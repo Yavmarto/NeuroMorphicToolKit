@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
@@ -27,6 +28,12 @@ import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart' hide AppTheme;
 /// per-node activity ([activity]) drives node glow; optional [edgeStrengths]
 /// (edge id → co-activation correlation, from the CEL-140 correlation engine)
 /// drives edge emphasis.
+///
+/// The view also owns an [OrbitCamera]: dragging empty space rotates the whole
+/// scene, and the scroll wheel or a two-finger pinch zooms it. Orbiting is a
+/// pure re-projection — it never re-runs [ForceDirectedLayout], so it stays
+/// cheap on every frame. Dragging a node still moves that node, and tapping
+/// still selects it. A "Reset view" affordance appears once the camera moves.
 ///
 /// The widget is intentionally provider-free so it can be unit/widget tested
 /// with plain constructor arguments; the Studio wiring (CEL-141) supplies the
@@ -101,6 +108,14 @@ class _Network25DViewState extends State<Network25DView>
   Ticker? _ticker;
   String? _internalSelectedId;
   String? _draggingNodeId;
+
+  /// Orientation/zoom of the virtual camera. Changed by drag/scroll/pinch
+  /// without ever touching [_layout], so orbiting is a cheap re-projection.
+  OrbitCamera _camera = OrbitCamera.identity;
+
+  /// Cumulative pinch scale at the last update, so the camera only applies the
+  /// per-frame ratio instead of the whole gesture's scale.
+  double _lastScale = 1.0;
 
   final Map<String, double> _smoothedActivity = <String, double>{};
 
@@ -231,28 +246,61 @@ class _Network25DViewState extends State<Network25DView>
     widget.onNodeSelected?.call(next);
   }
 
-  void _handlePanStart(DragStartDetails details, _FitTransform fit) {
-    final node = _hitTestNode(details.localPosition, fit);
+  /// A drag that starts on a node moves that node; a drag that starts on empty
+  /// space orbits the camera. A second pointer turns the gesture into a pinch
+  /// zoom. [ScaleStartDetails.localFocalPoint] is used so the hit test matches
+  /// the same coordinate space as the tap handler.
+  void _handleScaleStart(ScaleStartDetails details, _FitTransform fit) {
+    _lastScale = 1.0;
+    final node = _hitTestNode(details.localFocalPoint, fit);
     if (node != null) {
       setState(() => _draggingNodeId = node.id);
       _layout.pin(node.id, _layout.positions[node.id] ?? Offset.zero);
     }
   }
 
-  void _handlePanUpdate(DragUpdateDetails details, _FitTransform fit) {
+  void _handleScaleUpdate(ScaleUpdateDetails details, _FitTransform fit) {
     final id = _draggingNodeId;
-    if (id == null) return;
-    final current = _layout.positions[id];
-    if (current == null) return;
-    final next = fit.invert(fit.apply(current) + details.delta);
-    _layout.pin(id, next);
-    setState(() {});
+    if (id != null && details.pointerCount <= 1) {
+      final current = _layout.positions[id];
+      if (current != null) {
+        final next = fit.invert(fit.apply(current) + details.focalPointDelta);
+        _layout.pin(id, next);
+        setState(() {});
+      }
+      return;
+    }
+
+    final delta = details.focalPointDelta;
+    final scale = details.scale;
+    setState(() {
+      if (details.pointerCount >= 2) {
+        _camera = _camera.zoomBy(scale / _lastScale);
+      } else {
+        _camera = _camera.orbit(delta.dx, delta.dy);
+      }
+    });
+    _lastScale = scale;
   }
 
-  void _handlePanEnd(_) {
+  void _handleScaleEnd(ScaleEndDetails details) {
+    _lastScale = 1.0;
     if (_draggingNodeId != null) {
       setState(() => _draggingNodeId = null);
     }
+  }
+
+  /// Mouse wheel / trackpad scroll zoom. Exponential so each notch is a
+  /// constant ratio regardless of the current zoom.
+  void _handlePointerSignal(PointerSignalEvent event) {
+    if (event is! PointerScrollEvent) return;
+    final factor = math.exp(-event.scrollDelta.dy * 0.0015);
+    setState(() => _camera = _camera.zoomBy(factor));
+  }
+
+  void _resetCamera() {
+    if (_camera.isIdentity) return;
+    setState(() => _camera = OrbitCamera.identity);
   }
 
   void _handleTapUp(TapUpDetails details, _FitTransform fit) {
@@ -317,47 +365,81 @@ class _Network25DViewState extends State<Network25DView>
             child: Stack(
               children: [
                 Positioned.fill(
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTapUp: (details) => _handleTapUp(details, fit),
-                    onPanStart: (details) => _handlePanStart(details, fit),
-                    onPanUpdate: (details) => _handlePanUpdate(details, fit),
-                    onPanEnd: _handlePanEnd,
-                    child: RepaintBoundary(
-                      child: CustomPaint(
-                        size: size,
-                        painter: Network25DPainter(
-                          graph: widget.graph,
-                          positions: fitted,
-                          depths: depths,
-                          projection: Network25DProjection(size: size),
-                          activity: _smoothedActivity,
-                          edgeStrengths: widget.edgeStrengths,
-                          nirTypes: widget.nirTypes,
-                          selectedId: _selectedId,
-                          nodeLabelStyle: zeta.textStyles.labelSmall.copyWith(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.textPrimary,
+                  child: Listener(
+                    onPointerSignal: _handlePointerSignal,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTapUp: (details) => _handleTapUp(details, fit),
+                      onScaleStart: (details) =>
+                          _handleScaleStart(details, fit),
+                      onScaleUpdate: (details) =>
+                          _handleScaleUpdate(details, fit),
+                      onScaleEnd: _handleScaleEnd,
+                      child: RepaintBoundary(
+                        child: CustomPaint(
+                          size: size,
+                          painter: Network25DPainter(
+                            graph: widget.graph,
+                            positions: fitted,
+                            depths: depths,
+                            projection: Network25DProjection(
+                              size: size,
+                              camera: _camera,
+                            ),
+                            activity: _smoothedActivity,
+                            edgeStrengths: widget.edgeStrengths,
+                            nirTypes: widget.nirTypes,
+                            selectedId: _selectedId,
+                            nodeLabelStyle: zeta.textStyles.labelSmall.copyWith(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.textPrimary,
+                            ),
+                            secondaryLabelStyle: zeta.textStyles.labelSmall
+                                .copyWith(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w500,
+                                  color: AppTheme.textSecondary,
+                                ),
+                            activityColorOf: (rate) =>
+                                spikeRateColor(rate, zeta.colors),
+                            selectionColor: zeta.colors.mainInverse,
+                            gridColor: zeta.colors.borderSubtle,
                           ),
-                          secondaryLabelStyle: zeta.textStyles.labelSmall
-                              .copyWith(
-                                fontSize: 9,
-                                fontWeight: FontWeight.w500,
-                                color: AppTheme.textSecondary,
-                              ),
-                          activityColorOf: (rate) =>
-                              spikeRateColor(rate, zeta.colors),
-                          selectionColor: zeta.colors.mainInverse,
-                          gridColor: zeta.colors.borderSubtle,
                         ),
                       ),
                     ),
                   ),
                 ),
                 if (widget.showChrome) ...[
-                  Positioned(top: 12, left: 12, child: _buildStatChips()),
-                  Positioned(top: 12, right: 12, child: _buildDepthLegend()),
+                  Positioned(
+                    top: 12,
+                    left: 12,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildStatChips(),
+                        if (_camera.isIdentity) ...[
+                          const SizedBox(height: 8),
+                          _buildOrbitHint(),
+                        ],
+                      ],
+                    ),
+                  ),
+                  Positioned(
+                    top: 12,
+                    right: 12,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        _buildDepthLegend(),
+                        if (!_camera.isIdentity) ...[
+                          const SizedBox(height: 8),
+                          _buildResetCameraButton(),
+                        ],
+                      ],
+                    ),
+                  ),
                   if (widget.edgeStrengths != null)
                     Positioned(
                       left: 12,
@@ -453,6 +535,47 @@ class _Network25DViewState extends State<Network25DView>
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildOrbitHint() {
+    return _chip(ZetaIcons.sync, 'Drag to orbit · scroll to zoom');
+  }
+
+  Widget _buildResetCameraButton() {
+    final tokens = NmtkShellTokens.of(context);
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(tokens.radiusChip),
+        onTap: _resetCamera,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+          decoration: BoxDecoration(
+            color: AppTheme.background.withValues(alpha: 0.8),
+            borderRadius: BorderRadius.circular(tokens.radiusChip),
+            border: Border.all(color: AppTheme.border),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                ZetaIcons.refresh,
+                size: 14,
+                color: AppTheme.textSecondary,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                'Reset view',
+                style: Zeta.of(context).textStyles.labelSmall.copyWith(
+                  color: AppTheme.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -634,9 +757,83 @@ class _FitTransform {
       sourceCenter + (canvasPosition - target) / scale;
 }
 
+/// Orientation and zoom of the virtual camera that orbits the network scene.
+///
+/// The camera is a pure value object: dragging rotates the *whole scene* by
+/// [yaw] (around the vertical axis) and [pitch] (around the horizontal axis),
+/// and the scroll wheel / pinch gesture changes [zoom]. It never touches the
+/// force layout, so orbiting does not re-run relaxation — the layout is solved
+/// once and every frame is a cheap re-projection.
+@immutable
+class OrbitCamera {
+  const OrbitCamera({this.yaw = 0.0, this.pitch = 0.0, this.zoom = 1.0});
+
+  /// No rotation, unit zoom. The projection with this camera reproduces the
+  /// pre-camera CEL-139 output exactly.
+  static const OrbitCamera identity = OrbitCamera();
+
+  static const double minZoom = 0.35;
+  static const double maxZoom = 3.2;
+
+  /// Pitch is clamped short of ±90° so the scene never flips over the pole.
+  static const double maxPitch = 1.25;
+
+  static const double _orbitSensitivity = 0.008;
+
+  /// Rotation around the vertical (y) axis, in radians.
+  final double yaw;
+
+  /// Rotation around the horizontal (x) axis, in radians.
+  final double pitch;
+
+  /// Uniform scale applied after projection. `1.0` is the fitted default.
+  final double zoom;
+
+  bool get isIdentity => yaw == 0.0 && pitch == 0.0 && zoom == 1.0;
+
+  /// Rotates the scene by a screen-space drag delta, in logical pixels.
+  OrbitCamera orbit(double dx, double dy) {
+    return copyWith(
+      yaw: yaw + dx * _orbitSensitivity,
+      pitch: (pitch + dy * _orbitSensitivity).clamp(-maxPitch, maxPitch),
+    );
+  }
+
+  /// Multiplies zoom by [factor], clamped to [[minZoom], [maxZoom]].
+  OrbitCamera zoomBy(double factor) {
+    if (!factor.isFinite || factor <= 0) return this;
+    return copyWith(zoom: (zoom * factor).clamp(minZoom, maxZoom));
+  }
+
+  OrbitCamera copyWith({double? yaw, double? pitch, double? zoom}) {
+    return OrbitCamera(
+      yaw: yaw ?? this.yaw,
+      pitch: pitch ?? this.pitch,
+      zoom: zoom ?? this.zoom,
+    );
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is OrbitCamera &&
+      other.yaw == yaw &&
+      other.pitch == pitch &&
+      other.zoom == zoom;
+
+  @override
+  int get hashCode => Object.hash(yaw, pitch, zoom);
+
+  @override
+  String toString() => 'OrbitCamera(yaw: $yaw, pitch: $pitch, zoom: $zoom)';
+}
+
 /// Perspective projection that turns a 2D layout position plus a depth value
 /// into a canvas position and scale. Nearer nodes (`depth` 1) are larger and
 /// pushed outward from the focal point; farther nodes recede.
+///
+/// An optional [camera] rotates the scene before the perspective divide, which
+/// is what makes drag-to-orbit work without re-running the layout. With
+/// [OrbitCamera.identity] the math collapses to the original CEL-139 formula.
 class Network25DProjection {
   const Network25DProjection({
     required this.size,
@@ -644,6 +841,8 @@ class Network25DProjection {
     this.nearScale = 1.18,
     this.farScale = 0.6,
     this.parallax = 20.0,
+    this.camera = OrbitCamera.identity,
+    this.depthSpread = 180.0,
   });
 
   final Size size;
@@ -655,17 +854,61 @@ class Network25DProjection {
   /// separation that reads as depth even where two nodes overlap in x/y.
   final double parallax;
 
+  /// Orientation/zoom of the virtual camera.
+  final OrbitCamera camera;
+
+  /// How many pixels of separation a full `0..1` depth range maps to when the
+  /// camera rotates. Larger values make the scene read as deeper.
+  final double depthSpread;
+
   double scaleFor(double depth) {
     final d = depth.clamp(0.0, 1.0);
     return farScale + (nearScale - farScale) * d;
   }
 
-  Offset project(Offset canvasPosition, double depth) {
+  /// Applies the orbit [camera] to a scene point plus its depth, returning the
+  /// rotated point and the depth re-derived from the rotated z. Identity camera
+  /// is a no-op, so callers get the pre-camera result unchanged.
+  ({Offset point, double depth}) transformScene(
+    Offset canvasPosition,
+    double depth,
+  ) {
+    final d = depth.clamp(0.0, 1.0);
+    if (camera.isIdentity) {
+      return (point: canvasPosition, depth: d);
+    }
+    final center = Offset(size.width * focal.dx, size.height * focal.dy);
+    final local = canvasPosition - center;
+    final z = (d - 0.5) * depthSpread;
+
+    final cosYaw = math.cos(camera.yaw);
+    final sinYaw = math.sin(camera.yaw);
+    final x1 = local.dx * cosYaw + z * sinYaw;
+    final z1 = -local.dx * sinYaw + z * cosYaw;
+
+    final cosPitch = math.cos(camera.pitch);
+    final sinPitch = math.sin(camera.pitch);
+    final y1 = local.dy * cosPitch - z1 * sinPitch;
+    final z2 = local.dy * sinPitch + z1 * cosPitch;
+
+    final rotatedDepth = (0.5 + z2 / depthSpread).clamp(0.0, 1.0);
+    return (point: center + Offset(x1, y1), depth: rotatedDepth);
+  }
+
+  /// Projects an already camera-transformed point at [depth] to the canvas,
+  /// applying the depth scale, parallax, and camera zoom.
+  Offset projectTransformed(Offset point, double depth) {
     final d = depth.clamp(0.0, 1.0);
     final center = Offset(size.width * focal.dx, size.height * focal.dy);
-    final scaled = center + (canvasPosition - center) * scaleFor(d);
+    final scaled = center + (point - center) * scaleFor(d);
     final shift = (d - 0.5) * parallax;
-    return scaled + Offset(shift, shift * 0.5);
+    final projected = scaled + Offset(shift, shift * 0.5);
+    return center + (projected - center) * camera.zoom;
+  }
+
+  Offset project(Offset canvasPosition, double depth) {
+    final transformed = transformScene(canvasPosition, depth);
+    return projectTransformed(transformed.point, transformed.depth);
   }
 }
 
@@ -869,10 +1112,13 @@ class Network25DPainter extends CustomPainter {
     final position = positions[node.id];
     if (position == null) return;
 
-    final depth = (depths[node.id] ?? 0.5).clamp(0.0, 1.0);
+    final rawDepth = (depths[node.id] ?? 0.5).clamp(0.0, 1.0);
+    final transformed = projection.transformScene(position, rawDepth);
+    final depth = transformed.depth;
     final color = _nodeColor(node);
-    final radius = _nodeRadius(node) * projection.scaleFor(depth);
-    final center = projection.project(position, depth);
+    final radius =
+        _nodeRadius(node) * projection.scaleFor(depth) * projection.camera.zoom;
+    final center = projection.projectTransformed(transformed.point, depth);
     final isSelected = node.id == selectedId;
     final activity = (this.activity[node.id] ?? 0.0).clamp(0.0, 1.0);
 
@@ -1070,5 +1316,6 @@ class Network25DPainter extends CustomPainter {
       old.edgeStrengths != edgeStrengths ||
       old.selectedId != selectedId ||
       old.nirTypes != nirTypes ||
-      old.projection.size != projection.size;
+      old.projection.size != projection.size ||
+      old.projection.camera != projection.camera;
 }

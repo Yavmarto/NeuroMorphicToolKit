@@ -3,6 +3,9 @@
 // stat/depth/disclosure chrome. animate:false keeps the relax/pulse ticker out
 // of the picture so tests are deterministic.
 
+import 'dart:math' as math;
+
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -207,5 +210,175 @@ void main() {
     final far = projection.project(const Offset(400, 300), 0.0);
     expect(near, isNot(far));
     expect(near.dx, greaterThan(400));
+  });
+
+  group('OrbitCamera', () {
+    test('identity is a no-op for the projection', () {
+      const camera = OrbitCamera.identity;
+      expect(camera.isIdentity, isTrue);
+
+      const projection = Network25DProjection(
+        size: Size(800, 600),
+        camera: camera,
+      );
+      final transformed = projection.transformScene(
+        const Offset(240, 180),
+        0.75,
+      );
+      expect(transformed.point, const Offset(240, 180));
+      expect(transformed.depth, closeTo(0.75, 1e-9));
+    });
+
+    test('drag rotates yaw and pitch, and pitch is clamped', () {
+      const camera = OrbitCamera.identity;
+      final rotated = camera.orbit(50, 0);
+      expect(rotated.yaw, greaterThan(0));
+      expect(rotated.pitch, 0);
+
+      final tilted = camera.orbit(0, 100000);
+      expect(tilted.pitch, OrbitCamera.maxPitch);
+      final tiltedBack = camera.orbit(0, -100000);
+      expect(tiltedBack.pitch, -OrbitCamera.maxPitch);
+    });
+
+    test('zoom clamps to the supported range', () {
+      const camera = OrbitCamera.identity;
+      expect(camera.zoomBy(2).zoom, closeTo(2.0, 1e-9));
+      expect(camera.zoomBy(1000).zoom, OrbitCamera.maxZoom);
+      expect(camera.zoomBy(0.0001).zoom, OrbitCamera.minZoom);
+      expect(camera.zoomBy(0).zoom, 1.0);
+      expect(camera.zoomBy(double.nan).zoom, 1.0);
+    });
+
+    test('value equality drives repaint decisions', () {
+      expect(const OrbitCamera(), const OrbitCamera());
+      expect(
+        const OrbitCamera(yaw: 0.2).hashCode,
+        const OrbitCamera(yaw: 0.2).hashCode,
+      );
+      expect(const OrbitCamera(yaw: 0.2), isNot(const OrbitCamera(yaw: 0.3)));
+    });
+
+    test('yaw moves an off-axis point through the depth dimension', () {
+      const camera = OrbitCamera(yaw: math.pi / 2);
+      const projection = Network25DProjection(
+        size: Size(800, 600),
+        camera: camera,
+      );
+      // A node 240px right of centre at mid-depth; a 90° yaw should swing it
+      // into the depth axis, changing its projected x and depth.
+      final rotated = projection.transformScene(const Offset(640, 300), 0.5);
+      expect(rotated.point.dx, lessThan(640));
+      final projected = projection.project(const Offset(640, 300), 0.5);
+      expect(projected, isNot(const Offset(640, 300)));
+    });
+
+    test('zoom scales the projected offset from the focal centre', () {
+      const center = Offset(400, 300);
+      const point = Offset(600, 300);
+      const identity = Network25DProjection(size: Size(800, 600));
+      const zoomed = Network25DProjection(
+        size: Size(800, 600),
+        camera: OrbitCamera(zoom: 2.0),
+      );
+      final base = identity.project(point, 0.5) - center;
+      final scaled = zoomed.project(point, 0.5) - center;
+      expect(scaled.dx, closeTo(base.dx * 2, 0.001));
+      expect(scaled.dy, closeTo(base.dy * 2, 0.001));
+    });
+  });
+
+  Network25DPainter painterOf(WidgetTester tester) {
+    return tester
+        .widgetList<CustomPaint>(find.byType(CustomPaint))
+        .map((paint) => paint.painter)
+        .whereType<Network25DPainter>()
+        .first;
+  }
+
+  testWidgets('dragging empty space orbits the camera without relayout', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      _wrap(
+        Network25DView(
+          graph: _threeLayerGraph(),
+          useStoredPositions: true,
+          animate: false,
+        ),
+      ),
+    );
+    expect(painterOf(tester).projection.camera.isIdentity, isTrue);
+
+    final orbitGesture = await tester.startGesture(const Offset(400, 200));
+    await tester.pump();
+    await orbitGesture.moveBy(const Offset(40, 0));
+    await tester.pump();
+    await orbitGesture.moveBy(const Offset(40, 0));
+    await tester.pump();
+    await orbitGesture.up();
+    await tester.pump();
+
+    final camera = painterOf(tester).projection.camera;
+    expect(camera.isIdentity, isFalse);
+    expect(camera.yaw, isNot(0.0));
+
+    // The reset affordance appears once the camera has moved.
+    expect(find.text('Reset view'), findsOneWidget);
+    await tester.tap(find.text('Reset view'));
+    await tester.pump();
+    expect(painterOf(tester).projection.camera.isIdentity, isTrue);
+  });
+
+  testWidgets('scroll wheel zooms the camera', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      _wrap(
+        Network25DView(
+          graph: _threeLayerGraph(),
+          useStoredPositions: true,
+          animate: false,
+        ),
+      ),
+    );
+
+    final center = tester.getCenter(find.byType(Network25DView));
+    final pointer = TestPointer(1, PointerDeviceKind.mouse);
+    pointer.hover(center);
+    await tester.sendEventToBinding(pointer.scroll(const Offset(0, -120)));
+    await tester.pump();
+
+    expect(painterOf(tester).projection.camera.zoom, greaterThan(1.0));
+  });
+
+  testWidgets('a two-finger pinch zooms the camera', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(
+      _wrap(
+        Network25DView(
+          graph: _threeLayerGraph(),
+          useStoredPositions: true,
+          animate: false,
+        ),
+      ),
+    );
+
+    final center = tester.getCenter(find.byType(Network25DView));
+    final first = await tester.startGesture(
+      center - const Offset(30, 0),
+      pointer: 1,
+    );
+    final second = await tester.startGesture(
+      center + const Offset(30, 0),
+      pointer: 2,
+    );
+    await first.moveBy(const Offset(-60, 0));
+    await second.moveBy(const Offset(60, 0));
+    await tester.pump();
+    await first.up();
+    await second.up();
+    await tester.pump();
+
+    expect(painterOf(tester).projection.camera.zoom, greaterThan(1.0));
   });
 }
