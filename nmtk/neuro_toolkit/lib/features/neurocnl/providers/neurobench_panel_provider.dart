@@ -16,6 +16,7 @@ final _authedHttpProvider = Provider<AdminTokenHttpClient>((ref) {
   final client = AdminTokenHttpClient(
     adminToken: launchContext.authentication.adminToken,
     onReportError: launchContext.onReportError,
+    onRecovered: launchContext.onRecovered,
   );
   ref.onDispose(client.close);
   return client;
@@ -126,7 +127,9 @@ class NeurobenchPanelState {
 
 final neurobenchBenchmarksProvider =
     FutureProvider<List<NeurobenchBenchmarkSummary>>((ref) async {
-      final uri = Uri.parse('${ref.read(_neurobenchBaseUrlProvider)}/benchmarks');
+      final uri = Uri.parse(
+        '${ref.read(_neurobenchBaseUrlProvider)}/benchmarks',
+      );
       final response = await ref.read(_authedHttpProvider).get(uri);
       if (response.statusCode == 200) {
         final List<dynamic> data = json.decode(response.body) as List<dynamic>;
@@ -236,7 +239,9 @@ class NeurobenchPanelController extends _$NeurobenchPanelController {
 
   Future<void> _pollJob(String jobId) async {
     try {
-      final uri = Uri.parse('${ref.read(_neurobenchBaseUrlProvider)}/run/$jobId');
+      final uri = Uri.parse(
+        '${ref.read(_neurobenchBaseUrlProvider)}/run/$jobId',
+      );
       final response = await ref
           .read(_authedHttpProvider)
           .get(uri)
@@ -291,7 +296,9 @@ class NeurobenchPanelController extends _$NeurobenchPanelController {
 
   Future<void> _fetchResult(String resultId) async {
     try {
-      final uri = Uri.parse('${ref.read(_neurobenchBaseUrlProvider)}/results/$resultId');
+      final uri = Uri.parse(
+        '${ref.read(_neurobenchBaseUrlProvider)}/results/$resultId',
+      );
       final response = await ref
           .read(_authedHttpProvider)
           .get(uri)

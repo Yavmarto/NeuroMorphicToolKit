@@ -8,11 +8,17 @@ class AdminTokenHttpClient extends http.BaseClient {
   AdminTokenHttpClient({
     required this.adminToken,
     required this.onReportError,
+    this.onRecovered = _noopRecovered,
     http.Client? inner,
   }) : _inner = inner ?? http.Client();
 
   final String adminToken;
   final NmtkFeatureErrorReporter onReportError;
+
+  /// Invoked when a request completes without a network failure or an auth
+  /// rejection, telling the host that a previously-reported connection/auth
+  /// error no longer applies. No-op by default.
+  final NmtkFeatureRecoveryReporter onRecovered;
   final http.Client _inner;
 
   @override
@@ -33,6 +39,8 @@ class AdminTokenHttpClient extends http.BaseClient {
             ),
           ),
         );
+      } else {
+        unawaited(onRecovered());
       }
       return response;
     } on Object {
@@ -52,3 +60,5 @@ class AdminTokenHttpClient extends http.BaseClient {
   @override
   void close() => _inner.close();
 }
+
+Future<void> _noopRecovered() async {}

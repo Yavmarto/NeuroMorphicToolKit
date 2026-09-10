@@ -20,6 +20,7 @@ final apiClientProvider = Provider<ApiClient>((ref) {
     httpClient: AdminTokenHttpClient(
       adminToken: launchContext.authentication.adminToken,
       onReportError: launchContext.onReportError,
+      onRecovered: launchContext.onRecovered,
     ),
   );
   ref.onDispose(client.dispose);
@@ -37,6 +38,7 @@ final neurochipClientProvider = Provider<NeurochipClient>((ref) {
     httpClient: AdminTokenHttpClient(
       adminToken: launchContext.authentication.adminToken,
       onReportError: launchContext.onReportError,
+      onRecovered: launchContext.onRecovered,
     ),
   );
   ref.onDispose(client.dispose);
@@ -51,6 +53,7 @@ final studioTargetRegistryServiceProvider =
         client: AdminTokenHttpClient(
           adminToken: launchContext.authentication.adminToken,
           onReportError: launchContext.onReportError,
+          onRecovered: launchContext.onRecovered,
         ),
       );
       ref.onDispose(service.dispose);

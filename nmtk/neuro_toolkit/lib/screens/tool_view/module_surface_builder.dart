@@ -116,6 +116,7 @@ Widget buildModuleChild(
                       onOpenBackendSetup: () =>
                           showServerConnectionPopup(context, ref),
                     ),
+                onRecovered: () => clearHostedFeatureError(context),
                 onEditServer: () => showServerConnectionPopup(context, ref),
                 workspaceHeaderAction: workspaceHeaderAction,
               ),
