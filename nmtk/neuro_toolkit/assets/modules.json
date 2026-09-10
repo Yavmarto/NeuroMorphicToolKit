@@ -253,7 +253,9 @@
       "requiredPorts": [
         9000
       ],
-      "requiredEnvironment": [],
+      "requiredEnvironment": [
+        "GITHUB_OAUTH_CLIENT_ID"
+      ],
       "secretFields": [],
       "defaultContainerImage": "ghcr.io/completed-spoon-6/neurohub:latest",
       "chartTemplateId": "nmtk-backend",
