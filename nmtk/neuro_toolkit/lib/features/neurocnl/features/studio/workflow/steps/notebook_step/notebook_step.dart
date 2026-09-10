@@ -305,12 +305,7 @@ class _NotebookStepState extends ConsumerState<NotebookStep> {
           ZetaButton.text(
             onPressed: () {
               Clipboard.setData(ClipboardData(text: text));
-              ScaffoldMessenger.of(ctx).showSnackBar(
-                const SnackBar(
-                  content: Text('Copied to clipboard'),
-                  showCloseIcon: true,
-                ),
-              );
+              NmtkSnackBars.success(ctx, 'Copied to clipboard');
             },
             label: 'Copy',
           ),

@@ -55,13 +55,7 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
           .loadProject(selectedProjectId);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          ZetaSnackBar(
-            context: context,
-            content: Text('Failed to load project: $e'),
-            type: ZetaSnackBarType.error,
-          ),
-        );
+        NmtkSnackBars.error(context, 'Failed to load project: $e');
       }
     }
   }

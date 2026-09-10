@@ -650,9 +650,7 @@ class SetupStepState extends ConsumerState<SetupStep> {
         });
         return;
       }
-      ScaffoldMessenger.of(context).showSnackBar(
-        NmtkSnackBars.success(context, 'Opened ${workspaceFile.name}.'),
-      );
+      NmtkSnackBars.success(context, 'Opened ${workspaceFile.name}.');
     } on FormatException {
       if (!mounted) return;
       setState(() {
@@ -1005,15 +1003,11 @@ class SetupStepState extends ConsumerState<SetupStep> {
           .read(workspaceProvider.notifier)
           .selectDataset(entry.id, serverPath: entry.localPath);
       final formatLabel = entry.format?.trim();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            formatLabel == null || formatLabel.isEmpty
-                ? 'Imported ${entry.label}'
-                : 'Imported ${entry.label} ($formatLabel)',
-          ),
-          showCloseIcon: true,
-        ),
+      NmtkSnackBars.success(
+        context,
+        formatLabel == null || formatLabel.isEmpty
+            ? 'Imported ${entry.label}'
+            : 'Imported ${entry.label} ($formatLabel)',
       );
     } catch (e) {
       if (!mounted) return;
@@ -1146,19 +1140,19 @@ class SetupStepState extends ConsumerState<SetupStep> {
           );
       final restoreFailed = restoreCanvasSectionFromPayload(ref, config);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        restoreFailed
-            ? NmtkSnackBars.error(
-                context,
-                'Opened ${choice.name} from server, but part of its canvas '
-                'state (pipeline, simulation, or layout) could not be '
-                'restored.',
-              )
-            : NmtkSnackBars.success(
-                context,
-                'Opened ${choice.name} from server.',
-              ),
-      );
+      if (restoreFailed) {
+        NmtkSnackBars.error(
+          context,
+          'Opened ${choice.name} from server, but part of its canvas '
+          'state (pipeline, simulation, or layout) could not be '
+          'restored.',
+        );
+      } else {
+        NmtkSnackBars.success(
+          context,
+          'Opened ${choice.name} from server.',
+        );
+      }
     } catch (error) {
       if (!mounted) return;
       setState(() {

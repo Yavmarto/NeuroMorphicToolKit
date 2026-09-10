@@ -995,7 +995,9 @@ class _ErrorSummaryButton extends StatelessWidget {
           title: const Text('Simulator Error'),
           content: SizedBox(
             width: 520,
-            child: SingleChildScrollView(child: Text(_errorText(error))),
+            child: SingleChildScrollView(
+              child: Text(formatSimulatorRunError(error)),
+            ),
           ),
           actions: [
             ZetaButton.text(
@@ -1026,21 +1028,12 @@ class _SimulatorErrorDetails extends StatelessWidget {
       color: tokens.errorColor.withValues(alpha: 0.08),
       child: SingleChildScrollView(
         child: Text(
-          _errorText(error),
+          formatSimulatorRunError(error),
           style: theme.textTheme.bodySmall?.copyWith(color: tokens.errorColor),
         ),
       ),
     );
   }
-}
-
-String _errorText(SimulatorRunError error) {
-  final lines = <String>[
-    if (error.statusCode != null) 'HTTP ${error.statusCode}',
-    error.message,
-    ...error.details.where((detail) => detail != error.message),
-  ];
-  return lines.join('\n');
 }
 
 class SimulatorSupportLevelBadge extends StatelessWidget {

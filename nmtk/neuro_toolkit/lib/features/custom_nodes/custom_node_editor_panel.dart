@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 import 'package:neuro_toolkit/ui_core/shell_tokens.dart';
 import 'package:zeta_flutter/zeta_flutter.dart';
 
@@ -130,18 +131,11 @@ class _CustomNodeEditorPanelState extends State<CustomNodeEditorPanel> {
   }
 
   void _showSnackBar(String message, {bool isError = false}) {
-    final colorToken = isError
-        // P0-1 fix: NmtkShellTokens.errorColor replaces the raw red palette
-        // entry that previously stood in here.
-        ? NmtkShellTokens.of(context).errorColor
-        : null;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: colorToken,
-        showCloseIcon: true,
-      ),
-    );
+    if (isError) {
+      NmtkSnackBars.error(context, message);
+    } else {
+      NmtkSnackBars.success(context, message);
+    }
   }
 
   /// Converts `CamelCase` to `snake_case`.

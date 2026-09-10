@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:neuro_toolkit/ui_core/app_theme.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 import 'package:neuro_toolkit/ui_core/zeta_theme.dart';
 
 /// State-management-independent live command transcript dialog.
@@ -63,12 +64,7 @@ class _NmtkLogViewerDialogState extends State<NmtkLogViewerDialog> {
   Future<void> _copyOutput() async {
     await Clipboard.setData(ClipboardData(text: widget.lines.join('\n')));
     if (!mounted) return;
-    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-      const SnackBar(
-        content: Text('Raw SSH output copied'),
-        showCloseIcon: true,
-      ),
-    );
+    NmtkSnackBars.success(context, 'Raw SSH output copied');
   }
 
   @override

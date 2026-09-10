@@ -164,9 +164,7 @@ class _NeurohubSignInDialogState extends ConsumerState<NeurohubSignInDialog> {
     if (code == null) return;
     await Clipboard.setData(ClipboardData(text: code));
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(NmtkSnackBars.success(context, 'Sign-in code copied.'));
+    NmtkSnackBars.success(context, 'Sign-in code copied.');
   }
 
   Future<void> _openLink() async {
@@ -176,12 +174,10 @@ class _NeurohubSignInDialogState extends ConsumerState<NeurohubSignInDialog> {
         .read(neurohubExternalLinkLauncherProvider)
         .open(url);
     if (!opened && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        NmtkSnackBars.error(
+      NmtkSnackBars.error(
           context,
           'The browser could not open. Copy the address and open it manually.',
-        ),
-      );
+        );
     }
   }
 

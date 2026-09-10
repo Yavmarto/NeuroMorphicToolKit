@@ -181,19 +181,15 @@ class WorkspaceFileIoController {
       _host.ref
           .read(workspaceProvider.notifier)
           .recordWorkspaceFilePath(result.path);
-      ScaffoldMessenger.of(_host.context).showSnackBar(
-        NmtkSnackBars.success(
+      NmtkSnackBars.success(
           _host.context,
           'Saved to ${result.path ?? suggestedName}',
-        ),
-      );
+        );
     } else if (result.outcome == SaveOutcome.failed) {
-      ScaffoldMessenger.of(_host.context).showSnackBar(
-        NmtkSnackBars.error(
+      NmtkSnackBars.error(
           _host.context,
           result.message ?? 'Workspace save failed.',
-        ),
-      );
+        );
     }
   }
 
@@ -225,39 +221,35 @@ class WorkspaceFileIoController {
       if (!_host.context.mounted) {
         return;
       }
-      ScaffoldMessenger.of(_host.context).showSnackBar(
-        restoreFailed
-            ? NmtkSnackBars.error(
-                _host.context,
-                'Opened workspace ${workspaceFile.name}, but part of its '
-                'canvas state (pipeline, simulation, or layout) could not '
-                'be restored. Check the logs and re-save to repair the file.',
-              )
-            : NmtkSnackBars.success(
-                _host.context,
-                'Opened workspace ${workspaceFile.name}.',
-              ),
-      );
+      if (restoreFailed) {
+        NmtkSnackBars.error(
+          _host.context,
+          'Opened workspace ${workspaceFile.name}, but part of its '
+          'canvas state (pipeline, simulation, or layout) could not '
+          'be restored. Check the logs and re-save to repair the file.',
+        );
+      } else {
+        NmtkSnackBars.success(
+          _host.context,
+          'Opened workspace ${workspaceFile.name}.',
+        );
+      }
     } on FormatException {
       if (!_host.context.mounted) {
         return;
       }
-      ScaffoldMessenger.of(_host.context).showSnackBar(
-        NmtkSnackBars.error(
+      NmtkSnackBars.error(
           _host.context,
           'Workspace file must contain a valid workspace JSON object.',
-        ),
-      );
+        );
     } catch (_) {
       if (!_host.context.mounted) {
         return;
       }
-      ScaffoldMessenger.of(_host.context).showSnackBar(
-        NmtkSnackBars.error(
+      NmtkSnackBars.error(
           _host.context,
           'Workspace open failed. Check the file and try again.',
-        ),
-      );
+        );
     } finally {
       if (_host.mounted) {
         _host.rebuild(() => _host.isOpeningWorkspace = false);

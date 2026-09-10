@@ -184,44 +184,31 @@ class _RunStepState extends ConsumerState<RunStep> {
   }
 
   void _showErrorSnackbar() {
-    final colors = Zeta.of(context).colors;
     final detail = _errorBannerDetail;
-    final controller = ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          _errorBannerSummary ?? 'Run failed — please check errors and retry.',
-        ),
-        backgroundColor: colors.surfaceNegativeSubtle,
-        duration: const Duration(days: 1),
-        showCloseIcon: true,
-        closeIconColor: colors.mainNegative,
-        action: detail == null
-            ? null
-            : SnackBarAction(
-                label: 'Details',
-                textColor: colors.mainNegative,
-                onPressed: () => _showErrorDetails(context),
-              ),
-      ),
+    NmtkSnackBars.error(
+      context,
+      _errorBannerSummary ?? 'Run failed — please check errors and retry.',
+      key: 'run-step-error',
+      duration: null,
+      action: detail == null
+          ? null
+          : NmtkNotificationAction(
+              label: 'Details',
+              onPressed: () => _showErrorDetails(context),
+            ),
+      onDismissed: _dismissRunErrors,
     );
-    controller.closed.then((reason) {
-      if (reason != SnackBarClosedReason.action) _dismissRunErrors();
-    });
   }
 
   void _showSuccessSnackbar() {
-    final colors = Zeta.of(context).colors;
-    final controller = ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Training complete — preparing results.'),
-        backgroundColor: colors.surfacePositiveSubtle,
-        showCloseIcon: true,
-        closeIconColor: colors.mainPositive,
-      ),
+    NmtkSnackBars.success(
+      context,
+      'Training complete — preparing results.',
+      key: 'run-step-success',
+      onDismissed: () {
+        if (mounted) setState(() => _successDismissed = true);
+      },
     );
-    controller.closed.then((_) {
-      if (mounted) setState(() => _successDismissed = true);
-    });
   }
 
   Future<void> _startTraining() async {
@@ -346,12 +333,7 @@ class _RunStepState extends ConsumerState<RunStep> {
           ZetaButton.text(
             onPressed: () {
               Clipboard.setData(ClipboardData(text: text));
-              ScaffoldMessenger.of(ctx).showSnackBar(
-                const SnackBar(
-                  content: Text('Copied to clipboard'),
-                  showCloseIcon: true,
-                ),
-              );
+              NmtkSnackBars.success(ctx, 'Copied to clipboard');
             },
             label: 'Copy',
           ),

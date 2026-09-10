@@ -110,9 +110,7 @@ class CompiledArtifactsPanel extends ConsumerWidget {
                           status: 'success',
                           panelId: 'deploy',
                         );
-                    ScaffoldMessenger.of(
-                      context,
-                    ).showSnackBar(NmtkSnackBars.success(context, detail));
+                    NmtkSnackBars.success(context, detail);
                   } else if (downloadResult.status == DownloadStatus.fallback) {
                     ref
                         .read(workspaceProvider.notifier)
@@ -126,13 +124,11 @@ class CompiledArtifactsPanel extends ConsumerWidget {
                           status: 'warning',
                           panelId: 'deploy',
                         );
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      NmtkSnackBars.error(
+                    NmtkSnackBars.error(
                         context,
                         downloadResult.message ??
                             'Use a browser-capable workspace to complete the download.',
-                      ),
-                    );
+                      );
                   } else {
                     ref
                         .read(workspaceProvider.notifier)
@@ -144,12 +140,10 @@ class CompiledArtifactsPanel extends ConsumerWidget {
                           status: 'error',
                           panelId: 'deploy',
                         );
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      NmtkSnackBars.error(
+                    NmtkSnackBars.error(
                         context,
                         downloadResult.message ?? 'Binary export failed.',
-                      ),
-                    );
+                      );
                   }
                 },
         );

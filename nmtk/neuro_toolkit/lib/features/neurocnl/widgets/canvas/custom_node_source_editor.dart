@@ -443,13 +443,7 @@ class _CustomNodeSourceEditorState
       );
     } on Object catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(error.toString()),
-          backgroundColor: Theme.of(context).colorScheme.error,
-          showCloseIcon: true,
-        ),
-      );
+      NmtkSnackBars.error(context, error.toString());
     } finally {
       if (mounted) setState(() => _saving = false);
     }

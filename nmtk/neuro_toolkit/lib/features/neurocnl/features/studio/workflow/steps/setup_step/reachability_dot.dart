@@ -61,17 +61,14 @@ class ReachabilityDot extends ConsumerWidget {
   /// message, tapping appeared to do nothing at all. The snackbar mirrors
   /// `studio_step_drawer.dart`'s recheck.
   Future<void> _recheckAkida(BuildContext context, WidgetRef ref) async {
-    final messenger = ScaffoldMessenger.of(context);
     ref.invalidate(akidaHostReadinessProvider);
     try {
       final host = await ref.read(akidaHostReadinessProvider.future);
       if (!context.mounted) return;
       if (host == null) {
-        messenger.showSnackBar(
-          NmtkSnackBars.error(
-            context,
-            'No Akida host is paired — add one under Manage Targets.',
-          ),
+        NmtkSnackBars.error(
+          context,
+          'No Akida host is paired — add one under Manage Targets.',
         );
         return;
       }
@@ -79,21 +76,16 @@ class ReachabilityDot extends ConsumerWidget {
       final text = detail.isEmpty
           ? host.state.label
           : '${host.state.label} — $detail';
-      // Only `ready` is a success: the user tapped to find out whether the
-      // re-check cleared the problem, and for every other state it did not.
-      // The amber-vs-red nuance stays where it persists, on the dot itself.
-      messenger.showSnackBar(
-        host.state == AkidaPairedHostState.ready
-            ? NmtkSnackBars.success(context, text)
-            : NmtkSnackBars.error(context, text),
-      );
+      if (host.state == AkidaPairedHostState.ready) {
+        NmtkSnackBars.success(context, text);
+      } else {
+        NmtkSnackBars.error(context, text);
+      }
     } catch (error) {
       if (!context.mounted) return;
-      messenger.showSnackBar(
-        NmtkSnackBars.error(
-          context,
-          'Could not re-check the Akida host: $error',
-        ),
+      NmtkSnackBars.error(
+        context,
+        'Could not re-check the Akida host: $error',
       );
     }
   }
@@ -111,7 +103,6 @@ class ReachabilityDot extends ConsumerWidget {
   /// from where the board was paired, instead of sending the user to a different
   /// step to press a different button.
   Future<void> _recheckPynq(BuildContext context, WidgetRef ref) async {
-    final messenger = ScaffoldMessenger.of(context);
     try {
       final current = await ref.read(pynqBoardReadinessProvider.future);
       if (current != null && current.state == PynqBoardState.unpaired) {
@@ -130,11 +121,9 @@ class ReachabilityDot extends ConsumerWidget {
       final board = await ref.read(pynqBoardReadinessProvider.future);
       if (!context.mounted) return;
       if (board == null) {
-        messenger.showSnackBar(
-          NmtkSnackBars.error(
-            context,
-            'No PYNQ board is paired — add one under Manage Targets.',
-          ),
+        NmtkSnackBars.error(
+          context,
+          'No PYNQ board is paired — add one under Manage Targets.',
         );
         return;
       }
@@ -145,18 +134,16 @@ class ReachabilityDot extends ConsumerWidget {
         if (detail.isNotEmpty) detail,
         ?nextStep,
       ].join(' — ');
-      messenger.showSnackBar(
-        board.state == PynqBoardState.ready
-            ? NmtkSnackBars.success(context, text)
-            : NmtkSnackBars.error(context, text),
-      );
+      if (board.state == PynqBoardState.ready) {
+        NmtkSnackBars.success(context, text);
+      } else {
+        NmtkSnackBars.error(context, text);
+      }
     } catch (error) {
       if (!context.mounted) return;
-      messenger.showSnackBar(
-        NmtkSnackBars.error(
-          context,
-          'Could not re-check the PYNQ board: $error',
-        ),
+      NmtkSnackBars.error(
+        context,
+        'Could not re-check the PYNQ board: $error',
       );
     }
   }

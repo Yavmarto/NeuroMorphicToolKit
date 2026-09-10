@@ -34,6 +34,7 @@ class NmtkNotification {
     this.action,
     this.duration,
     this.showCloseButton = true,
+    this.onDismissed,
   });
 
   /// Coalescing key. Pushing another notification with the same [key] while
@@ -64,6 +65,10 @@ class NmtkNotification {
 
   /// Whether the card exposes a close button.
   final bool showCloseButton;
+
+  /// Called when the banner is removed without its [action] being taken
+  /// (close button, auto-dismiss, or replacement by a keyed push).
+  final VoidCallback? onDismissed;
 }
 
 /// Backing store for the banners shown by [NmtkNotificationCenter].
@@ -169,6 +174,10 @@ class NmtkNotificationCenterController extends ChangeNotifier {
   void _removeEntry(_NmtkNotificationEntry entry) {
     if (_disposed) return;
     entry.timer?.cancel();
+    if (!entry.actionTaken && !entry.dismissedCallbackSent) {
+      entry.dismissedCallbackSent = true;
+      entry.notification.onDismissed?.call();
+    }
     _entries.remove(entry);
     notifyListeners();
   }
@@ -347,6 +356,8 @@ class _NmtkNotificationEntry {
   final int id;
   NmtkNotification notification;
   bool exiting = false;
+  bool actionTaken = false;
+  bool dismissedCallbackSent = false;
   Timer? timer;
 }
 
@@ -464,6 +475,7 @@ class _NmtkNotificationBanner extends StatelessWidget {
                     size: ZetaWidgetSize.small,
                     label: notification.action!.label,
                     onPressed: () {
+                      entry.actionTaken = true;
                       controller.dismissEntry(entry.id);
                       notification.action!.onPressed();
                     },

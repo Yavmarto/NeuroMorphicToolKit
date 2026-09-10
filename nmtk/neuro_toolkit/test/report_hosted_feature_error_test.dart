@@ -178,7 +178,7 @@ void main() {
     },
   );
 
-  testWidgets('navigation errors keep the bottom SnackBar path', (
+  testWidgets('navigation errors show a top-right banner', (
     tester,
   ) async {
     final context = await _pumpWithNotificationHost(tester);
@@ -190,23 +190,18 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byType(SnackBar), findsOneWidget);
+    expect(find.text('NeuroStudio Problem'), findsOneWidget);
     expect(find.text(_navigationEvent.message), findsOneWidget);
-    expect(find.text('Connection Problem'), findsNothing);
+    expect(find.byType(SnackBar), findsNothing);
     expect(find.text('Backend Setup'), findsNothing);
 
-    // Close the SnackBar so no dismiss timer is left pending at teardown.
-    await tester.tap(
-      find.descendant(
-        of: find.byType(SnackBar),
-        matching: find.byIcon(Icons.close),
-      ),
-    );
+    await tester.tap(find.byIcon(ZetaIcons.close_sharp));
     await tester.pumpAndSettle();
+    expect(find.text('NeuroStudio Problem'), findsNothing);
   });
 
   testWidgets(
-    'without a mounted host, connection errors fall back to SnackBar',
+    'without a mounted host, connection errors are suppressed',
     (tester) async {
       await tester.pumpWidget(
         MaterialApp(
@@ -223,17 +218,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.byType(SnackBar), findsOneWidget);
-      expect(find.text('Backend Setup'), findsOneWidget);
+      expect(find.byType(SnackBar), findsNothing);
       expect(find.text('Connection Problem'), findsNothing);
-
-      await tester.tap(
-        find.descendant(
-          of: find.byType(SnackBar),
-          matching: find.byIcon(Icons.close),
-        ),
-      );
-      await tester.pumpAndSettle();
     },
   );
 }

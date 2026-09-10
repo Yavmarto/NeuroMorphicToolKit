@@ -65,12 +65,7 @@ class _PublishResultsDialogState extends ConsumerState<PublishResultsDialog> {
         );
 
     Navigator.of(context).pop();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Published to your profile.'),
-        showCloseIcon: true,
-      ),
-    );
+    NmtkSnackBars.success(context, 'Published to your profile.');
     setState(() => _isPublishing = false);
   }
 

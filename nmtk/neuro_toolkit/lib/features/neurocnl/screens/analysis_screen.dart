@@ -133,12 +133,10 @@ class _AnalysisOwnershipCard extends ConsumerWidget {
     if (!context.mounted || opened) {
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      NmtkSnackBars.error(
+    NmtkSnackBars.error(
         context,
         'Could not open Neurochip automatically from this workspace.',
-      ),
-    );
+      );
   }
 }
 

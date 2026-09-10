@@ -103,32 +103,16 @@ class _HubPopupState extends ConsumerState<HubPopup> {
   });
 
   void _openInStudioPreview() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Workspace opening will be connected to the registry next.',
-        ),
-        showCloseIcon: true,
-      ),
-    );
+    NmtkSnackBars.info(context, 'Workspace opening will be connected to the registry next.',
+        );
   }
 
   void _runBenchmarkPreview() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Benchmark run is ready to open in Results.'),
-        showCloseIcon: true,
-      ),
-    );
+    NmtkSnackBars.success(context, 'Benchmark run is ready to open in Results.');
   }
 
   void _downloadNodePreview() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Node download is ready for the local Hub preview.'),
-        showCloseIcon: true,
-      ),
-    );
+    NmtkSnackBars.info(context, 'Node download is ready for the local Hub preview.');
   }
 
   @override
