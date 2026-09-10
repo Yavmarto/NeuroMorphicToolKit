@@ -114,7 +114,9 @@ class DeploymentStore:
 
     def delete_target(self, target_id: str) -> None:
         target = self.get_target(target_id)
-        self._secret_store.delete_many(list(target.secret_refs.values()))
+        self._secret_store.delete_many(
+            list(target.secret_refs.values()) + list(target.module_secret_refs.values())
+        )
         self._targets = [item for item in self._targets if item.id != target_id]
         if self._selected_target_id == target_id:
             self._selected_target_id = self._targets[0].id if self._targets else ""
@@ -178,7 +180,18 @@ class DeploymentStore:
                     field_name=field_name,
                     value=value,
                 )
+        module_secret_refs = dict(payload.get("moduleSecretRefs") or {})
+        module_secrets = payload.pop("moduleSecrets", None)
+        if isinstance(module_secrets, dict):
+            for field_name, value in module_secrets.items():
+                if isinstance(value, str) and value.strip():
+                    module_secret_refs[str(field_name)] = self._secret_store.put(
+                        target_id=target_id,
+                        field_name=f"module:{field_name}",
+                        value=value,
+                    )
         payload["secretRefs"] = secret_refs
+        payload["moduleSecretRefs"] = module_secret_refs
         return payload
 
     def _persist(self) -> None:

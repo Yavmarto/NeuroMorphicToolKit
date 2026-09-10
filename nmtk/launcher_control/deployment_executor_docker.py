@@ -950,6 +950,8 @@ done"""
 
     def _init_remote_secrets(self, target: DeploymentTarget, deploy_dir: str) -> None:
         """Ensure remote .env file exists and contains required secrets."""
+        from .module_deployment_env import build_dotenv_sync_script
+
         quoted = shlex.quote(deploy_dir)
         init_cmd = (
             f"touch {quoted}/.env && "
@@ -957,6 +959,18 @@ done"""
             f'echo "GRAFANA_ADMIN_PASSWORD=$(openssl rand -base64 32 2>/dev/null || head -c 32 /dev/urandom | base64)" >> {quoted}/.env'
         )
         self._ssh_run(target, init_cmd)
+        module_env = dict(target.module_environment)
+        for key, secret_ref in target.module_secret_refs.items():
+            if not secret_ref:
+                continue
+            secret = self._resolve_secret(secret_ref)
+            if secret:
+                module_env[str(key)] = secret
+        if module_env:
+            self._ssh_run(
+                target,
+                build_dotenv_sync_script(deploy_dir, module_env),
+            )
 
     def _ssh_run(
         self, target: DeploymentTarget, remote_cmd: str, timeout: int = 600
