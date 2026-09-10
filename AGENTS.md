@@ -241,6 +241,17 @@ the older `make backend-update`.
 **If a change still doesn't appear after a sync**, restart the `suite_api` container before
 assuming the patch is wrong — that distinguishes a stale reloader from a bad fix.
 
+**Serve a local Android APK over LAN** (developer-only; not an end-user path):
+
+```bash
+scripts/serve_apk.sh
+```
+
+Builds `nmtk/neuro_toolkit` (`flutter build apk --release` by default), serves
+`build/app/outputs/flutter-apk/` on port `8765`, prints a tap-friendly download URL, and
+shows a QR code when `qrencode` is installed. Use `--debug` for a debug APK or `--skip-build`
+to re-serve an existing build. Re-running stops any prior listener on that port.
+
 #### Port 8002 on the dev host belongs to the native Akida service
 
 `192.168.2.90` runs a real BrainChip Akida card served by the native `neurochip.service`
