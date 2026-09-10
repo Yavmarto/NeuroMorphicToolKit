@@ -35,6 +35,7 @@ class WorkspaceRepoCard extends StatelessWidget {
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
           onTap: onTap,
+          // Allowed: single-topic surface — one selectable workspace row.
           child: NmtkSurfaceCard(
             padding: const EdgeInsets.all(16),
             child: Row(

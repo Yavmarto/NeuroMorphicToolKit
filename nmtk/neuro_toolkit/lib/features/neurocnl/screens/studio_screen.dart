@@ -46,7 +46,6 @@ import 'package:neuro_toolkit/features/neurocnl/services/workspace_payload_build
 import 'package:neuro_toolkit/features/neurocnl/theme/app_theme.dart';
 import 'package:neuro_toolkit/features/neurocnl/widgets/studio_overlay_metrics.dart';
 import 'package:neuro_toolkit/features/neurocnl/screens/canvas/canvas_screen.dart';
-import 'package:neuro_toolkit/features/neurocnl/widgets/canvas/network_studio_view.dart';
 import 'package:neuro_toolkit/features/neurocnl/screens/hub/neurohub_workspace_save.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/shared/studio_shared.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/workspace/workspace_feature.dart'
@@ -330,11 +329,8 @@ class _StudioScreenState extends ConsumerState<StudioScreen>
       onManageHardwareTarget: (targetId) =>
           _handleManageHardwareTarget(context, targetId),
     ),
-    'defineModel' => KeepAliveWrapper(
-      child:
-          ref.watch(studioViewModeProvider).viewMode == StudioViewMode.network
-          ? const NetworkStudioView()
-          : const CanvasScreen(lockedTab: CanvasTab.architecture),
+    'defineModel' => const KeepAliveWrapper(
+      child: CanvasScreen(lockedTab: CanvasTab.architecture),
     ),
     'defineTrain' => _buildTrainingCanvas(),
     'defineEval' => _buildEvalCanvas(),
@@ -823,13 +819,11 @@ class _StudioScreenState extends ConsumerState<StudioScreen>
       if (!next.hasError || previous?.error == next.error) return;
       if (!_modelSyncNotificationsReady) return;
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        NmtkSnackBars.error(
+      NmtkSnackBars.error(
           context,
           'Model sync failed — CNL still shows the last good version. '
           'Review the Model canvas and correct or remove the unsupported node.',
-        ),
-      );
+        );
     });
 
     final routeUri = _currentRouteUri();
@@ -1486,11 +1480,11 @@ class _StudioScreenState extends ConsumerState<StudioScreen>
     if (!mounted) {
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      isError
-          ? NmtkSnackBars.error(context, message)
-          : NmtkSnackBars.success(context, message),
-    );
+    if (isError) {
+      NmtkSnackBars.error(context, message);
+    } else {
+      NmtkSnackBars.success(context, message);
+    }
   }
 
   void _notifyPlatformRequired(bool platformsReady) {

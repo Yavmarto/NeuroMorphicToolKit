@@ -220,6 +220,10 @@ class _AkidaVisualizationPanelState extends State<AkidaVisualizationPanel> {
                     context,
                     visualization,
                   ),
+                  StudioResultView.brainviz => _buildGrid(
+                    context,
+                    visualization,
+                  ),
                 },
         ),
       ],
