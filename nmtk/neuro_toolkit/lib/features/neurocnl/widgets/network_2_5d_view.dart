@@ -310,7 +310,7 @@ class _Network25DViewState extends State<Network25DView>
 
   CanvasNode? _hitTestNode(Offset local, _FitTransform fit) {
     final depths = _effectiveDepths();
-    final projection = Network25DProjection(size: fit.size);
+    final projection = Network25DProjection(size: fit.size, camera: _camera);
     CanvasNode? closest;
     var closestDistance = _nodeHitRadius;
     for (final node in widget.graph.nodes) {
