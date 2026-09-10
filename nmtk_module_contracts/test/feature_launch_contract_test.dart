@@ -20,6 +20,7 @@ void main() {
     final restorationState = <String, Object?>{'tab': 'reports'};
     NmtkFeatureNavigationRequest? navigationRequest;
     NmtkFeatureErrorEvent? errorEvent;
+    var recovered = 0;
     final context = NmtkFeatureLaunchContext(
       moduleId: NmtkModuleId.neurobench,
       backendUri: Uri.parse('http://127.0.0.1:9000/api/neurobench'),
@@ -29,6 +30,7 @@ void main() {
         return true;
       },
       onReportError: (event) async => errorEvent = event,
+      onRecovered: () async => recovered++,
       onEditServer: () async {},
     );
 
@@ -53,5 +55,22 @@ void main() {
     );
     await context.onReportError(event);
     expect(errorEvent, same(event));
+
+    await context.onRecovered();
+    expect(recovered, 1);
+  });
+
+  test('launch context defaults to a no-op recovery reporter', () async {
+    final context = NmtkFeatureLaunchContext(
+      moduleId: NmtkModuleId.neurobench,
+      backendUri: Uri.parse('http://127.0.0.1:9000/api/neurobench'),
+      onNavigate: (_) async => false,
+      onReportError: (_) async {},
+      onEditServer: () async {},
+    );
+
+    // Must not throw and must be non-null even when the host omits it.
+    await context.onRecovered();
+    expect(context.onRecovered, isNotNull);
   });
 }
