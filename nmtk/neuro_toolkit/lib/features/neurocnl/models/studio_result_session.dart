@@ -4,7 +4,8 @@ enum StudioResultView {
   architecture,
   grid,
   raster,
-  weights;
+  weights,
+  brainviz;
 
   /// Human-readable name for the view switch.
   ///
@@ -17,6 +18,7 @@ enum StudioResultView {
     StudioResultView.grid => 'Grid',
     StudioResultView.raster => 'Raster',
     StudioResultView.weights => 'Weights',
+    StudioResultView.brainviz => 'Brainviz',
   };
 
   @override

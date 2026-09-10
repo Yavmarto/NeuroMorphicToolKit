@@ -213,6 +213,46 @@ void main() {
       expect(copy.repulsion, config.repulsion);
       expect(copy.damping, config.damping);
     });
+
+    test('correlation attraction pulls positively correlated nodes closer', () {
+      final graph = CanvasGraph(
+        nodes: [_node('a'), _node('b'), _node('c')],
+        edges: const <CanvasEdge>[],
+        metadata: const <String, dynamic>{},
+      );
+      final apart = ForceDirectedLayout(
+        graph,
+        config: const ForceDirectedLayoutConfig(
+          repulsion: 2000,
+          correlationAttraction: 0.35,
+          maxIterations: 120,
+        ),
+      );
+      apart.setCorrelations(<String, Map<String, double>>{
+        'a': <String, double>{'b': 0.95},
+        'b': <String, double>{'a': 0.95},
+      });
+      apart.relax(80);
+
+      final control = ForceDirectedLayout(
+        graph,
+        config: const ForceDirectedLayoutConfig(
+          repulsion: 2000,
+          correlationAttraction: 0,
+          maxIterations: 120,
+        ),
+      )..relax(80);
+
+      final correlatedDistance = _distance(
+        apart.positions['a']!,
+        apart.positions['b']!,
+      );
+      final controlDistance = _distance(
+        control.positions['a']!,
+        control.positions['b']!,
+      );
+      expect(correlatedDistance, lessThan(controlDistance));
+    });
   });
 
   group('computeNetworkDepths', () {
@@ -242,6 +282,23 @@ void main() {
       expect(depths.keys.toSet(), {'a', 'b'});
       for (final value in depths.values) {
         expect(value, inInclusiveRange(0.0, 1.0));
+      }
+    });
+  });
+
+  group('ForceDirectedLayout3D', () {
+    test('settles to finite 3D positions', () {
+      final graph = neuronRasterGraph(<String, List<double>>{
+        '0': <double>[1],
+        '1': <double>[2],
+        '2': <double>[3],
+      });
+      final layout = ForceDirectedLayout3D(graph)..relax(48);
+      expect(layout.isSettled, isTrue);
+      for (final position in layout.positions.values) {
+        expect(position.x.isFinite, isTrue);
+        expect(position.y.isFinite, isTrue);
+        expect(position.z.isFinite, isTrue);
       }
     });
   });

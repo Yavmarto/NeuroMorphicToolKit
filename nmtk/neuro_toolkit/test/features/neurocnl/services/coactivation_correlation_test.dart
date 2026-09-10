@@ -178,6 +178,25 @@ void main() {
     });
   });
 
+  group('correlationPairs', () {
+    test('returns undirected pairs above threshold', () {
+      final pairs = correlationPairs(<String, Map<String, double>>{
+        'a': {'b': 0.8, 'c': 0.02},
+        'b': {'a': 0.8},
+        'c': {'a': 0.02, 'd': 0.5},
+        'd': {'c': 0.5},
+      });
+      expect(pairs.length, 2);
+      expect(
+        pairs.map((pair) => (pair.a, pair.b, pair.strength)).toSet(),
+        {
+          ('a', 'b', 0.8),
+          ('c', 'd', 0.5),
+        },
+      );
+    });
+  });
+
   group('coactivationEdgeStrengths', () {
     test('maps each edge to its endpoint correlation', () {
       final graph = _graph(<CanvasEdge>[

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart' show Color;
 
-import 'package:neuro_toolkit/features/neurocnl/models/studio_result_session.dart' show StudioResultView;
-import 'package:neuro_toolkit/features/neurocnl/utils/npy_parser.dart' show NpyArray, NpyParser;
+import 'package:neuro_toolkit/features/neurocnl/models/studio_result_session.dart'
+    show StudioResultView;
+import 'package:neuro_toolkit/features/neurocnl/utils/npy_parser.dart'
+    show NpyArray, NpyParser;
 
 /// One activity export reduced to the shape the playback views consume.
 typedef ResolvedActivityRaster = ({
@@ -71,7 +73,14 @@ extension StudioResultViewUi on StudioResultView {
   int get stackIndex => switch (this) {
     StudioResultView.architecture => 0,
     StudioResultView.weights => 2,
+    StudioResultView.brainviz => 3,
     _ => 1,
+  };
+
+  /// True for spike-playback views that share the grid export and epoch clock.
+  bool get usesActivityPlayback => switch (this) {
+    StudioResultView.architecture || StudioResultView.weights => false,
+    _ => true,
   };
 }
 

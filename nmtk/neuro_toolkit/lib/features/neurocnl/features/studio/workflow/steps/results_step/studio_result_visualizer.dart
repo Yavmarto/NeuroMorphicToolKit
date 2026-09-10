@@ -29,6 +29,7 @@ import 'package:neuro_toolkit/features/neurocnl/features/studio/workflow/steps/a
 import 'package:neuro_toolkit/features/neurocnl/features/studio/workflow/steps/platform_summary.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/workflow/steps/results_comparison/comparison_view.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/workflow/steps/results_step/network_playback_panel.dart';
+import 'package:neuro_toolkit/features/neurocnl/features/studio/workflow/steps/results_step/results_brainviz_panel.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/workflow/steps/results_step/support.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/workflow/steps/results_step/weights_view_tab.dart';
 
@@ -640,7 +641,7 @@ class _StudioResultVisualizerState extends ConsumerState<StudioResultVisualizer>
         final playbackClip = _activityRaster;
         final showPlaybackTransport =
             playbackClip.rasterSource != null &&
-            _view != StudioResultView.architecture &&
+            _view.usesActivityPlayback &&
             playbackClip.duration > 1;
         final playbackClock = showPlaybackTransport
             ? _clockFor(
@@ -766,8 +767,7 @@ class _StudioResultVisualizerState extends ConsumerState<StudioResultVisualizer>
               // layer picker and epoch scrubber stack instead of sharing one
               // row — a single row with both plus the scrubber overflowed at
               // phone widths.
-              if ((_view != StudioResultView.architecture &&
-                      layerLabels.length > 1) ||
+              if ((_view.usesActivityPlayback && layerLabels.length > 1) ||
                   scrubEpochs.length > 1)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
@@ -775,7 +775,7 @@ class _StudioResultVisualizerState extends ConsumerState<StudioResultVisualizer>
                       ? Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            if (_view != StudioResultView.architecture &&
+                            if (_view.usesActivityPlayback &&
                                 layerLabels.length > 1) ...[
                               _buildLayerDropdown(
                                 layerLabels,
@@ -799,7 +799,7 @@ class _StudioResultVisualizerState extends ConsumerState<StudioResultVisualizer>
                         )
                       : Row(
                           children: [
-                            if (_view != StudioResultView.architecture &&
+                            if (_view.usesActivityPlayback &&
                                 layerLabels.length > 1) ...[
                               _buildLayerDropdown(
                                 layerLabels,
@@ -866,6 +866,21 @@ class _StudioResultVisualizerState extends ConsumerState<StudioResultVisualizer>
                             child: WeightsViewTab(
                               jobId: jobId,
                               unavailableMessage: sourceUnavailable,
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: ResultsBrainvizPanel(
+                              rasterId:
+                                  '$_selectedLayer@${selectedEpoch?.epoch}@$_loadedEpoch',
+                              raster: playbackClip.raster,
+                              duration: playbackClip.duration,
+                              isLoading: _isLoadingActivity,
+                              error: sourceUnavailable ?? _activityError,
+                              playbackSession: _epochPlaybackSession,
+                              playbackController: playbackClock,
+                              onPlaybackComplete: () =>
+                                  _advanceEpochPlayback(maxIndex),
                             ),
                           ),
                         ],

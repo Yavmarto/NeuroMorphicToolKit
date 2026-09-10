@@ -342,6 +342,41 @@ Map<String, double> coactivationEdgeStrengths(
   return result;
 }
 
+/// Undirected correlation pairs above [min], for brainviz edge rendering.
+List<({String a, String b, double strength})> correlationPairs(
+  Map<String, Map<String, double>> matrix, {
+  double min = 0.05,
+}) {
+  if (matrix.isEmpty) return const [];
+  final pairs = <({String a, String b, double strength})>[];
+  final ids = matrix.keys.toList()..sort();
+  for (var i = 0; i < ids.length; i++) {
+    final a = ids[i];
+    final row = matrix[a];
+    if (row == null) continue;
+    for (var j = i + 1; j < ids.length; j++) {
+      final b = ids[j];
+      final r = row[b] ?? matrix[b]?[a];
+      if (r == null || r <= min) continue;
+      pairs.add((a: a, b: b, strength: r.clamp(0.0, 1.0)));
+    }
+  }
+  return pairs;
+}
+
+/// Count of correlation partners at or above [min] per node id.
+Map<String, int> correlationDegrees(
+  Map<String, Map<String, double>> matrix, {
+  double min = 0.05,
+}) {
+  final degrees = <String, int>{};
+  for (final pair in correlationPairs(matrix, min: min)) {
+    degrees.update(pair.a, (value) => value + 1, ifAbsent: () => 1);
+    degrees.update(pair.b, (value) => value + 1, ifAbsent: () => 1);
+  }
+  return degrees;
+}
+
 /// Stable cluster index per node id (`0`-based). Singletons are omitted.
 Map<String, int> coactivationClusterIndices(CoactivationSnapshot? snapshot) {
   if (snapshot == null || snapshot.isEmpty) return const <String, int>{};

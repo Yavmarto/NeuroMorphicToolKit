@@ -11,6 +11,7 @@ import 'package:neuro_toolkit/features/neurocnl/theme/app_theme.dart';
 import 'package:neuro_toolkit/features/neurocnl/theme/nir_node_styles.dart';
 import 'package:neuro_toolkit/features/neurocnl/utils/canvas_projection_utils.dart'
     show spikeRateColor;
+import 'package:neuro_toolkit/features/neurocnl/utils/force_directed_layout.dart';
 import 'package:neuro_toolkit/features/neurocnl/utils/globe_layout.dart';
 import 'package:neuro_toolkit/features/neurocnl/utils/glow_sprite.dart';
 import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart' hide AppTheme;
@@ -54,6 +55,8 @@ class Network25DView extends StatefulWidget {
     this.showChrome = true,
     this.padding = 64.0,
     this.nodeClusterIndices,
+    this.forceDirected = false,
+    this.correlationMatrix,
   });
 
   /// Topology to lay out and draw.
@@ -96,13 +99,22 @@ class Network25DView extends StatefulWidget {
   /// Padding kept free on every edge when fitting the layout to the viewport.
   final double padding;
 
+  /// When true, lays out with [CorrelationForceNetworkLayout] instead of the
+  /// static globe. Used by the Results brainviz tab.
+  final bool forceDirected;
+
+  /// Symmetric Pearson matrix for co-activation attraction. Only read when
+  /// [forceDirected] is true.
+  final Map<String, Map<String, double>>? correlationMatrix;
+
   @override
   State<Network25DView> createState() => _Network25DViewState();
 }
 
 class _Network25DViewState extends State<Network25DView>
     with SingleTickerProviderStateMixin {
-  late GlobeNetworkLayout _layout;
+  GlobeNetworkLayout? _globeLayout;
+  CorrelationForceNetworkLayout? _forceLayout;
   Ticker? _ticker;
   String? _internalSelectedId;
   String? _draggingNodeId;
@@ -130,12 +142,22 @@ class _Network25DViewState extends State<Network25DView>
   @override
   void didUpdateWidget(covariant Network25DView oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (_topologyChanged(oldWidget.graph, widget.graph)) {
-      _layout.updateGraph(
-        widget.graph,
-        categoryOf: GlobeNetworkLayout.categoryResolver(widget.nirTypes),
-      );
+    if (widget.forceDirected != oldWidget.forceDirected) {
+      _rebuildLayout();
+    } else if (_topologyChanged(oldWidget.graph, widget.graph)) {
+      if (widget.forceDirected) {
+        _forceLayout?.updateGraph(widget.graph);
+      } else {
+        _globeLayout?.updateGraph(
+          widget.graph,
+          categoryOf: GlobeNetworkLayout.categoryResolver(widget.nirTypes),
+        );
+      }
       _smoothedActivity.clear();
+    }
+    if (widget.forceDirected &&
+        widget.correlationMatrix != oldWidget.correlationMatrix) {
+      _forceLayout?.setCorrelations(widget.correlationMatrix);
     }
     if (widget.activity != oldWidget.activity ||
         widget.depths != oldWidget.depths) {
@@ -151,12 +173,36 @@ class _Network25DViewState extends State<Network25DView>
   }
 
   void _rebuildLayout() {
-    _layout = GlobeNetworkLayout(
-      widget.graph,
-      categoryOf: GlobeNetworkLayout.categoryResolver(widget.nirTypes),
-    );
+    if (widget.forceDirected) {
+      _globeLayout = null;
+      _forceLayout = CorrelationForceNetworkLayout(widget.graph);
+      _forceLayout!.setCorrelations(widget.correlationMatrix);
+    } else {
+      _forceLayout = null;
+      _globeLayout = GlobeNetworkLayout(
+        widget.graph,
+        categoryOf: GlobeNetworkLayout.categoryResolver(widget.nirTypes),
+      );
+    }
     _syncActivityTargets();
   }
+
+  Map<String, Offset> get _layoutPositions =>
+      widget.forceDirected ? _forceLayout!.positions : _globeLayout!.positions;
+
+  Map<String, double> get _layoutDepths =>
+      widget.forceDirected ? _forceLayout!.depths : _globeLayout!.depths;
+
+  void _pinLayoutNode(String nodeId, Offset position) {
+    if (widget.forceDirected) {
+      _forceLayout!.pin(nodeId, position);
+    } else {
+      _globeLayout!.pin(nodeId, position);
+    }
+  }
+
+  Rect? _layoutBounds() =>
+      widget.forceDirected ? _forceLayout!.bounds() : _globeLayout!.bounds();
 
   void _syncActivityTargets() {
     final target = widget.activity;
@@ -191,7 +237,10 @@ class _Network25DViewState extends State<Network25DView>
 
   // ── Ticker ─────────────────────────────────────────────────────────────────
 
-  bool get _wantsAnimation => widget.animate && widget.activity != null;
+  bool get _wantsAnimation =>
+      widget.animate &&
+      (widget.activity != null ||
+          (widget.forceDirected && _forceLayout?.isSettled == false));
 
   void _restartTickerIfNeeded() {
     if (!_wantsAnimation) {
@@ -217,6 +266,9 @@ class _Network25DViewState extends State<Network25DView>
         _smoothedActivity[entry.key] =
             current + (entry.value - current) * _activityLerp;
       }
+    }
+    if (widget.forceDirected) {
+      _forceLayout?.advance();
     }
 
     setState(() {});
@@ -249,17 +301,17 @@ class _Network25DViewState extends State<Network25DView>
     final node = _hitTestNode(details.localFocalPoint, fit);
     if (node != null) {
       setState(() => _draggingNodeId = node.id);
-      _layout.pin(node.id, _layout.positions[node.id] ?? Offset.zero);
+      _pinLayoutNode(node.id, _layoutPositions[node.id] ?? Offset.zero);
     }
   }
 
   void _handleScaleUpdate(ScaleUpdateDetails details, _FitTransform fit) {
     final id = _draggingNodeId;
     if (id != null && details.pointerCount <= 1) {
-      final current = _layout.positions[id];
+      final current = _layoutPositions[id];
       if (current != null) {
         final next = fit.invert(fit.apply(current) + details.focalPointDelta);
-        _layout.pin(id, next);
+        _pinLayoutNode(id, next);
         setState(() {});
       }
       return;
@@ -308,7 +360,7 @@ class _Network25DViewState extends State<Network25DView>
     CanvasNode? closest;
     var closestDistance = _nodeHitRadius;
     for (final node in widget.graph.nodes) {
-      final position = _layout.positions[node.id];
+      final position = _layoutPositions[node.id];
       if (position == null) continue;
       final depth = depths[node.id] ?? 0.5;
       final projected = projection.project(fit.apply(position), depth);
@@ -321,7 +373,7 @@ class _Network25DViewState extends State<Network25DView>
     return closest;
   }
 
-  Map<String, double> _effectiveDepths() => widget.depths ?? _layout.depths;
+  Map<String, double> _effectiveDepths() => widget.depths ?? _layoutDepths;
 
   // ── Build ──────────────────────────────────────────────────────────────────
 
@@ -337,13 +389,13 @@ class _Network25DViewState extends State<Network25DView>
     return LayoutBuilder(
       builder: (context, constraints) {
         final size = Size(constraints.maxWidth, constraints.maxHeight);
-        final fit = _FitTransform.forLayout(
-          layout: _layout,
+        final fit = _FitTransform.forBounds(
+          bounds: _layoutBounds(),
           size: size,
           padding: widget.padding,
         );
         final fitted = <String, Offset>{
-          for (final entry in _layout.positions.entries)
+          for (final entry in _layoutPositions.entries)
             entry.key: fit.apply(entry.value),
         };
         final depths = _effectiveDepths();
@@ -720,12 +772,12 @@ class _FitTransform {
   final double scale;
   final Offset sourceCenter;
 
-  factory _FitTransform.forLayout({
-    required GlobeNetworkLayout layout,
+  factory _FitTransform.forBounds({
+    required Rect? bounds,
     required Size size,
     required double padding,
   }) {
-    final box = layout.bounds();
+    final box = bounds;
     if (box == null) {
       return _FitTransform(
         size: size,
