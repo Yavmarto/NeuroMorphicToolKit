@@ -1,30 +1,49 @@
 # NeuroToolkit App Specification
 
+> **Product intent (read this first):** The frontend is **one integrated surface — NeuroStudio**.
+> There is **no module marketplace, no module picker, and no per-module tab bar** in the
+> launcher. Users connect to a server, and everything they see lives inside the single mounted
+> NeuroStudio surface. This has regressed multiple times (see CEL-100): do not reintroduce
+> module-selection UI from any "marketplace" or "catalog" idea.
+
 ## Overview
-NeuroToolkit is a centralized, modular hub built in Flutter that allows users to easily manage, install, and run various neuromorphic engineering sub-modules. Instead of forcing users to download and configure a monolithic repository, the app provides a lightweight core where users can browse available tools (e.g., `Neuro-Dream-Hand`, `neurocnl`, `nmtk`) and selectively "install" what they need.
+NeuroToolkit (`nmtk/neuro_toolkit`) is the single shipped Flutter app for the
+NeuroMorphicToolKit suite. It is a deliberately thin launcher: it connects to a backend server,
+tracks module health from the `launcher-control` manifest, and mounts exactly **one** module
+surface full-window. In practice that surface is **NeuroStudio**, which owns all navigation,
+chrome, workspace switching, and the pipeline UX. The launcher renders no navigation of its own.
 
 ## Goals
-- **Modularity:** Users download only the tools they require.
-- **Ease of Use:** Provide a simple graphical interface to manage complex Python dependencies and CLI tools.
-- **Discoverability:** Serve as a catalog for related neuromorphic projects.
+- **Single surface:** One app, one workspace. After connecting to a server, the user works
+  entirely inside NeuroStudio — no picking, browsing, or installing of modules.
+- **Ease of Use:** Auto-detect the backend and mount the workspace with minimal setup steps.
+- **Integration:** All suite capabilities (simulation, CNL compilation, deployment, datasets)
+  are features inside NeuroStudio, not separate tools the user must discover or install.
 
 ## Architecture
-1. **Frontend (Flutter):**
-   - **Dashboard:** Overview of installed tools and system status.
-   - **Module Marketplace:** A catalog view showing available tools with descriptions, statuses (Not Installed, Installed, Update Available), and an "Install" button.
-   - **Tool Runners:** Dedicated GUI wrappers for each installed tool to execute commands (e.g., running a simulation in `Neuro-Dream-Hand` or compiling a spec in `neurocnl`).
-2. **Backend/Local Integration:**
-   - **Module Manager:** Handles cloning Git repositories or downloading packages.
-   - **Environment Manager:** Provisions isolated Python environments (via `venv` or `conda`) for each tool to prevent dependency conflicts.
-   - **Process Execution:** Uses Dart's `Process.run` to execute underlying Python scripts and stream stdout/stderr back to the Flutter UI.
+1. **Frontend (Flutter launcher):**
+   - **Tool View:** Hosts exactly one mounted module surface, full-window, with no outer nav
+     chrome (see ADR-0009 `docs/ADR-claude/0009-single-workspace-launcher-navigation.md`).
+   - **Server connect / Backend Setup:** The only pre-workspace flow — connect to a server,
+     verify backend health, then enter NeuroStudio.
+   - **Embedded WebViews:** Only for surfaces that are genuinely web-backed (e.g., Jupyter);
+     these are rendered inside the single workspace, not as a module catalog.
+2. **Backend / Local Integration:**
+   - **launcher-control:** Serves the module manifest (`assets/modules.json` bundled, remote
+     manifest takes precedence) and module lifecycle/health. The manifest describes deployed
+     suite services — it is not a user-facing "install" catalog.
+   - **Process Execution:** The launcher starts/monitors local services and streams status;
+     it does not present install/update buttons to the user.
 
-## Modules Included
+## Suite Modules (backend services, not user-facing picks)
 1. **Neuro-Dream-Hand:** Neuromorphic simulation framework for prosthetic hand control.
-2. **neurocnl:** Controlled Natural Language specifications compiler for neuromorphic computing.
+2. **neurocnl:** Controlled Natural Language specifications compiler (hosts NeuroStudio).
 3. **nmtk:** Neuromorphic Toolkit hub for various utilities.
 
-## Phase 1 Implementation (Current Scope)
-- Build the Flutter UI shell (Navigation, Dashboard, Module Catalog).
-- Implement state management for module statuses (Uninstalled, Installing, Installed).
-- Provide a mock installation process (simulating a download and setup phase with progress indicators).
-- Set up a generic "Tool View" for launched modules.
+## Historical / Deprecated (do NOT implement)
+The following describe an obsolete early vision and are kept only as history. They contradict
+the current product intent and the root README:
+- ~~"Module Marketplace": a catalog view to browse, install, and update tools.~~ Deprecated.
+- ~~"Dashboard: overview of installed tools."~~ Deprecated.
+- ~~Module picker panel / module tab bar (`ModulePickerPanel`, `ModuleTabBar`).~~ Removed in
+  CEL-101/CEL-103 (commits `ba3704fe`, landed 2026-09-08). Do not reintroduce.
