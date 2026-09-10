@@ -155,4 +155,22 @@ void main() {
     expect(find.text('Review playback'), findsOneWidget);
     expect(find.text('Idle'), findsNothing);
   });
+
+  testWidgets('renders the layer search and filters the layer list', (
+    WidgetTester tester,
+  ) async {
+    final container = _container();
+    addTearDown(container.dispose);
+    await tester.pumpWidget(_wrap(container));
+    await tester.pump();
+
+    expect(find.byType(TextField), findsOneWidget);
+
+    await tester.enterText(find.byType(TextField), 'outp');
+    await tester.pump();
+
+    expect(find.text('output'), findsOneWidget);
+    expect(find.text('input'), findsNothing);
+    expect(find.text('hidden'), findsNothing);
+  });
 }
