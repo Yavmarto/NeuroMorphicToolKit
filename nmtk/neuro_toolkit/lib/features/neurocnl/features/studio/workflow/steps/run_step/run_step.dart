@@ -10,10 +10,12 @@ import 'package:neuro_toolkit/features/neurocnl/l10n/app_localizations.dart';
 import 'package:neuro_toolkit/features/neurocnl/models/studio_result_visualization.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/canvas/canvas_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/studio_result_session_provider.dart';
+import 'package:neuro_toolkit/features/neurocnl/providers/studio_view_mode_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/training_mode_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/training_run_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/workspace_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/screens/canvas/canvas_screen.dart';
+import 'package:neuro_toolkit/features/neurocnl/widgets/canvas/network_studio_view.dart';
 import 'package:neuro_toolkit/features/neurocnl/widgets/studio_overlay_metrics.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/deployment_feature.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/shared/studio_shared.dart';
@@ -376,6 +378,8 @@ class _RunStepState extends ConsumerState<RunStep> {
     );
     final workspace = ref.watch(workspaceProvider);
     final resultSession = ref.watch(studioResultSessionProvider);
+    final isNetwork =
+        ref.watch(studioViewModeProvider).viewMode == StudioViewMode.network;
     final overlayMetrics = StudioOverlayMetrics.maybeOf(context);
     // Same offset Setup's load row and Deploy's target picker use, so all
     // three per-step header rows sit the same distance below the stepper.
@@ -446,27 +450,29 @@ class _RunStepState extends ConsumerState<RunStep> {
             // ── Canvas Background ──────────────────────────────────────
             Positioned.fill(
               child: KeepAliveWrapper(
-                child: CanvasScreen(
-                  lockedTab: CanvasTab.architecture,
-                  disableEditingChrome: true,
-                  bottomRightUtilityPanel: isCompact
-                      ? null
-                      : Material(
-                          elevation: 4,
-                          borderRadius: BorderRadius.circular(
-                            NmtkShellTokens.of(context).radiusSm,
-                          ),
-                          clipBehavior: Clip.antiAlias,
-                          child: MetricsSidebar(
-                            status: status,
-                            epochs: epochs,
-                            lastEpoch: lastEpoch,
-                            colors: colors,
-                          ),
-                        ),
-                  bottomRightUtilityPanelHeight: kMetricsDockHeight,
-                  bottomRightUtilityPanelWidth: kMetricsDockWidth,
-                ),
+                child: isNetwork
+                    ? const NetworkStudioView()
+                    : CanvasScreen(
+                        lockedTab: CanvasTab.architecture,
+                        disableEditingChrome: true,
+                        bottomRightUtilityPanel: isCompact
+                            ? null
+                            : Material(
+                                elevation: 4,
+                                borderRadius: BorderRadius.circular(
+                                  NmtkShellTokens.of(context).radiusSm,
+                                ),
+                                clipBehavior: Clip.antiAlias,
+                                child: MetricsSidebar(
+                                  status: status,
+                                  epochs: epochs,
+                                  lastEpoch: lastEpoch,
+                                  colors: colors,
+                                ),
+                              ),
+                        bottomRightUtilityPanelHeight: kMetricsDockHeight,
+                        bottomRightUtilityPanelWidth: kMetricsDockWidth,
+                      ),
               ),
             ),
 
@@ -474,13 +480,17 @@ class _RunStepState extends ConsumerState<RunStep> {
               top: viewSwitchTop,
               left: 32,
               right: 12,
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: ResultsViewSwitch(
-                  key: const Key('run-result-view-switch'),
-                  view: widget.view,
-                  onChanged: widget.onViewChanged,
-                ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ResultsViewSwitch(
+                    key: const Key('run-result-view-switch'),
+                    view: widget.view,
+                    onChanged: widget.onViewChanged,
+                  ),
+                  const SizedBox(width: 8),
+                  const NetworkViewToggleButton(),
+                ],
               ),
             ),
 

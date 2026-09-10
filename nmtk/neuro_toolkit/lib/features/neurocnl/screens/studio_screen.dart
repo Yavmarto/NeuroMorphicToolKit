@@ -46,6 +46,7 @@ import 'package:neuro_toolkit/features/neurocnl/services/workspace_payload_build
 import 'package:neuro_toolkit/features/neurocnl/theme/app_theme.dart';
 import 'package:neuro_toolkit/features/neurocnl/widgets/studio_overlay_metrics.dart';
 import 'package:neuro_toolkit/features/neurocnl/screens/canvas/canvas_screen.dart';
+import 'package:neuro_toolkit/features/neurocnl/widgets/canvas/network_studio_view.dart';
 import 'package:neuro_toolkit/features/neurocnl/screens/hub/neurohub_workspace_save.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/shared/studio_shared.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/workspace/workspace_feature.dart'
@@ -329,8 +330,11 @@ class _StudioScreenState extends ConsumerState<StudioScreen>
       onManageHardwareTarget: (targetId) =>
           _handleManageHardwareTarget(context, targetId),
     ),
-    'defineModel' => const KeepAliveWrapper(
-      child: CanvasScreen(lockedTab: CanvasTab.architecture),
+    'defineModel' => KeepAliveWrapper(
+      child:
+          ref.watch(studioViewModeProvider).viewMode == StudioViewMode.network
+          ? const NetworkStudioView()
+          : const CanvasScreen(lockedTab: CanvasTab.architecture),
     ),
     'defineTrain' => _buildTrainingCanvas(),
     'defineEval' => _buildEvalCanvas(),

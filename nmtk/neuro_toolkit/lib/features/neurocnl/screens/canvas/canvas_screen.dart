@@ -21,6 +21,7 @@ import 'package:neuro_toolkit/features/neurocnl/providers/canvas/simulation_prov
 import 'package:neuro_toolkit/features/neurocnl/providers/canvas/sync_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/nir_import_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/spec_provider.dart';
+import 'package:neuro_toolkit/features/neurocnl/providers/studio_view_mode_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/canvas/validation_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/import_cnl_payload.dart';
 import 'package:neuro_toolkit/features/neurocnl/routing/canvas/neurosim_nav_section.dart';
@@ -524,6 +525,18 @@ class _CanvasScreenState extends ConsumerState<CanvasScreen> {
                                       ),
                                     ],
                                     extraRightActions: [
+                                      CanvasChromeIconButton(
+                                        // ZETA-MIGRATION-EXEMPT: no Zeta
+                                        // equivalent (network graph hub)
+                                        icon: Icons.hub_outlined,
+                                        tooltip: 'Network view',
+                                        enabled: true,
+                                        onPressed: () => ref
+                                            .read(
+                                              studioViewModeProvider.notifier,
+                                            )
+                                            .setMode(StudioViewMode.network),
+                                      ),
                                       CanvasChromeIconButton(
                                         icon: ZetaIcons.tune,
                                         tooltip: 'Inspector',

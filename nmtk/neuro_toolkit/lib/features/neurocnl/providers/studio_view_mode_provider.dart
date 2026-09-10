@@ -5,7 +5,7 @@ import 'package:neuro_toolkit/features/neurocnl/services/server_config_service.d
 part 'studio_view_mode_provider.g.dart';
 
 /// Which pane is shown in the left editor workspace of NeuroStudio.
-enum StudioViewMode { cnl, nir, canvas }
+enum StudioViewMode { cnl, nir, canvas, network }
 
 /// State for the editor view toggle.
 ///
@@ -36,6 +36,7 @@ class StudioViewModeController extends _$StudioViewModeController {
 
   static StudioViewMode _loadPersistedMode() {
     final stored = ServerConfigService.getString(_modeKey);
+    if (stored == 'network') return StudioViewMode.network;
     if (stored == 'canvas') return StudioViewMode.canvas;
     if (stored == 'nir') return StudioViewMode.nir;
     return StudioViewMode.cnl;
@@ -43,6 +44,7 @@ class StudioViewModeController extends _$StudioViewModeController {
 
   void setMode(StudioViewMode mode) {
     ServerConfigService.setString(_modeKey, switch (mode) {
+      StudioViewMode.network => 'network',
       StudioViewMode.canvas => 'canvas',
       StudioViewMode.nir => 'nir',
       StudioViewMode.cnl => 'cnl',
