@@ -241,16 +241,21 @@ the older `make backend-update`.
 **If a change still doesn't appear after a sync**, restart the `suite_api` container before
 assuming the patch is wrong — that distinguishes a stale reloader from a bad fix.
 
-**Serve a local Android APK over LAN** (developer-only; not an end-user path):
+**Build Android APK and copy to Box** (developer-only; not an end-user path):
 
 ```bash
-scripts/serve_apk.sh
+scripts/build_and_deliver_apk.sh
 ```
 
-Builds `nmtk/neuro_toolkit` (`flutter build apk --release` by default), serves
-`build/app/outputs/flutter-apk/` on port `8765`, prints a tap-friendly download URL, and
-shows a QR code when `qrencode` is installed. Use `--debug` for a debug APK or `--skip-build`
-to re-serve an existing build. Re-running stops any prior listener on that port.
+Builds `nmtk/neuro_toolkit` as a **profile** build by default (`--debug` and `--release` are
+also available as flags) and copies the Android APK into the local Box sync folder (default
+`~/Library/CloudStorage/Box-Box/NMTK/Builds`; override with `--box-dir` or `NMTK_BOX_DIR`).
+Pass `--with-dmg` to also build the macOS DMG installer, or `--dmg-only` for DMG only.
+Use `--skip-build` to copy existing artifacts without rebuilding.
+If Box is not installed or synced, the copy is skipped with a warning and the script still exits 0.
+A DMG build failure does not block APK delivery when `--with-dmg` is used.
+The macOS DMG path (`make build-macos-dmg-signed` → `create-dmg.sh`) uses the same Box copy
+helper and the same `NMTK_BOX_DIR` default.
 
 #### Port 8002 on the dev host belongs to the native Akida service
 
