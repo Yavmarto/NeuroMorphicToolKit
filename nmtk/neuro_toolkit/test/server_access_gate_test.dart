@@ -30,15 +30,17 @@ class _FakeConnectNotifier extends ConnectNotifier {
         phase: ConnectPhase.connected,
         session: ConnectSession(
           host: '192.168.2.90',
-          username: 'alice',
-          sessionToken: 'token',
+          username: '',
+          sessionToken: '',
         ),
         savedHost: '192.168.2.90',
       );
     } else {
       state = const ConnectState(
         phase: ConnectPhase.failed,
-        failureCause: 'Incorrect username or password.',
+        failureCause:
+            'Could not reach 192.168.2.90. Confirm the address and that '
+            'the server is running, then try again.',
         savedHost: '192.168.2.90',
       );
     }
@@ -55,8 +57,8 @@ class _FakeConnectNotifier extends ConnectNotifier {
       phase: ConnectPhase.connected,
       session: ConnectSession(
         host: request.host,
-        username: request.appUsername,
-        sessionToken: 'token',
+        username: '',
+        sessionToken: '',
       ),
       savedHost: request.host,
     );
@@ -98,13 +100,10 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      expect(find.text('Sign in to your server'), findsOneWidget);
-      expect(find.byKey(const Key('server-connect-sign-in')), findsOneWidget);
+      expect(find.text('Connect to your server'), findsOneWidget);
+      expect(find.byKey(const Key('server-connect-connect')), findsOneWidget);
       // The failed reconnect's reason is surfaced on the form.
-      expect(
-        find.textContaining('Incorrect username or password'),
-        findsWidgets,
-      );
+      expect(find.textContaining('Could not reach'), findsWidgets);
       // The workspace stays mounted behind the popup (CEL-103).
       expect(find.text('WORKSPACE'), findsOneWidget);
     },
@@ -129,46 +128,43 @@ void main() {
     },
   );
 
+  testWidgets('back affordance on setup returns to the connect form', (
+    tester,
+  ) async {
+    final notifier = _FakeConnectNotifier('reconnect-fail');
+    await tester.pumpWidget(_harness(notifier));
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(
+      find.byKey(const Key('server-connect-new-server')),
+    );
+    await tester.tap(find.byKey(const Key('server-connect-new-server')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Set up your server'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('server-setup-back')));
+    await tester.pumpAndSettle();
+
+    // Back on the connect form, not stuck in the setup dead end (CEL-88).
+    expect(find.text('Set up your server'), findsNothing);
+    expect(find.text('Connect to your server'), findsOneWidget);
+    expect(find.byKey(const Key('server-connect-connect')), findsOneWidget);
+  });
+
   testWidgets(
-    'back affordance on setup returns to the connect form',
+    'connecting does not touch ref after the gate unmounts the form',
     (tester) async {
       final notifier = _FakeConnectNotifier('reconnect-fail');
       await tester.pumpWidget(_harness(notifier));
       await tester.pumpAndSettle();
 
+      // The host is prefilled from the failed reconnect's saved host, so no
+      // input is needed before tapping connect.
       await tester.ensureVisible(
-        find.byKey(const Key('server-connect-new-server')),
+        find.byKey(const Key('server-connect-connect')),
       );
-      await tester.tap(find.byKey(const Key('server-connect-new-server')));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Set up your server'), findsOneWidget);
-
-      await tester.tap(find.byKey(const Key('server-setup-back')));
-      await tester.pumpAndSettle();
-
-      // Back on the connect form, not stuck in the setup dead end (CEL-88).
-      expect(find.text('Set up your server'), findsNothing);
-      expect(find.text('Sign in to your server'), findsOneWidget);
-      expect(find.byKey(const Key('server-connect-sign-in')), findsOneWidget);
-    },
-  );
-
-  testWidgets(
-    'signing in does not touch ref after the gate unmounts the form',
-    (tester) async {
-      final notifier = _FakeConnectNotifier('reconnect-fail');
-      await tester.pumpWidget(_harness(notifier));
-      await tester.pumpAndSettle();
-
-      await tester.enterText(find.byType(TextField).at(0), '192.168.2.90');
-      await tester.enterText(find.byType(TextField).at(1), 'alice');
-      await tester.enterText(find.byType(TextField).at(2), 'secret');
-
-      await tester.ensureVisible(
-        find.byKey(const Key('server-connect-sign-in')),
-      );
-      await tester.tap(find.byKey(const Key('server-connect-sign-in')));
+      await tester.tap(find.byKey(const Key('server-connect-connect')));
       // The gate flips to `connected` and unmounts ServerConnectScreen while
       // its `connect()` await is still pending -- flutter_test rethrows any
       // exception from that dangling future, so this settling without error

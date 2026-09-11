@@ -3,23 +3,18 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:neuro_toolkit/features/server/connect/connect_service.dart';
 import 'package:neuro_toolkit/features/server/shared/target_store.dart';
+import 'package:neuro_toolkit/services/control_api_service.dart';
 
 enum ConnectPhase { idle, reconnecting, connected, devOffline, failed }
 
-/// What the connect form submits: an app username against a host, with a
-/// credential that is a password today. The shape leaves room for a passkey
-/// variant later without a second method — same reasoning as the backend's
-/// `{username, credential}` login endpoint (see the CEL-25 plan document).
+/// What the connect form submits: just a server address. Connecting to an
+/// already-running dev server never requires a credential -- only
+/// `server_setup_screen.dart`'s provisioning flow (SSH/admin, for a
+/// brand-new server) still does. See CEL-171.
 class ConnectRequest {
-  const ConnectRequest({
-    required this.host,
-    required this.appUsername,
-    required this.credential,
-  });
+  const ConnectRequest({required this.host});
 
   final String host;
-  final String appUsername;
-  final String credential;
 }
 
 class ConnectState {
@@ -58,17 +53,18 @@ final targetStoreProvider = FutureProvider<TargetStore>((ref) async {
   return TargetStore(preferences: await SharedPreferences.getInstance());
 });
 
-/// Backs the connect form and drives auto-reconnect at app start. Replaces
-/// `launcher_bootstrap_notifier.dart` plus the connect half of
-/// `deployment_notifier.dart` (see the CEL-25 plan document) — this notifier
-/// only ever calls [ConnectService], never SSH.
+/// Backs the connect form and drives auto-reconnect at app start. A device
+/// connecting to an already-running server only ever needs the server to
+/// answer -- [ConnectService.login] and [ConnectService.reconnect] (the
+/// credentialed calls) are deliberately unused here; they remain for
+/// server_setup_screen.dart's separate provisioning flow. See CEL-171.
 class ConnectNotifier extends Notifier<ConnectState> {
   @override
   ConnectState build() => const ConnectState();
 
-  /// Called once at app start. Resolves to `connected` fast on a working
-  /// saved credential, else `failed` with [ConnectState.savedHost] set so the
-  /// connect form can prefill the host that needs re-entering credentials.
+  /// Called once at app start. Resolves to `connected` fast when the saved
+  /// host still answers, else `failed` with [ConnectState.savedHost] set so
+  /// the connect form can prefill the host that needs retrying.
   Future<void> reconnectOnOpen() async {
     if (state.phase == ConnectPhase.connected ||
         state.phase == ConnectPhase.devOffline) {
@@ -76,76 +72,62 @@ class ConnectNotifier extends Notifier<ConnectState> {
     }
     final store = await ref.read(targetStoreProvider.future);
     final last = await store.loadLastTarget();
-    if (last == null || last.sessionToken.isEmpty || last.credential.isEmpty) {
-      state = ConnectState(
+    if (last == null) {
+      state = const ConnectState(
         phase: ConnectPhase.failed,
-        savedHost: last?.host,
-        failureCause: last == null
-            ? 'No saved server to reconnect to.'
-            : 'No saved session for this server. Log in again.',
+        failureCause: 'No saved server to reconnect to.',
       );
       return;
     }
-    await _authenticate(
-      () => ref.read(connectServiceProvider).reconnect(last),
-      savedHost: last.host,
-    );
+    await _connectToHost(last.host);
   }
 
-  /// Submits the connect form. Retry is calling this again with a re-entered
-  /// credential.
-  Future<void> connect(ConnectRequest request) {
-    return _authenticate(
-      () => ref
-          .read(connectServiceProvider)
-          .login(
-            host: request.host,
-            username: request.appUsername,
-            credential: request.credential,
-          ),
-      savedHost: request.host,
-      credential: request.credential,
-    );
-  }
+  /// Submits the connect form. Retry is calling this again, typically after
+  /// the user fixes a typo'd address.
+  Future<void> connect(ConnectRequest request) => _connectToHost(request.host);
 
-  Future<void> _authenticate(
-    Future<ConnectSession> Function() attempt, {
-    required String savedHost,
-    String credential = '',
-  }) async {
-    state = ConnectState(
-      phase: ConnectPhase.reconnecting,
-      savedHost: savedHost,
-    );
+  Future<void> _connectToHost(String host) async {
+    state = ConnectState(phase: ConnectPhase.reconnecting, savedHost: host);
+
+    final String normalizedHost;
     try {
-      final session = await attempt();
-      final store = await ref.read(targetStoreProvider.future);
-      await store.saveTarget(
-        ConnectTarget(
-          host: session.host,
-          appUsername: session.username,
-          sessionToken: session.sessionToken,
-          credential: credential,
-        ),
-      );
-      state = ConnectState(
-        phase: ConnectPhase.connected,
-        session: session,
-        savedHost: session.host,
-      );
-    } on ConnectException catch (error) {
+      normalizedHost = ControlApiService.normalizeBaseUri(host).host;
+    } on FormatException catch (error) {
       state = ConnectState(
         phase: ConnectPhase.failed,
+        savedHost: host,
         failureCause: error.message,
-        savedHost: savedHost,
       );
-    } on Object catch (error) {
+      return;
+    }
+
+    final reachable = await ref
+        .read(connectServiceProvider)
+        .probe(host: normalizedHost);
+    if (!reachable) {
       state = ConnectState(
         phase: ConnectPhase.failed,
-        failureCause: error.toString(),
-        savedHost: savedHost,
+        savedHost: host,
+        failureCause:
+            'Could not reach $normalizedHost. Confirm the address and that '
+            'the server is running, then try again.',
       );
+      return;
     }
+
+    final store = await ref.read(targetStoreProvider.future);
+    await store.saveTarget(
+      ConnectTarget(host: normalizedHost, appUsername: ''),
+    );
+    state = ConnectState(
+      phase: ConnectPhase.connected,
+      session: ConnectSession(
+        host: normalizedHost,
+        username: '',
+        sessionToken: '',
+      ),
+      savedHost: normalizedHost,
+    );
   }
 
   void logout() {
