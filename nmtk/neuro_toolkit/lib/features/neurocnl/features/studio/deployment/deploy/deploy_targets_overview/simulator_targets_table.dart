@@ -83,6 +83,7 @@ class SimulatorTargetsTable extends ConsumerWidget {
         context,
         result,
       ),
+      SimulatorRunError err => _simulatorErrorText(context, err),
       _ => emptyCell,
     };
 
@@ -112,13 +113,14 @@ class SimulatorTargetsTable extends ConsumerWidget {
                       ),
                     ),
                   ),
-                  SimulatorRunError() => Tooltip(
-                    message: 'Run failed — tap to retry',
+                  SimulatorRunError err => Tooltip(
+                    message: '${formatSimulatorRunError(err)}\n\nTap to retry.',
                     child: ZetaIconButton.negative(
                       key: Key('simulator-target-run-$backend'),
                       size: ZetaWidgetSize.small,
                       icon: ZetaIcons.cancel_outline,
-                      semanticLabel: 'Run failed — tap to retry',
+                      semanticLabel:
+                          'Run failed: ${formatSimulatorRunError(err)}. Tap to retry.',
                       onPressed: () => runSimulatorBackend(ref, backend),
                     ),
                   ),
@@ -213,6 +215,21 @@ class SimulatorTargetsTable extends ConsumerWidget {
   /// `_SimulatorExecutionPaneState`) rather than anything carried on
   /// [SimulatorRunResult] itself, so it isn't reproducible here without
   /// duplicating that state-tracking.
+  Widget _simulatorErrorText(BuildContext context, SimulatorRunError error) {
+    final textStyles = Zeta.of(context).textStyles;
+    final colors = Zeta.of(context).colors;
+    final message = formatSimulatorRunError(error);
+    return Tooltip(
+      message: message,
+      child: Text(
+        message,
+        maxLines: 3,
+        overflow: TextOverflow.ellipsis,
+        style: textStyles.bodySmall.copyWith(color: colors.mainNegative),
+      ),
+    );
+  }
+
   Widget _simulatorResultText(BuildContext context, SimulatorRunResult result) {
     final textStyles = Zeta.of(context).textStyles;
     final colors = Zeta.of(context).colors;

@@ -48,6 +48,10 @@ void main() {
         _connectionEvent,
         onOpenBackendSetup: () => openedBackendSetup++,
       );
+      // Connection reports are grace-suppressed at startup so a still-starting
+      // backend does not flash a permanent-looking banner; it promotes only
+      // once the grace window expires with the backend still failing.
+      await tester.pump(hostedFeatureErrorStartupGrace);
       await tester.pumpAndSettle();
 
       expect(find.text('Connection Problem'), findsOneWidget);
@@ -79,6 +83,7 @@ void main() {
       _connectionEvent,
       onOpenBackendSetup: () {},
     );
+    await tester.pump(hostedFeatureErrorStartupGrace);
     await tester.pumpAndSettle();
 
     expect(find.text('Connection Problem'), findsOneWidget);
@@ -96,6 +101,7 @@ void main() {
       _authenticationEvent,
       onOpenBackendSetup: () {},
     );
+    await tester.pump(hostedFeatureErrorStartupGrace);
     await tester.pumpAndSettle();
 
     expect(find.text('Authentication Problem'), findsOneWidget);
@@ -104,7 +110,75 @@ void main() {
     expect(find.byType(SnackBar), findsNothing);
   });
 
-  testWidgets('navigation errors keep the bottom SnackBar path', (
+  testWidgets('a recovery during the grace window never shows the banner', (
+    tester,
+  ) async {
+    final context = await _pumpWithNotificationHost(tester);
+
+    // Startup race (CEL-129): a couple of failed requests while the backend is
+    // still warming up, then a successful request before the grace window ends.
+    await reportHostedFeatureError(
+      context,
+      _connectionEvent,
+      onOpenBackendSetup: () {},
+    );
+    await reportHostedFeatureError(
+      context,
+      _connectionEvent,
+      onOpenBackendSetup: () {},
+    );
+    await clearHostedFeatureError(context);
+    await tester.pump(hostedFeatureErrorStartupGrace);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Connection Problem'), findsNothing);
+    expect(find.byType(SnackBar), findsNothing);
+  });
+
+  testWidgets(
+    'a recovery after the banner is live dismisses the stale banner',
+    (tester) async {
+      final context = await _pumpWithNotificationHost(tester);
+
+      // Backend died mid-session: the banner promotes after the grace window…
+      await reportHostedFeatureError(
+        context,
+        _connectionEvent,
+        onOpenBackendSetup: () {},
+      );
+      await tester.pump(hostedFeatureErrorStartupGrace);
+      await tester.pumpAndSettle();
+      expect(find.text('Connection Problem'), findsOneWidget);
+
+      // …then a later request succeeds and the banner must go away (CEL-129).
+      await clearHostedFeatureError(context);
+      await tester.pumpAndSettle();
+      expect(find.text('Connection Problem'), findsNothing);
+      expect(find.byType(SnackBar), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'a recovery after the banner is live also dismisses an auth banner',
+    (tester) async {
+      final context = await _pumpWithNotificationHost(tester);
+
+      await reportHostedFeatureError(
+        context,
+        _authenticationEvent,
+        onOpenBackendSetup: () {},
+      );
+      await tester.pump(hostedFeatureErrorStartupGrace);
+      await tester.pumpAndSettle();
+      expect(find.text('Authentication Problem'), findsOneWidget);
+
+      await clearHostedFeatureError(context);
+      await tester.pumpAndSettle();
+      expect(find.text('Authentication Problem'), findsNothing);
+    },
+  );
+
+  testWidgets('navigation errors show a top-right banner', (
     tester,
   ) async {
     final context = await _pumpWithNotificationHost(tester);
@@ -116,23 +190,18 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byType(SnackBar), findsOneWidget);
+    expect(find.text('NeuroStudio Problem'), findsOneWidget);
     expect(find.text(_navigationEvent.message), findsOneWidget);
-    expect(find.text('Connection Problem'), findsNothing);
+    expect(find.byType(SnackBar), findsNothing);
     expect(find.text('Backend Setup'), findsNothing);
 
-    // Close the SnackBar so no dismiss timer is left pending at teardown.
-    await tester.tap(
-      find.descendant(
-        of: find.byType(SnackBar),
-        matching: find.byIcon(Icons.close),
-      ),
-    );
+    await tester.tap(find.byIcon(ZetaIcons.close_sharp));
     await tester.pumpAndSettle();
+    expect(find.text('NeuroStudio Problem'), findsNothing);
   });
 
   testWidgets(
-    'without a mounted host, connection errors fall back to SnackBar',
+    'without a mounted host, connection errors are suppressed',
     (tester) async {
       await tester.pumpWidget(
         MaterialApp(
@@ -149,17 +218,8 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.byType(SnackBar), findsOneWidget);
-      expect(find.text('Backend Setup'), findsOneWidget);
+      expect(find.byType(SnackBar), findsNothing);
       expect(find.text('Connection Problem'), findsNothing);
-
-      await tester.tap(
-        find.descendant(
-          of: find.byType(SnackBar),
-          matching: find.byIcon(Icons.close),
-        ),
-      );
-      await tester.pumpAndSettle();
     },
   );
 }

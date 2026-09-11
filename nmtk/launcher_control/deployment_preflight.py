@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 
 from .deployment_contracts import DeploymentPreflightResult, DeploymentTarget
+from .module_deployment_env import missing_module_environment
 
 
 def port_is_open(host: str, port: int, timeout: float = 0.5) -> bool:
@@ -42,6 +43,13 @@ def run_preflight(
 
     if not (repo_root / "nmtk" / "neuro_toolkit" / "assets" / "modules.json").exists():
         blocking.append("preflight failed: launcher module manifest is missing")
+    degraded.extend(
+        missing_module_environment(
+            target.module_environment,
+            repo_root,
+            module_secret_refs=target.module_secret_refs,
+        )
+    )
 
     if blocking:
         return DeploymentPreflightResult(

@@ -83,6 +83,13 @@ class NmtkFeatureErrorEvent {
 typedef NmtkFeatureErrorReporter =
     Future<void> Function(NmtkFeatureErrorEvent event);
 
+/// Signals that a previously-reported error condition has recovered — e.g. a
+/// request against the backend succeeded after earlier failures, so a stale
+/// "cannot reach backend" banner no longer describes reality.
+typedef NmtkFeatureRecoveryReporter = Future<void> Function();
+
+Future<void> _noopRecoveryReporter() async {}
+
 @immutable
 class NmtkFeatureLaunchContext {
   NmtkFeatureLaunchContext({
@@ -91,6 +98,7 @@ class NmtkFeatureLaunchContext {
     required this.onNavigate,
     required this.onReportError,
     required this.onEditServer,
+    this.onRecovered = _noopRecoveryReporter,
     this.authentication = const NmtkFeatureAuthentication(),
     this.initialLocation = '/',
     Map<String, Object?> restorationState = const <String, Object?>{},
@@ -106,6 +114,7 @@ class NmtkFeatureLaunchContext {
   final Map<String, Object?> restorationState;
   final NmtkFeatureNavigator onNavigate;
   final NmtkFeatureErrorReporter onReportError;
+  final NmtkFeatureRecoveryReporter onRecovered;
   final Future<void> Function() onEditServer;
   final Widget? workspaceHeaderAction;
 }

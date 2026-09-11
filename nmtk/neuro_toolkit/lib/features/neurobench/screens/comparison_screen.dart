@@ -90,19 +90,15 @@ class _ExportActions extends ConsumerWidget {
       );
 
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          NmtkSnackBars.success(
+        NmtkSnackBars.success(
             context,
             'Export received (${content.length} bytes) — '
             'file saving is not yet wired on this platform.',
-          ),
-        );
+          );
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(NmtkSnackBars.error(context, 'Export failed: $e'));
+        NmtkSnackBars.error(context, 'Export failed: $e');
       }
     }
   }

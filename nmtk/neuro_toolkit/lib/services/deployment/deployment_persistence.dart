@@ -113,6 +113,15 @@ class DeploymentPersistence {
       kubeconfig: secrets['kubeconfig'] as String? ?? '',
       adminToken: secrets['adminToken'] as String? ?? '',
       cleanInstall: cleanInstall,
+      moduleEnvironment: target.moduleEnvironment,
+      moduleSecrets: _moduleSecretsFromJson(secrets['moduleSecrets']),
+    );
+  }
+
+  static Map<String, String> _moduleSecretsFromJson(Object? value) {
+    if (value is! Map) return const {};
+    return value.map(
+      (dynamic key, dynamic item) => MapEntry(key.toString(), item.toString()),
     );
   }
 

@@ -38,7 +38,9 @@ class _FakeConnectNotifier extends ConnectNotifier {
     if (behavior == 'failure') {
       state = ConnectState(
         phase: ConnectPhase.failed,
-        failureCause: 'Incorrect username or password.',
+        failureCause:
+            'Could not reach ${request.host}. Confirm the address and that '
+            'the server is running, then try again.',
         savedHost: request.host,
       );
     } else {
@@ -46,8 +48,8 @@ class _FakeConnectNotifier extends ConnectNotifier {
         phase: ConnectPhase.connected,
         session: ConnectSession(
           host: request.host,
-          username: request.appUsername,
-          sessionToken: 'token',
+          username: '',
+          sessionToken: '',
         ),
         savedHost: request.host,
       );
@@ -72,51 +74,45 @@ Widget _host({
 }
 
 void main() {
-  testWidgets('connect form collects host, app username and password', (
+  testWidgets('connect form collects only the server address', (
     tester,
   ) async {
     final notifier = _FakeConnectNotifier('success');
     await tester.pumpWidget(_host(notifier: notifier));
 
-    expect(find.text('Sign in to your server'), findsOneWidget);
+    expect(find.text('Connect to your server'), findsOneWidget);
     expect(find.text('Server address'), findsWidgets);
-    expect(find.text('App account'), findsOneWidget);
-    expect(find.text('Password'), findsWidgets);
 
     await tester.enterText(
       find.byKey(const Key('server-connect-host')),
       '192.168.2.90',
     );
-    await tester.enterText(
-      find.byKey(const Key('server-connect-username')),
-      'alice',
-    );
-    await tester.enterText(
-      find.byKey(const Key('server-connect-password')),
-      'secret',
-    );
-    await tester.ensureVisible(find.byKey(const Key('server-connect-sign-in')));
-    await tester.tap(find.byKey(const Key('server-connect-sign-in')));
+    await tester.ensureVisible(find.byKey(const Key('server-connect-connect')));
+    await tester.tap(find.byKey(const Key('server-connect-connect')));
     await tester.pumpAndSettle();
 
     expect(notifier.connectCalls, 1);
     expect(notifier.lastRequest?.host, '192.168.2.90');
-    expect(notifier.lastRequest?.appUsername, 'alice');
-    expect(notifier.lastRequest?.credential, 'secret');
   });
 
   testWidgets(
-    'connecting to an existing server never asks for an SSH credential',
+    'connecting to an existing server never asks for a credential',
     (tester) async {
       final notifier = _FakeConnectNotifier('success');
       await tester.pumpWidget(_host(notifier: notifier));
 
-      // Only the app-level host/username/password fields exist; no SSH,
+      // Only the server address field exists; no username, password, SSH,
       // key, or admin-credential fields are ever rendered on this screen.
       expect(find.byKey(const Key('server-connect-host')), findsOneWidget);
-      expect(find.byKey(const Key('server-connect-username')), findsOneWidget);
-      expect(find.byKey(const Key('server-connect-password')), findsOneWidget);
-      for (final word in const ['SSH', 'sudo', 'private key']) {
+      expect(find.text('App account'), findsNothing);
+      expect(find.text('Password'), findsNothing);
+      for (final word in const [
+        'SSH',
+        'sudo',
+        'private key',
+        'username',
+        'password',
+      ]) {
         expect(find.textContaining(word, findRichText: true), findsNothing);
       }
     },
@@ -130,7 +126,9 @@ void main() {
       initialState: const ConnectState(
         phase: ConnectPhase.failed,
         savedHost: '192.168.2.90',
-        failureCause: 'Incorrect username or password.',
+        failureCause:
+            'Could not reach 192.168.2.90. Confirm the address and that '
+            'the server is running, then try again.',
       ),
     );
     await tester.pumpWidget(_host(notifier: notifier));
@@ -144,34 +142,31 @@ void main() {
   testWidgets('shows plain-English failure and a retry that re-invokes', (
     tester,
   ) async {
-    final notifier = _FakeConnectNotifier('failure');
+    final notifier = _FakeConnectNotifier(
+      'failure',
+      initialState: const ConnectState(
+        phase: ConnectPhase.failed,
+        savedHost: '192.168.2.90',
+        failureCause:
+            'Could not reach 192.168.2.90. Confirm the address and that '
+            'the server is running, then try again.',
+      ),
+    );
     await tester.pumpWidget(_host(notifier: notifier));
 
-    await tester.enterText(
-      find.byKey(const Key('server-connect-host')),
-      '192.168.2.90',
-    );
-    await tester.enterText(
-      find.byKey(const Key('server-connect-username')),
-      'alice',
-    );
-    await tester.enterText(
-      find.byKey(const Key('server-connect-password')),
-      'wrong',
-    );
-    await tester.ensureVisible(find.byKey(const Key('server-connect-sign-in')));
-    await tester.tap(find.byKey(const Key('server-connect-sign-in')));
+    await tester.ensureVisible(find.byKey(const Key('server-connect-connect')));
+    await tester.tap(find.byKey(const Key('server-connect-connect')));
     await tester.pumpAndSettle();
 
     expect(find.byKey(const Key('server-connect-error')), findsOneWidget);
-    expect(find.textContaining('Incorrect username or password'), findsWidgets);
+    expect(find.textContaining('Could not reach'), findsWidgets);
     for (final word in const ['SSH', 'sudo', 'docker', 'stderr', 'exit code']) {
       expect(find.textContaining(word), findsNothing);
     }
 
-    // The form is still present, so the user can correct and sign in again.
-    await tester.ensureVisible(find.byKey(const Key('server-connect-sign-in')));
-    await tester.tap(find.byKey(const Key('server-connect-sign-in')));
+    // The form is still present, so the user can correct and retry.
+    await tester.ensureVisible(find.byKey(const Key('server-connect-connect')));
+    await tester.tap(find.byKey(const Key('server-connect-connect')));
     await tester.pumpAndSettle();
     expect(notifier.connectCalls, 2);
   });
@@ -186,18 +181,10 @@ void main() {
         find.byKey(const Key('server-connect-host')),
         '192.168.2.90',
       );
-      await tester.enterText(
-        find.byKey(const Key('server-connect-username')),
-        'alice',
-      );
-      await tester.enterText(
-        find.byKey(const Key('server-connect-password')),
-        'secret',
-      );
       await tester.ensureVisible(
-        find.byKey(const Key('server-connect-sign-in')),
+        find.byKey(const Key('server-connect-connect')),
       );
-      await tester.tap(find.byKey(const Key('server-connect-sign-in')));
+      await tester.tap(find.byKey(const Key('server-connect-connect')));
       await tester.pump();
 
       expect(
@@ -217,9 +204,9 @@ void main() {
       await tester.pumpWidget(_host(notifier: notifier));
 
       await tester.ensureVisible(
-        find.byKey(const Key('server-connect-sign-in')),
+        find.byKey(const Key('server-connect-connect')),
       );
-      await tester.tap(find.byKey(const Key('server-connect-sign-in')));
+      await tester.tap(find.byKey(const Key('server-connect-connect')));
       await tester.pumpAndSettle();
 
       expect(notifier.connectCalls, 0);

@@ -17,6 +17,7 @@ RUN pip install --no-cache-dir \
     "structlog>=24.1.0" \
     "prometheus-client>=0.19.0" \
     "aiosqlite>=0.20.0" \
+    "sqlalchemy[asyncio]>=2.0.0" \
     "watchdog>=3.0"
 
 # WORKDIR is /repo so __file__ = /repo/workers/neurocnl_physics/main.py

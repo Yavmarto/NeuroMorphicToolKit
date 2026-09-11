@@ -33,7 +33,7 @@ final class ModuleNotifierProvider
   ModuleNotifier create() => ModuleNotifier();
 }
 
-String _$moduleNotifierHash() => r'f2ea47df262085d0d81f1284b6d61c0ec4dd19f5';
+String _$moduleNotifierHash() => r'e13a58cede9e7eadb1bd28585a9d1b83e58fbf9e';
 
 abstract class _$ModuleNotifier extends $AsyncNotifier<ModuleState> {
   FutureOr<ModuleState> build();

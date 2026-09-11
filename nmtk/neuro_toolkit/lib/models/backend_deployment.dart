@@ -20,6 +20,7 @@ class DeploymentTarget {
     this.lastDeployedVersion = '',
     this.lastFailureReason = '',
     this.updatedAt,
+    this.moduleEnvironment = const <String, String>{},
   });
 
   final String id;
@@ -42,6 +43,7 @@ class DeploymentTarget {
   final String lastDeployedVersion;
   final String lastFailureReason;
   final DateTime? updatedAt;
+  final Map<String, String> moduleEnvironment;
 
   factory DeploymentTarget.fromJson(Map<String, dynamic> json) {
     return DeploymentTarget(
@@ -65,6 +67,14 @@ class DeploymentTarget {
       lastDeployedVersion: json['lastDeployedVersion'] as String? ?? '',
       lastFailureReason: json['lastFailureReason'] as String? ?? '',
       updatedAt: DateTime.tryParse(json['updatedAt'] as String? ?? ''),
+      moduleEnvironment: _stringMap(json['moduleEnvironment']),
+    );
+  }
+
+  static Map<String, String> _stringMap(Object? value) {
+    if (value is! Map) return const {};
+    return value.map(
+      (dynamic key, dynamic item) => MapEntry(key.toString(), item.toString()),
     );
   }
 
@@ -89,6 +99,7 @@ class DeploymentTarget {
     'lastDeployedVersion': lastDeployedVersion,
     'lastFailureReason': lastFailureReason,
     if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
+    if (moduleEnvironment.isNotEmpty) 'moduleEnvironment': moduleEnvironment,
   };
 
   DeploymentTarget copyWith({

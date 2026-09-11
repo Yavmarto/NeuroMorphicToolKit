@@ -351,10 +351,10 @@ class _HardwareScreenState extends ConsumerState<HardwareScreen> {
   }
 
   void _showMessage(String message, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      isError
-          ? NmtkSnackBars.error(context, message)
-          : NmtkSnackBars.success(context, message),
-    );
+    if (isError) {
+      NmtkSnackBars.error(context, message);
+    } else {
+      NmtkSnackBars.success(context, message);
+    }
   }
 }

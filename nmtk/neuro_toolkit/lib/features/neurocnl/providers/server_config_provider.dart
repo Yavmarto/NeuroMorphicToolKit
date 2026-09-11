@@ -94,6 +94,7 @@ class ServerConfigController extends _$ServerConfigController {
       final client = AdminTokenHttpClient(
         adminToken: launchContext.authentication.adminToken,
         onReportError: launchContext.onReportError,
+        onRecovered: launchContext.onRecovered,
       );
       ref.onDispose(client.close);
       final response = await client

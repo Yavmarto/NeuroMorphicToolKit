@@ -483,10 +483,10 @@ class _AkidaDeployPanelState extends ConsumerState<AkidaDeployPanel> {
 
   void _showMessage(String message, {bool isError = false}) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      isError
-          ? NmtkSnackBars.error(context, message)
-          : NmtkSnackBars.success(context, message),
-    );
+    if (isError) {
+      NmtkSnackBars.error(context, message);
+    } else {
+      NmtkSnackBars.success(context, message);
+    }
   }
 }

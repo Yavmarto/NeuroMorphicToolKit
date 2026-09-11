@@ -36,6 +36,7 @@ class StudioViewModeController extends _$StudioViewModeController {
 
   static StudioViewMode _loadPersistedMode() {
     final stored = ServerConfigService.getString(_modeKey);
+    if (stored == 'network') return StudioViewMode.canvas;
     if (stored == 'canvas') return StudioViewMode.canvas;
     if (stored == 'nir') return StudioViewMode.nir;
     return StudioViewMode.cnl;

@@ -1,9 +1,13 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:nmtk_module_contracts/nmtk_module_contracts.dart';
 
+import 'package:neuro_toolkit/features/server/connect/connect_notifier.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/services/control_api_service.dart';
@@ -43,6 +47,10 @@ class ModuleNotifier extends _$ModuleNotifier {
     final generation = _serverGeneration;
 
     if (!bootstrapState.canUseControlApi) {
+      final connectState = ref.watch(connectNotifierProvider);
+      if (connectState.phase == ConnectPhase.devOffline) {
+        return _loadBundledModules();
+      }
       return const ModuleState();
     }
 
@@ -79,6 +87,36 @@ class ModuleNotifier extends _$ModuleNotifier {
   }
 
   UpdateChannel get currentChannel => _updateService.channel;
+
+  Future<ModuleState> _loadBundledModules() async {
+    try {
+      String raw;
+      try {
+        raw = await rootBundle.loadString('assets/modules.json');
+      } catch (_) {
+        final file = File('assets/modules.json');
+        if (file.existsSync()) {
+          raw = await file.readAsString();
+        } else {
+          rethrow;
+        }
+      }
+      final list = jsonDecode(raw) as List<dynamic>;
+      final modules = list.cast<Map<String, dynamic>>().map((m) {
+        final module = Module.fromJson(m);
+        return module.copyWith(status: ModuleStatus.running);
+      }).toList();
+      return ModuleState(
+        modules: modules,
+        pythonAvailable: true,
+        mujocoAvailable: true,
+        activeModuleIds: state.value?.activeModuleIds ?? [],
+      );
+    } catch (e) {
+      debugPrint('Failed to load bundled modules in dev offline mode: $e');
+      return const ModuleState();
+    }
+  }
 
   Future<ModuleState> _reloadFromControlApi({
     required ControlApiService controlApi,
@@ -409,6 +447,22 @@ class ModuleNotifier extends _$ModuleNotifier {
       ),
     );
 
+    final bootstrapState = ref.read(launcherBootstrapStateProvider);
+    if (!bootstrapState.canUseControlApi) {
+      final latestState = state.value;
+      if (latestState != null) {
+        final newModules = List<Module>.from(latestState.modules);
+        final newIndex = newModules.indexWhere((m) => m.id == moduleId);
+        if (newIndex != -1) {
+          newModules[newIndex] = newModules[newIndex].copyWith(
+            status: ModuleStatus.running,
+          );
+          state = AsyncData(latestState.copyWith(modules: newModules));
+        }
+      }
+      return;
+    }
+
     try {
       final controlApi = ref.read(controlApiServiceProvider);
       final updatedModule = await controlApi.startModule(moduleId);
@@ -450,6 +504,22 @@ class ModuleNotifier extends _$ModuleNotifier {
         activeModuleIds: updatedActiveIds,
       ),
     );
+
+    final bootstrapState = ref.read(launcherBootstrapStateProvider);
+    if (!bootstrapState.canUseControlApi) {
+      final latestState = state.value;
+      if (latestState != null) {
+        final newModules = List<Module>.from(latestState.modules);
+        final newIndex = newModules.indexWhere((m) => m.id == moduleId);
+        if (newIndex != -1) {
+          newModules[newIndex] = newModules[newIndex].copyWith(
+            status: ModuleStatus.installed,
+          );
+          state = AsyncData(latestState.copyWith(modules: newModules));
+        }
+      }
+      return;
+    }
 
     try {
       final controlApi = ref.read(controlApiServiceProvider);

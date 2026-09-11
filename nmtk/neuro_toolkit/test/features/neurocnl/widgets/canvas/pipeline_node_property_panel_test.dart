@@ -869,13 +869,15 @@ void main() {
           UncontrolledProviderScope(
             container: container,
             child: MaterialApp(
-              home: Scaffold(
-                body: DatasetPathField(
-                  value: '',
-                  format: 'pt',
-                  onChanged: (_) {},
-                  onFileSelected: (_) {},
-                  gateway: gateway,
+              home: NmtkNotificationCenter(
+                child: Scaffold(
+                  body: DatasetPathField(
+                    value: '',
+                    format: 'pt',
+                    onChanged: (_) {},
+                    onFileSelected: (_) {},
+                    gateway: gateway,
+                  ),
                 ),
               ),
             ),
@@ -886,13 +888,14 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(
-          find.byType(SnackBar),
+          find.textContaining('Could not select the dataset file'),
           findsOneWidget,
           reason:
-              'A pickFiles() failure must surface a SnackBar just like an '
+              'A pickFiles() failure must surface feedback just like an '
               'upload failure does — silently swallowing it is exactly the '
               '"nothing happens" bug.',
         );
+        expect(find.byType(SnackBar), findsNothing);
         expect(fakeApi.lastUploadedFilename, isNull);
       },
     );
@@ -916,13 +919,15 @@ void main() {
         UncontrolledProviderScope(
           container: container,
           child: MaterialApp(
-            home: Scaffold(
-              body: DatasetPathField(
-                value: '',
-                format: 'pt',
-                onChanged: (_) => onChangedCalled = true,
-                onFileSelected: (_) => onChangedCalled = true,
-                gateway: gateway,
+            home: NmtkNotificationCenter(
+              child: Scaffold(
+                body: DatasetPathField(
+                  value: '',
+                  format: 'pt',
+                  onChanged: (_) => onChangedCalled = true,
+                  onFileSelected: (_) => onChangedCalled = true,
+                  gateway: gateway,
+                ),
               ),
             ),
           ),
@@ -932,7 +937,8 @@ void main() {
       await tester.tap(find.byIcon(ZetaIcons.folder_outline));
       await tester.pumpAndSettle();
 
-      expect(find.byType(SnackBar), findsOneWidget);
+      expect(find.textContaining('Could not select the dataset file'), findsOneWidget);
+      expect(find.byType(SnackBar), findsNothing);
       expect(onChangedCalled, isFalse);
     });
   });

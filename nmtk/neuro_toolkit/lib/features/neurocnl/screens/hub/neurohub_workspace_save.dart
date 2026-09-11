@@ -32,12 +32,10 @@ Future<void> saveCurrentWorkspaceToNeurohub(
   }
   if (!binding.canEdit) {
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      NmtkSnackBars.error(
+    NmtkSnackBars.error(
         context,
         'You can preview this workspace, but you cannot save changes to it. Fork a private copy instead.',
-      ),
-    );
+      );
     return;
   }
 
@@ -53,9 +51,7 @@ Future<void> saveCurrentWorkspaceToNeurohub(
         );
     _afterSave(ref, saved);
     if (!context.mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(NmtkSnackBars.success(context, 'Saved to Neurohub.'));
+    NmtkSnackBars.success(context, 'Saved to Neurohub.');
   } on NeurohubConflictException catch (conflict) {
     if (!context.mounted) return;
     await _resolveConflict(
@@ -69,9 +65,7 @@ Future<void> saveCurrentWorkspaceToNeurohub(
     );
   } on NeurohubException catch (error) {
     if (!context.mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(NmtkSnackBars.error(context, workspaceErrorMessage(error)));
+    NmtkSnackBars.error(context, workspaceErrorMessage(error));
   }
 }
 
@@ -99,19 +93,15 @@ Future<void> _createWorkspace(
         );
     _afterSave(ref, saved);
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      NmtkSnackBars.success(
+    NmtkSnackBars.success(
         context,
         details.isPublic
             ? 'Published to Neurohub.'
             : 'Saved privately to Neurohub.',
-      ),
-    );
+      );
   } on NeurohubException catch (error) {
     if (!context.mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(NmtkSnackBars.error(context, workspaceErrorMessage(error)));
+    NmtkSnackBars.error(context, workspaceErrorMessage(error));
   }
 }
 
@@ -141,9 +131,7 @@ Future<void> _resolveConflict(
         .getWorkspace(binding.owner, binding.slug);
   } on NeurohubException catch (error) {
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        NmtkSnackBars.error(context, workspaceErrorMessage(error)),
-      );
+      NmtkSnackBars.error(context, workspaceErrorMessage(error));
     }
     return;
   }
@@ -174,9 +162,7 @@ Future<void> _resolveConflict(
     await reloadWorkspace(remote);
     _afterSave(ref, remote);
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        NmtkSnackBars.success(context, 'Loaded the latest saved version.'),
-      );
+      NmtkSnackBars.success(context, 'Loaded the latest saved version.');
     }
     return;
   }

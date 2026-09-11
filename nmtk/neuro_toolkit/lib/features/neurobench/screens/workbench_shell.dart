@@ -138,12 +138,10 @@ class _WorkbenchShellScreenState extends ConsumerState<WorkbenchShellScreen> {
 
       if (previousJob?.status != nextJob?.status &&
           nextJob?.status == BenchmarkJobStatus.completed) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          NmtkSnackBars.success(
+        NmtkSnackBars.success(
             context,
             'Benchmark job ${nextJob?.id} completed.',
-          ),
-        );
+          );
         _goToRouteIfNeeded(
           _currentRouteState(
             tab: NeurobenchWorkbenchTab.results,
@@ -157,27 +155,21 @@ class _WorkbenchShellScreenState extends ConsumerState<WorkbenchShellScreen> {
 
       if (previousJob?.status != nextJob?.status &&
           nextJob?.status == BenchmarkJobStatus.failed) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          NmtkSnackBars.error(
+        NmtkSnackBars.error(
             context,
             nextJob?.error ?? 'Benchmark job failed.',
-          ),
-        );
+          );
       }
 
       if (next.noticeMessage != null &&
           next.noticeMessage != previous?.noticeMessage) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(NmtkSnackBars.success(context, next.noticeMessage!));
+        NmtkSnackBars.success(context, next.noticeMessage!);
         ref.read(benchmarkExecutionProvider.notifier).clearMessages();
       }
 
       if (next.errorMessage != null &&
           next.errorMessage != previous?.errorMessage) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(NmtkSnackBars.error(context, next.errorMessage!));
+        NmtkSnackBars.error(context, next.errorMessage!);
       }
     });
 

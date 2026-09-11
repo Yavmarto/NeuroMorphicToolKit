@@ -1,13 +1,11 @@
 services:
-  # CEL-25/57 replaced the old SSH-tunnel connect model with a plain HTTP
-  # login straight to host+port, so these three ports must be reachable on
-  # the host's LAN interface, not loopback-only (loopback was correct for
-  # the tunnel model, where the app never spoke to the port directly).
-  # NMTK_AUTH_REQUIRED=1 below is the security boundary now: app-level
-  # token/credential auth, not network isolation.
+  # These services communicate over backend-net and do not need host
+  # published ports during a remote Flutter deployment. Removing the
+  # bindings avoids collisions with native services and stale rootlessport
+  # helpers on the target host.
   suite_api:
     ports: !override
-      - "${SUITE_API_PORT:-9000}:9000"
+      - "127.0.0.1:${SUITE_API_PORT:-9000}:9000"
     # No `user: "0:0"` here, and the token comes from a mounted file rather
     # than a compose secret, for the same reason as launcher-control below.
     # `suite_api/Dockerfile` ends on `USER app` and gives that account
@@ -45,7 +43,7 @@ services:
 
   launcher-control:
     ports: !override
-      - "${LAUNCHER_CONTROL_PORT:-8090}:8091"
+      - "127.0.0.1:${LAUNCHER_CONTROL_PORT:-8090}:8091"
     # Compose mounts secrets 0400 root:root, and Dockerfile.control ends on
     # `USER appuser`, so this service cannot read a compose secret at all: the
     # launcher's _is_authorized() swallows the OSError and answers 401 to
@@ -88,4 +86,4 @@ services:
 
   jupyter-server:
     ports: !override
-      - "${JUPYTER_PORT:-8008}:8008"
+      - "127.0.0.1:${JUPYTER_PORT:-8008}:8008"

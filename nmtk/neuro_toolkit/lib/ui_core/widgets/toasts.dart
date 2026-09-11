@@ -1,36 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:zeta_flutter/zeta_flutter.dart';
 
+import 'package:neuro_toolkit/ui_core/widgets/snack_bars.dart';
+
+/// Top-right notification shorthands. Replaces the old bottom [SnackBar] surface.
 class NmtkToasts {
   NmtkToasts._();
 
   static void success(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      ZetaSnackBar(
-        context: context,
-        content: Text(message),
-        type: ZetaSnackBarType.positive,
-      ),
-    );
+    NmtkSnackBars.success(context, message);
   }
 
   static void error(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      ZetaSnackBar(
-        context: context,
-        content: Text(message),
-        type: ZetaSnackBarType.error,
-      ),
-    );
+    NmtkSnackBars.error(context, message);
   }
 
   static void warning(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      ZetaSnackBar(
-        context: context,
-        content: Text(message),
-        type: ZetaSnackBarType.warning,
-      ),
-    );
+    NmtkSnackBars.warning(context, message);
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
 import 'package:neuro_toolkit/features/neurocnl/models/canvas/canvas.dart';
 import 'package:neuro_toolkit/features/neurocnl/models/nir_node_type.dart';
@@ -411,13 +412,9 @@ mixin NetworkCanvasConnectionMixin<T extends ConsumerStatefulWidget>
     }
 
     if (ref.read(canvasProvider).connectingFromNodeId != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Drop on another node input, or click an input port to finish the connection.',
-          ),
-          showCloseIcon: true,
-        ),
+      NmtkSnackBars.info(
+        context,
+        'Drop on another node input, or click an input port to finish the connection.',
       );
       ref.read(canvasProvider.notifier).cancelConnecting();
     }
@@ -432,12 +429,7 @@ mixin NetworkCanvasConnectionMixin<T extends ConsumerStatefulWidget>
     double strokeWeight = 1.0,
   }) {
     if (sourceNodeId == targetNodeId) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Connections must end on a different node.'),
-          showCloseIcon: true,
-        ),
-      );
+      NmtkSnackBars.info(context, 'Connections must end on a different node.');
       ref.read(canvasProvider.notifier).cancelConnecting();
       return false;
     }
@@ -455,12 +447,7 @@ mixin NetworkCanvasConnectionMixin<T extends ConsumerStatefulWidget>
     if (existingEdge.isNotEmpty) {
       ref.read(canvasProvider.notifier).selectEdge(existingEdge.first.id);
       ref.read(canvasProvider.notifier).cancelConnecting();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('That connection already exists.'),
-          showCloseIcon: true,
-        ),
-      );
+      NmtkSnackBars.info(context, 'That connection already exists.');
       return false;
     }
 
@@ -482,12 +469,7 @@ mixin NetworkCanvasConnectionMixin<T extends ConsumerStatefulWidget>
       if (srcType != null &&
           tgtType != null &&
           !srcType.isCompatibleWith(tgtType)) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Type mismatch: $srcType → $tgtType'),
-            showCloseIcon: true,
-          ),
-        );
+        NmtkSnackBars.info(context, 'Type mismatch: $srcType → $tgtType');
         ref.read(canvasProvider.notifier).cancelConnecting();
         return false;
       }

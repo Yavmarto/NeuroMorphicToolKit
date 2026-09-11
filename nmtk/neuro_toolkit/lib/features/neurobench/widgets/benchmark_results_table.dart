@@ -272,15 +272,11 @@ class BenchmarkResultsTable extends ConsumerWidget {
       await ref.read(apiClientProvider).saveBaseline(result);
       ref.invalidate(baselinesProvider);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          NmtkSnackBars.success(context, 'Saved ${result.id} as baseline.'),
-        );
+        NmtkSnackBars.success(context, 'Saved ${result.id} as baseline.');
       }
     } catch (error) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(NmtkSnackBars.error(context, 'Save failed: $error'));
+        NmtkSnackBars.error(context, 'Save failed: $error');
       }
     }
   }
@@ -288,11 +284,9 @@ class BenchmarkResultsTable extends ConsumerWidget {
   void _exportJson(BuildContext context, BenchmarkResult result) {
     final payload = const JsonEncoder.withIndent('  ').convert(result.toJson());
     Clipboard.setData(ClipboardData(text: payload));
-    ScaffoldMessenger.of(context).showSnackBar(
-      NmtkSnackBars.success(
+    NmtkSnackBars.success(
         context,
         'Result JSON copied to clipboard (${payload.length} bytes).',
-      ),
-    );
+      );
   }
 }

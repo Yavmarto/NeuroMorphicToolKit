@@ -2,48 +2,28 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
+import 'notification_center_test.dart';
+
 void main() {
-  testWidgets('NmtkSnackBars.success uses healthyColor', (tester) async {
-    late BuildContext context;
+  testWidgets('NmtkSnackBars.success shows a success banner', (tester) async {
+    final context = await pumpNotificationCenterHost(tester);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: AppTheme.darkTheme,
-        home: Builder(
-          builder: (buildContext) {
-            context = buildContext;
-            return const SizedBox.shrink();
-          },
-        ),
-      ),
-    );
+    NmtkSnackBars.success(context, 'Done');
+    await tester.pumpAndSettle();
 
-    final snackBar = NmtkSnackBars.success(context, 'Done');
-    final tokens = NmtkShellTokens.of(context);
-
-    expect(snackBar.backgroundColor, tokens.healthyColor);
-    expect(snackBar.showCloseIcon, isTrue);
+    expect(find.text('Done'), findsOneWidget);
+    expect(find.byIcon(ZetaIcons.check_circle_round), findsOneWidget);
+    expect(find.byType(SnackBar), findsNothing);
   });
 
-  testWidgets('NmtkSnackBars.error uses errorColor', (tester) async {
-    late BuildContext context;
+  testWidgets('NmtkSnackBars.error shows a danger banner', (tester) async {
+    final context = await pumpNotificationCenterHost(tester);
 
-    await tester.pumpWidget(
-      MaterialApp(
-        theme: AppTheme.darkTheme,
-        home: Builder(
-          builder: (buildContext) {
-            context = buildContext;
-            return const SizedBox.shrink();
-          },
-        ),
-      ),
-    );
+    NmtkSnackBars.error(context, 'Failed');
+    await tester.pumpAndSettle();
 
-    final snackBar = NmtkSnackBars.error(context, 'Failed');
-    final tokens = NmtkShellTokens.of(context);
-
-    expect(snackBar.backgroundColor, tokens.errorColor);
-    expect(snackBar.showCloseIcon, isTrue);
+    expect(find.text('Failed'), findsOneWidget);
+    expect(find.byIcon(ZetaIcons.error_outline), findsOneWidget);
+    expect(find.byType(SnackBar), findsNothing);
   });
 }

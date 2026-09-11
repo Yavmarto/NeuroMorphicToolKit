@@ -65,6 +65,18 @@ class WorkspaceNotifier extends _$WorkspaceNotifier {
       return;
     }
 
+    final bootstrapState = ref.read(launcherBootstrapStateProvider);
+    if (!bootstrapState.canUseControlApi) {
+      state = state.whenData(
+        (s) => s.copyWith(
+          sessions: sessions,
+          focusedModuleId: focusedModuleId,
+          defaultSessionsEnsured: true,
+        ),
+      );
+      return;
+    }
+
     final controlApi = ref.read(controlApiServiceProvider);
     final snapshot = await controlApi.updateWorkspace(
       sessions: sessions,
@@ -87,6 +99,28 @@ class WorkspaceNotifier extends _$WorkspaceNotifier {
     Map<String, dynamic> restoreState = const <String, dynamic>{},
     String readinessState = 'opening',
   }) async {
+    final bootstrapState = ref.read(launcherBootstrapStateProvider);
+    if (!bootstrapState.canUseControlApi) {
+      final session = WorkspaceSession(
+        moduleId: moduleId,
+        surfaceMode: surfaceMode,
+        deepLink: deepLink,
+        restoreState: restoreState,
+        readinessState: readinessState,
+      );
+      state = state.whenData((s) {
+        final existing = s.sessions.indexWhere((it) => it.moduleId == moduleId);
+        final nextSessions = List<WorkspaceSession>.from(s.sessions);
+        if (existing == -1) {
+          nextSessions.add(session);
+        } else {
+          nextSessions[existing] = session;
+        }
+        return s.copyWith(sessions: nextSessions, focusedModuleId: moduleId);
+      });
+      return;
+    }
+
     final controlApi = ref.read(controlApiServiceProvider);
     final snapshot = await controlApi.createWorkspaceSession(
       moduleId: moduleId,
@@ -112,6 +146,9 @@ class WorkspaceNotifier extends _$WorkspaceNotifier {
 
     // Optimistic UI update
     state = state.whenData((s) => s.copyWith(focusedModuleId: moduleId));
+
+    final bootstrapState = ref.read(launcherBootstrapStateProvider);
+    if (!bootstrapState.canUseControlApi) return;
 
     final controlApi = ref.read(controlApiServiceProvider);
     final snapshot = await controlApi.updateWorkspace(
@@ -151,6 +188,9 @@ class WorkspaceNotifier extends _$WorkspaceNotifier {
     // Optimistic UI update
     state = state.whenData((s) => s.copyWith(sessions: updatedSessions));
 
+    final bootstrapState = ref.read(launcherBootstrapStateProvider);
+    if (!bootstrapState.canUseControlApi) return;
+
     final controlApi = ref.read(controlApiServiceProvider);
     final snapshot = await controlApi.updateWorkspace(
       sessions: updatedSessions,
@@ -166,6 +206,17 @@ class WorkspaceNotifier extends _$WorkspaceNotifier {
   }
 
   Future<void> closeSession(String moduleId) async {
+    final bootstrapState = ref.read(launcherBootstrapStateProvider);
+    if (!bootstrapState.canUseControlApi) {
+      state = state.whenData((s) {
+        final nextSessions = s.sessions
+            .where((it) => it.moduleId != moduleId)
+            .toList(growable: false);
+        return s.copyWith(sessions: nextSessions);
+      });
+      return;
+    }
+
     final controlApi = ref.read(controlApiServiceProvider);
     final snapshot = await controlApi.deleteWorkspaceSession(moduleId);
     state = state.whenData(

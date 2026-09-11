@@ -34,7 +34,7 @@ final class BackendDeploymentNotifierProvider
 }
 
 String _$backendDeploymentNotifierHash() =>
-    r'b4880c6458a0f725cc541d3c530f9759964136a9';
+    r'25e8dbd4efd1abfa03cb85f40e52d7a0004d9b8f';
 
 abstract class _$BackendDeploymentNotifier
     extends $AsyncNotifier<DeploymentState> {

@@ -5,12 +5,12 @@ import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
 import 'package:neuro_toolkit/features/server/connect/connect_notifier.dart';
 
-/// Sign-in form for an already-running server.
+/// Connect form for an already-running server.
 ///
-/// Used both for the very first connection (right after provisioning) and for
-/// every additional device (mobile/desktop) logging into the same server.
-/// Requires only the server address, the app account, and its password — no
-/// terminal, no SSH, no administrator access.
+/// Used both for the very first connection to a server and to retry after a
+/// failed connect attempt (e.g. a stale or mistyped address). Only asks for
+/// the server address -- no username, password, terminal, or administrator
+/// access. Any device that can reach the server connects (CEL-171).
 ///
 /// On app open the caller tries [ConnectNotifier.reconnectOnOpen] first and
 /// only shows this form when that fails or there is no saved server.
@@ -48,12 +48,7 @@ class ServerConnectScreen extends ConsumerStatefulWidget {
 
 class _ServerConnectScreenState extends ConsumerState<ServerConnectScreen> {
   final _host = TextEditingController();
-  final _username = TextEditingController();
-  final _password = TextEditingController();
-  bool _obscurePassword = true;
   String? _hostError;
-  String? _usernameError;
-  String? _credentialError;
 
   @override
   void initState() {
@@ -65,8 +60,6 @@ class _ServerConnectScreenState extends ConsumerState<ServerConnectScreen> {
   @override
   void dispose() {
     _host.dispose();
-    _username.dispose();
-    _password.dispose();
     super.dispose();
   }
 
@@ -79,13 +72,13 @@ class _ServerConnectScreenState extends ConsumerState<ServerConnectScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'Sign in to your server',
+          'Connect to your server',
           style: Theme.of(context).textTheme.headlineMedium,
         ),
         SizedBox(height: tokens.compactGap),
         const Text(
-          'Use the app account created when the server was set up. '
-          'No administrator access or terminal needed.',
+          'Enter the address of a server that is already running. No '
+          'account or terminal needed.',
         ),
         SizedBox(height: tokens.sectionGap * 1.5),
         if (state.phase == ConnectPhase.reconnecting)
@@ -133,37 +126,6 @@ class _ServerConnectScreenState extends ConsumerState<ServerConnectScreen> {
                 keyboardType: TextInputType.url,
                 valueSanitizer: _sanitizeHost,
               ),
-              SizedBox(height: tokens.sectionGap),
-              _fieldLabel('App account'),
-              SizedBox(height: tokens.compactGap),
-              NmtkTextInput(
-                key: const Key('server-connect-username'),
-                controller: _username,
-                hintText: 'e.g. alice',
-                errorText: _usernameError,
-              ),
-              SizedBox(height: tokens.sectionGap),
-              _fieldLabel('Password'),
-              SizedBox(height: tokens.compactGap),
-              NmtkTextInput(
-                key: const Key('server-connect-password'),
-                controller: _password,
-                obscureText: _obscurePassword,
-                errorText: _credentialError,
-                suffix: Tooltip(
-                  message: _obscurePassword ? 'Show password' : 'Hide password',
-                  child: ZetaIconButton.text(
-                    icon: _obscurePassword
-                        ? ZetaIcons.visibility_off
-                        : ZetaIcons.visibility,
-                    semanticLabel: _obscurePassword
-                        ? 'Show password'
-                        : 'Hide password',
-                    onPressed: () =>
-                        setState(() => _obscurePassword = !_obscurePassword),
-                  ),
-                ),
-              ),
             ],
           ),
         ),
@@ -172,7 +134,7 @@ class _ServerConnectScreenState extends ConsumerState<ServerConnectScreen> {
           SizedBox(height: tokens.sectionGap),
           NmtkStatusBanner(
             key: const Key('server-connect-error'),
-            title: 'Could not sign in',
+            title: 'Could not connect',
             content: Text(state.failureCause!),
             tone: NmtkTone.danger,
           ),
@@ -181,9 +143,9 @@ class _ServerConnectScreenState extends ConsumerState<ServerConnectScreen> {
         _actionArea(
           tokens,
           primary: ZetaButton(
-            key: const Key('server-connect-sign-in'),
+            key: const Key('server-connect-connect'),
             onPressed: _connect,
-            label: 'Sign in',
+            label: 'Connect',
           ),
           secondary: widget.onNewServer != null
               ? ZetaButton.text(
@@ -277,30 +239,19 @@ class _ServerConnectScreenState extends ConsumerState<ServerConnectScreen> {
       _hostError = _host.text.trim().isEmpty
           ? 'Enter the server address, for example 192.168.2.90.'
           : null;
-      _usernameError = _username.text.trim().isEmpty
-          ? 'Enter the app username.'
-          : null;
-      _credentialError = _password.text.isEmpty ? 'Enter the password.' : null;
     });
-    return _hostError == null &&
-        _usernameError == null &&
-        _credentialError == null;
+    return _hostError == null;
   }
 
   Future<void> _connect() async {
     if (!_validate()) return;
+    final host = _host.text.trim();
     // ServerAccessGate watches connectNotifierProvider and swaps this screen
     // out for the workspace as soon as the phase flips to connected, which
-    // can unmount this widget mid-await — so nothing below may touch `ref`.
+    // can unmount this widget mid-await -- so nothing below may touch `ref`.
     await ref
         .read(connectNotifierProvider.notifier)
-        .connect(
-          ConnectRequest(
-            host: _host.text.trim(),
-            appUsername: _username.text.trim(),
-            credential: _password.text,
-          ),
-        );
+        .connect(ConnectRequest(host: host));
   }
 
   void _continueWithoutServer() {

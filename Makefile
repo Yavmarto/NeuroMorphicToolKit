@@ -44,6 +44,7 @@ help:
 	@echo "  make docker-ex-down REMOTE_HOST=user@ip - Stop and remove remote Docker containers"
 	@echo "  make dev-update               - Daily: test, sync to the dev backend, rebuild only what needs it"
 	@echo "  make restart-server           - Just restart suite_api on the dev backend (no sync/tests)"
+	@echo "  make check-server             - Check dev server health and restart any failed services"
 	@echo "  make suite_api_dev            - Start unified suite_api backend on port 9000 (with reload)"
 	@echo "  make release-publish VERSION=x.y.z - Cut, push, watch CI and verify a full release"
 	@echo "  make release VERSION=x.y.z    - Tag a release locally only (release-publish calls this)"
@@ -294,6 +295,13 @@ dev-update:
 restart-server:
 	@REMOTE_HOST=$(if $(REMOTE_HOST),$(REMOTE_HOST),$(DEV_BACKEND_HOST)) \
 		bash scripts/dev_update.sh --restart-suite-api-only $(ARGS)
+
+## Check dev server health and restart any stopped or unhealthy services.
+## Defaults to 192.168.2.90 (DEV_BACKEND_HOST). Pass flags with ARGS=, e.g. ARGS='--check-only'.
+.PHONY: check-server
+check-server:
+	@REMOTE_HOST=$(if $(REMOTE_HOST),$(REMOTE_HOST),$(DEV_BACKEND_HOST)) \
+		bash scripts/check_dev_server.sh $(ARGS)
 
 ## Cut a release end to end: pre-flight gates, bump/changelog/tag via
 ## scripts/release.sh, confirm once, push submodules then root, watch both CI

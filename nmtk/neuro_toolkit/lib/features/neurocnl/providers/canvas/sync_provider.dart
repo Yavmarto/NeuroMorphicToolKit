@@ -14,6 +14,7 @@ final apiClientProvider = Provider((ref) {
     httpClient: AdminTokenHttpClient(
       adminToken: launchContext.authentication.adminToken,
       onReportError: launchContext.onReportError,
+      onRecovered: launchContext.onRecovered,
     ),
   );
 });

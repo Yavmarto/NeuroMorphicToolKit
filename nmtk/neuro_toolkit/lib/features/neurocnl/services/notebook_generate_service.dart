@@ -13,6 +13,7 @@ import 'package:neuro_toolkit/features/neurocnl/providers/workspace_provider.dar
 import 'package:neuro_toolkit/features/neurocnl/services/api_client.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/dataset_generation_preparer.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/open_external_url.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
 /// Service that reads both halves of [CanvasState] and calls
 /// `POST /api/notebook/generate-v2` to produce a Jupyter notebook.
@@ -58,14 +59,10 @@ abstract final class NotebookGenerateService {
     final workspace = ref.read(workspaceProvider);
 
     if (spec.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'No architecture to generate from.\n'
-            'Define and validate a network on the Architecture tab first.',
-          ),
-          showCloseIcon: true,
-        ),
+      NmtkSnackBars.info(
+        context,
+        'No architecture to generate from.\n'
+        'Define and validate a network on the Architecture tab first.',
       );
       return;
     }
@@ -202,21 +199,18 @@ abstract final class NotebookGenerateService {
     bool showSystemHealth = false,
   }) {
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        action: showSystemHealth
-            ? SnackBarAction(
-                label: 'System Health',
-                onPressed: () {
-                  openExternalUrl(systemHealthUri);
-                },
-              )
-            : null,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 6),
-        showCloseIcon: true,
-      ),
+    NmtkSnackBars.error(
+      context,
+      message,
+      duration: const Duration(seconds: 6),
+      action: showSystemHealth
+          ? NmtkNotificationAction(
+              label: 'System Health',
+              onPressed: () {
+                openExternalUrl(systemHealthUri);
+              },
+            )
+          : null,
     );
   }
 }

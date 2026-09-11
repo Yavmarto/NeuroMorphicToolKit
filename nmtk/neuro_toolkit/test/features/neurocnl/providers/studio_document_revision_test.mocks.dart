@@ -19,6 +19,8 @@ import 'package:neuro_toolkit/features/neurocnl/models/dataset_catalog.dart'
     as _i3;
 import 'package:neuro_toolkit/features/neurocnl/models/deploy_preview_result.dart'
     as _i7;
+import 'package:neuro_toolkit/features/neurocnl/models/detected_hardware_entry.dart'
+    as _i30;
 import 'package:neuro_toolkit/features/neurocnl/models/energy_report.dart'
     as _i20;
 import 'package:neuro_toolkit/features/neurocnl/models/fault_injection_report.dart'
@@ -36,7 +38,7 @@ import 'package:neuro_toolkit/features/neurocnl/models/prosthetic_sim.dart'
 import 'package:neuro_toolkit/features/neurocnl/models/quantization_report.dart'
     as _i21;
 import 'package:neuro_toolkit/features/neurocnl/models/sensor_frame.dart'
-    as _i30;
+    as _i31;
 import 'package:neuro_toolkit/features/neurocnl/models/server_workspace_summary.dart'
     as _i27;
 import 'package:neuro_toolkit/features/neurocnl/models/simulation_result.dart'
@@ -1068,6 +1070,20 @@ class MockApiClient extends _i1.Mock implements _i9.ApiClient {
           as _i25.Future<Map<String, dynamic>>);
 
   @override
+  _i25.Future<List<_i30.DetectedHardwareEntry>> fetchDetectedHardware({
+    List<String>? registeredIdentifiers = const [],
+  }) =>
+      (super.noSuchMethod(
+            Invocation.method(#fetchDetectedHardware, [], {
+              #registeredIdentifiers: registeredIdentifiers,
+            }),
+            returnValue: _i25.Future<List<_i30.DetectedHardwareEntry>>.value(
+              <_i30.DetectedHardwareEntry>[],
+            ),
+          )
+          as _i25.Future<List<_i30.DetectedHardwareEntry>>);
+
+  @override
   _i25.Future<List<String>> listSerialPorts() =>
       (super.noSuchMethod(
             Invocation.method(#listSerialPorts, []),
@@ -1094,12 +1110,12 @@ class MockApiClient extends _i1.Mock implements _i9.ApiClient {
           as _i25.Future<void>);
 
   @override
-  _i25.Stream<_i30.SensorFrame> streamHardwareSensorData() =>
+  _i25.Stream<_i31.SensorFrame> streamHardwareSensorData() =>
       (super.noSuchMethod(
             Invocation.method(#streamHardwareSensorData, []),
-            returnValue: _i25.Stream<_i30.SensorFrame>.empty(),
+            returnValue: _i25.Stream<_i31.SensorFrame>.empty(),
           )
-          as _i25.Stream<_i30.SensorFrame>);
+          as _i25.Stream<_i31.SensorFrame>);
 
   @override
   _i25.Future<_i23.JobStatus<T>> getJobStatus<T>(

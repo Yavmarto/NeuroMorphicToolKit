@@ -97,6 +97,7 @@ class RemoteDeploymentRunner {
         job: job,
         request: request,
       );
+      await _syncRemoteDotenv(client, deployDir, request);
       await registry.emit(
         job,
         DeploymentPhase.uploadingAssets,
@@ -663,6 +664,41 @@ exit 1
 
   static String _shortHash(String hash) =>
       hash.length <= 12 ? hash : hash.substring(0, 12);
+
+  Future<void> _syncRemoteDotenv(
+    SSHClient client,
+    String deployDir,
+    DeploymentRequest request,
+  ) async {
+    final values = <String, String>{
+      ...request.moduleEnvironment,
+      ...request.moduleSecrets,
+    };
+    if (values.isEmpty) return;
+    final payload = jsonEncode(values);
+    final script =
+        "python3 - <<'PY'\n"
+        'import json, pathlib\n'
+        'deploy = pathlib.Path(${jsonEncode(deployDir)})\n'
+        'path = deploy / ".env"\n'
+        'path.parent.mkdir(parents=True, exist_ok=True)\n'
+        'values = json.loads(${jsonEncode(payload)})\n'
+        'existing = {}\n'
+        'if path.exists():\n'
+        '    for line in path.read_text(encoding="utf-8").splitlines():\n'
+        '        if not line or line.startswith("#") or "=" not in line:\n'
+        '            continue\n'
+        '        key, value = line.split("=", 1)\n'
+        '        existing[key.strip()] = value\n'
+        'existing.update(values)\n'
+        'path.write_text("\\n".join(f"{k}={v}" for k, v in sorted(existing.items())) + "\\n", encoding="utf-8")\n'
+        'PY';
+    await runChecked(
+      client,
+      'cd ${shellQuote(deployDir)} && $script',
+      'Could not write module configuration to the server.',
+    );
+  }
 }
 
 /// Prints `NMTK_ADMIN_TOKEN|<token>` for the first candidate file the running

@@ -45,7 +45,7 @@ final class ServerConfigControllerProvider
 }
 
 String _$serverConfigControllerHash() =>
-    r'abe691f6cfb14da8fcdd840aeb826e75a90ec704';
+    r'7173309ba971f3e490cb25a7a9e02f3827ee8747';
 
 /// Manages readiness for the connection selected by the root launcher.
 

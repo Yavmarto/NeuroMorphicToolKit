@@ -24,3 +24,7 @@ services:
       - ./nmtk/launcher_control:/app/nmtk/launcher_control
       - ./scripts/launcher_control_service.py:/app/scripts/launcher_control_service.py
       - ./nmtk/neuro_toolkit/assets:/app/nmtk/neuro_toolkit/assets
+      # App-account credential store (minted by install.sh --app-username/--app-password).
+      - ./credentials/app/users.json:/app/credentials/users.json
+    environment:
+      - NMTK_APP_USERS_FILE=/app/credentials/users.json

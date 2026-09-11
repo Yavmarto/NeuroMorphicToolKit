@@ -25,11 +25,15 @@ Future<TargetStore> _fakeTargetStore() async {
   );
 }
 
+/// A device connecting to an existing server only ever probes reachability
+/// (CEL-171) -- `login`/`reconnect` are the credentialed calls the connect
+/// flow no longer uses, so they assert if the notifier ever reaches for them.
 class _FakeConnectService implements ConnectService {
-  _FakeConnectService({this.loginResult, this.reconnectResult});
+  _FakeConnectService({this.reachable = true});
 
-  Object? loginResult;
-  Object? reconnectResult;
+  bool reachable;
+  int probeCalls = 0;
+  String? lastProbedHost;
 
   @override
   Future<ConnectSession> login({
@@ -37,24 +41,26 @@ class _FakeConnectService implements ConnectService {
     required String username,
     required String credential,
   }) async {
-    final result = loginResult;
-    if (result is Exception) throw result;
-    return result as ConnectSession;
+    throw UnimplementedError(
+      'connecting to an existing server must not call login()',
+    );
   }
 
   @override
   Future<ConnectSession> reconnect(ConnectTarget target) async {
-    final result = reconnectResult;
-    if (result == null) {
-      throw const ConnectException('no saved session');
-    }
-    if (result is Exception) throw result;
-    return result as ConnectSession;
+    throw UnimplementedError(
+      'connecting to an existing server must not call reconnect()',
+    );
   }
 
   @override
-  Future<bool> probe({required String host, Duration timeout = const Duration(seconds: 2)}) async {
-    return true;
+  Future<bool> probe({
+    required String host,
+    Duration timeout = const Duration(seconds: 2),
+  }) async {
+    probeCalls++;
+    lastProbedHost = host;
+    return reachable;
   }
 }
 
@@ -76,89 +82,70 @@ void main() {
     expect(state.savedHost, isNull);
   });
 
-  test('connect success saves the target and reports connected', () async {
+  test(
+    'connect succeeds with no credential when the host answers, and saves it',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      final service = _FakeConnectService(reachable: true);
+      final container = ProviderContainer(
+        overrides: [
+          connectServiceProvider.overrideWithValue(service),
+          targetStoreProvider.overrideWith((ref) => _fakeTargetStore()),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container
+          .read(connectNotifierProvider.notifier)
+          .connect(const ConnectRequest(host: '192.168.2.90'));
+
+      final state = container.read(connectNotifierProvider);
+      expect(state.phase, ConnectPhase.connected);
+      expect(state.session?.host, '192.168.2.90');
+      expect(state.savedHost, '192.168.2.90');
+      expect(service.probeCalls, 1);
+      expect(service.lastProbedHost, '192.168.2.90');
+
+      final store = await container.read(targetStoreProvider.future);
+      final saved = await store.loadLastTarget();
+      expect(saved?.host, '192.168.2.90');
+    },
+  );
+
+  test(
+    'connect fails with a could-not-reach message when the host does not answer',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      final container = ProviderContainer(
+        overrides: [
+          connectServiceProvider.overrideWithValue(
+            _FakeConnectService(reachable: false),
+          ),
+          targetStoreProvider.overrideWith((ref) => _fakeTargetStore()),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container
+          .read(connectNotifierProvider.notifier)
+          .connect(const ConnectRequest(host: '192.168.2.90'));
+
+      final state = container.read(connectNotifierProvider);
+      expect(state.phase, ConnectPhase.failed);
+      expect(state.failureCause, contains('Could not reach'));
+      expect(state.savedHost, '192.168.2.90');
+
+      final store = await container.read(targetStoreProvider.future);
+      expect(await store.loadTargets(), isEmpty);
+    },
+  );
+
+  test('reconnectOnOpen reconnects silently when the saved host still answers', () async {
     SharedPreferences.setMockInitialValues({});
-    const session = ConnectSession(
-      host: '192.168.2.90',
-      username: 'ada',
-      sessionToken: 'tok-1',
-    );
     final container = ProviderContainer(
       overrides: [
         connectServiceProvider.overrideWithValue(
-          _FakeConnectService(loginResult: session),
-        ),
-        targetStoreProvider.overrideWith((ref) => _fakeTargetStore()),
-      ],
-    );
-    addTearDown(container.dispose);
-
-    await container
-        .read(connectNotifierProvider.notifier)
-        .connect(
-          const ConnectRequest(
-            host: '192.168.2.90',
-            appUsername: 'ada',
-            credential: 'hunter2',
-          ),
-        );
-
-    final state = container.read(connectNotifierProvider);
-    expect(state.phase, ConnectPhase.connected);
-    expect(state.session?.sessionToken, 'tok-1');
-    expect(state.savedHost, '192.168.2.90');
-
-    final store = await container.read(targetStoreProvider.future);
-    final saved = await store.loadLastTarget();
-    expect(saved?.host, '192.168.2.90');
-    expect(saved?.sessionToken, 'tok-1');
-    expect(saved?.credential, 'hunter2');
-  });
-
-  test('connect failure reports the cause, keeps the host, saves nothing', () async {
-    SharedPreferences.setMockInitialValues({});
-    final container = ProviderContainer(
-      overrides: [
-        connectServiceProvider.overrideWithValue(
-          _FakeConnectService(
-            loginResult: const ConnectException('Incorrect username or password.'),
-          ),
-        ),
-        targetStoreProvider.overrideWith((ref) => _fakeTargetStore()),
-      ],
-    );
-    addTearDown(container.dispose);
-
-    await container
-        .read(connectNotifierProvider.notifier)
-        .connect(
-          const ConnectRequest(
-            host: '192.168.2.90',
-            appUsername: 'ada',
-            credential: 'wrong',
-          ),
-        );
-
-    final state = container.read(connectNotifierProvider);
-    expect(state.phase, ConnectPhase.failed);
-    expect(state.failureCause, 'Incorrect username or password.');
-    expect(state.savedHost, '192.168.2.90');
-
-    final store = await container.read(targetStoreProvider.future);
-    expect(await store.loadTargets(), isEmpty);
-  });
-
-  test('reconnectOnOpen restores a saved session', () async {
-    SharedPreferences.setMockInitialValues({});
-    const refreshed = ConnectSession(
-      host: '192.168.2.90',
-      username: 'ada',
-      sessionToken: 'tok-2',
-    );
-    final container = ProviderContainer(
-      overrides: [
-        connectServiceProvider.overrideWithValue(
-          _FakeConnectService(reconnectResult: refreshed),
+          _FakeConnectService(reachable: true),
         ),
         targetStoreProvider.overrideWith((ref) => _fakeTargetStore()),
       ],
@@ -167,37 +154,63 @@ void main() {
 
     final store = await container.read(targetStoreProvider.future);
     await store.saveTarget(
-      const ConnectTarget(
-        host: '192.168.2.90',
-        appUsername: 'ada',
-        sessionToken: 'tok-1',
-        credential: 'hunter2',
-      ),
+      const ConnectTarget(host: '192.168.2.90', appUsername: ''),
     );
 
     await container.read(connectNotifierProvider.notifier).reconnectOnOpen();
 
     final state = container.read(connectNotifierProvider);
     expect(state.phase, ConnectPhase.connected);
-    expect(state.session?.sessionToken, 'tok-2');
+    expect(state.session?.host, '192.168.2.90');
     expect(state.savedHost, '192.168.2.90');
   });
 
-  test('reconnectOnOpen with nothing saved fails without a saved host', () async {
-    SharedPreferences.setMockInitialValues({});
-    final container = ProviderContainer(
-      overrides: [
-        connectServiceProvider.overrideWithValue(_FakeConnectService()),
-        targetStoreProvider.overrideWith((ref) => _fakeTargetStore()),
-      ],
-    );
-    addTearDown(container.dispose);
+  test(
+    'reconnectOnOpen fails with a could-not-reach message when the saved host is offline',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      final container = ProviderContainer(
+        overrides: [
+          connectServiceProvider.overrideWithValue(
+            _FakeConnectService(reachable: false),
+          ),
+          targetStoreProvider.overrideWith((ref) => _fakeTargetStore()),
+        ],
+      );
+      addTearDown(container.dispose);
 
-    await container.read(connectNotifierProvider.notifier).reconnectOnOpen();
+      final store = await container.read(targetStoreProvider.future);
+      await store.saveTarget(
+        const ConnectTarget(host: '192.168.2.90', appUsername: ''),
+      );
 
-    final state = container.read(connectNotifierProvider);
-    expect(state.phase, ConnectPhase.failed);
-    expect(state.savedHost, isNull);
-    expect(state.failureCause, isNotNull);
-  });
+      await container.read(connectNotifierProvider.notifier).reconnectOnOpen();
+
+      final state = container.read(connectNotifierProvider);
+      expect(state.phase, ConnectPhase.failed);
+      expect(state.savedHost, '192.168.2.90');
+      expect(state.failureCause, contains('Could not reach'));
+    },
+  );
+
+  test(
+    'reconnectOnOpen with nothing saved fails without a saved host',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      final container = ProviderContainer(
+        overrides: [
+          connectServiceProvider.overrideWithValue(_FakeConnectService()),
+          targetStoreProvider.overrideWith((ref) => _fakeTargetStore()),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(connectNotifierProvider.notifier).reconnectOnOpen();
+
+      final state = container.read(connectNotifierProvider);
+      expect(state.phase, ConnectPhase.failed);
+      expect(state.savedHost, isNull);
+      expect(state.failureCause, isNotNull);
+    },
+  );
 }

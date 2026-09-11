@@ -10,7 +10,7 @@ import 'package:neuro_toolkit/features/neurocnl/providers/api_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/screens/canvas_host_screen.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/studio_feature.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart'
-    show neurocnlBackendDegradedProvider;
+    show NeurocnlBackendDegradedNotifier, neurocnlBackendDegradedProvider;
 
 GoRouter createAppRouter({
   String initialLocation = '/',
@@ -133,6 +133,7 @@ class _AppShellState extends ConsumerState<AppShell> {
   bool _mujocoAvailable = false;
   bool _healthLoading = true;
   bool _backendOnline = true;
+  late NeurocnlBackendDegradedNotifier _degradedNotifier;
 
   @override
   void initState() {
@@ -143,8 +144,21 @@ class _AppShellState extends ConsumerState<AppShell> {
   @override
   void dispose() {
     // Leaving the neurocnl shell: stop reporting its backend health onto the
-    // shared connection dot so a stale degraded state doesn't linger.
-    ref.read(neurocnlBackendDegradedProvider.notifier).set(false);
+    // shared connection dot so a stale degraded state doesn't linger. The
+    // notifier is captured during `build` (Riverpod 3 forbids `ref` inside
+    // `dispose`) and the reset is deferred on a microtask because modifying a
+    // provider while the widget tree is still being finalized is also
+    // forbidden. The reset is best-effort: if the provider has already been
+    // disposed (no launcher is watching it), a fresh mount re-creates it at
+    // its default `false`, so we simply swallow that case.
+    final notifier = _degradedNotifier;
+    Future.microtask(() {
+      try {
+        notifier.set(false);
+      } catch (_) {
+        // Provider already disposed; nothing to reset.
+      }
+    });
     super.dispose();
   }
 
@@ -180,6 +194,9 @@ class _AppShellState extends ConsumerState<AppShell> {
 
   @override
   Widget build(BuildContext context) {
+    // Capture the notifier before the widget can be unmounted so `dispose`
+    // can reset the shared connection dot without touching `ref`.
+    _degradedNotifier = ref.read(neurocnlBackendDegradedProvider.notifier);
     // Re-run the health check whenever the root changes its selected backend.
     ref.listen<String?>(serverConfigProvider.select((s) => s.serverUrl), (
       prev,

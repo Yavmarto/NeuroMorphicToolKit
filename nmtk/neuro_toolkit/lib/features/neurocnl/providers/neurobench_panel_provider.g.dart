@@ -42,7 +42,7 @@ final class NeurobenchPanelControllerProvider
 }
 
 String _$neurobenchPanelControllerHash() =>
-    r'c7dbf961a8fb091f98d1c09ff59261e4a67b2cb5';
+    r'19c961973b365716d07d8311cf8b681fb3b2ef5e';
 
 abstract class _$NeurobenchPanelController
     extends $Notifier<NeurobenchPanelState> {

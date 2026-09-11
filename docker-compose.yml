@@ -40,6 +40,7 @@ services:
       - NEUROCNL_DATA_DIR=/home/app/data
       - NEUROSIM_PROJECT_DB=/home/app/data/neurosim/projects.db
       - NEUROCHIP_DEPLOYMENT_DB=/home/app/data/neurochip/deployments.db
+      - GITHUB_OAUTH_CLIENT_ID=${GITHUB_OAUTH_CLIENT_ID:-}
     volumes:
       - suite_api_data:/home/app/data
     healthcheck:

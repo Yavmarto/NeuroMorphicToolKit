@@ -44,7 +44,7 @@ final class NeurosimWorkspaceControllerProvider
 }
 
 String _$neurosimWorkspaceControllerHash() =>
-    r'6b75689a5368703395bc139a935fd6f894517f73';
+    r'b607dbf79e88733fd58d8d3643ed0d264e5d35f4';
 
 abstract class _$NeurosimWorkspaceController
     extends $Notifier<NeurosimWorkspaceState> {

@@ -9,20 +9,26 @@ void main() {
         jsonDecode(File('assets/modules.json').readAsStringSync())
             as List<dynamic>;
 
-    for (final moduleId in <String>['Neurosense', 'Neurohub']) {
-      final module = manifest.cast<Map<String, dynamic>>().singleWhere(
-        (entry) => entry['id'] == moduleId,
-      );
-
-      expect(module['hasFrontend'], isFalse, reason: moduleId);
-      expect(module['frontendStatus'], 'No', reason: moduleId);
-      expect(module['showInLauncherNav'], isFalse, reason: moduleId);
-    }
+    final neurosense = manifest.cast<Map<String, dynamic>>().singleWhere(
+      (entry) => entry['id'] == 'Neurosense',
+    );
+    expect(neurosense['hasFrontend'], isFalse);
+    expect(neurosense['frontendStatus'], 'No');
+    expect(neurosense['showInLauncherNav'], isFalse);
 
     final neurobench = manifest.cast<Map<String, dynamic>>().singleWhere(
       (entry) => entry['id'] == 'Neurobench',
     );
     expect(neurobench['hasFrontend'], isTrue);
     expect(neurobench['frontendStatus'], 'Yes');
+
+    // Neurohub ships a native Share surface in the launcher and its GitHub
+    // workspace API is fronted by the same NeuroStudio client.
+    final neurohub = manifest.cast<Map<String, dynamic>>().singleWhere(
+      (entry) => entry['id'] == 'Neurohub',
+    );
+    expect(neurohub['hasFrontend'], isTrue);
+    expect(neurohub['frontendStatus'], 'Yes');
+    expect(neurohub['showInLauncherNav'], isTrue);
   });
 }

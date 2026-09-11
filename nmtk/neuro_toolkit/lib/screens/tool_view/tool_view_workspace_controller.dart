@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
+import 'package:neuro_toolkit/features/server/connect/connect_notifier.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/models/workspace_session.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
@@ -22,6 +23,12 @@ import 'package:neuro_toolkit/screens/tool_view/tool_view_workspace_host.dart';
 /// The single module surface the launcher mounts. Everything else in the
 /// module manifest is a backend capability descriptor, not an openable UI.
 const String kPrimaryModuleId = 'neurocnl';
+
+/// The second openable native surface: the Neurohub "Share" workspace
+/// browser. Admitted alongside [kPrimaryModuleId] only because it ships a
+/// real native surface (see [NativeSurfaceRegistry]); every other manifest
+/// entry remains a backend capability descriptor.
+const String kNeurohubModuleId = 'Neurohub';
 
 /// Owns module-workspace session lifecycle: which module is active, the
 /// live WebView controllers, per-module load failures, and the
@@ -188,11 +195,18 @@ class ToolViewWorkspaceController {
     workspaceInitializing = true;
     final serverGeneration = workspaceServerGeneration;
     final baseUri = uri_resolver.launcherBaseUri(_ref);
-    if (baseUri == null) {
+    final connectState = _ref.read(connectNotifierProvider);
+    final isDevOffline = connectState.phase == ConnectPhase.devOffline;
+    if (baseUri == null && !isDevOffline) {
       workspaceInitializing = false;
       return;
     }
-    final serverKey = baseUri.toString();
+    final serverKey = baseUri?.toString() ?? 'dev-offline';
+    String? currentServerKey() =>
+        uri_resolver.launcherBaseUri(_ref)?.toString() ??
+        (_ref.read(connectNotifierProvider).phase == ConnectPhase.devOffline
+            ? 'dev-offline'
+            : null);
     try {
       final moduleStateAsync = _ref.read(moduleProvider);
       final moduleState = moduleStateAsync.value;
@@ -205,7 +219,7 @@ class ToolViewWorkspaceController {
         return;
       }
       if (serverGeneration != workspaceServerGeneration ||
-          serverKey != uri_resolver.launcherBaseUri(_ref)?.toString()) {
+          serverKey != currentServerKey()) {
         return;
       }
 
@@ -235,7 +249,7 @@ class ToolViewWorkspaceController {
           eligibleModules.first.id;
 
       if (serverGeneration != workspaceServerGeneration ||
-          serverKey != uri_resolver.launcherBaseUri(_ref)?.toString()) {
+          serverKey != currentServerKey()) {
         return;
       }
       await _ref
@@ -246,7 +260,7 @@ class ToolViewWorkspaceController {
           );
       if (!_host.mounted ||
           serverGeneration != workspaceServerGeneration ||
-          serverKey != uri_resolver.launcherBaseUri(_ref)?.toString()) {
+          serverKey != currentServerKey()) {
         return;
       }
 
@@ -280,10 +294,11 @@ class ToolViewWorkspaceController {
   }
 
   bool shouldOpenModule(Module module) {
-    // The launcher mounts exactly one frontend surface: NeuroStudio. Every
+    // The launcher mounts NeuroStudio as its primary surface, plus the
+    // Neurohub "Share" surface as the second openable native module. Every
     // other entry in the module manifest is a backend capability descriptor
     // (Jupyter kernels, native services, etc.), not a separate tabbable UI.
-    if (module.id != kPrimaryModuleId) {
+    if (module.id != kPrimaryModuleId && module.id != kNeurohubModuleId) {
       return false;
     }
     if (!module.isEnabled || !module.showInLauncherNav) {

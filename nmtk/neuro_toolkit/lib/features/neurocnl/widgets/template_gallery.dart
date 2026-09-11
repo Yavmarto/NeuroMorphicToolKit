@@ -346,12 +346,10 @@ class _TemplateGalleryState extends ConsumerState<TemplateGallery> {
                                     path: result.path,
                                   );
                             } else if (result.outcome == SaveOutcome.failed) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                NmtkSnackBars.error(
+                              NmtkSnackBars.error(
                                   context,
                                   result.message ?? 'File save failed.',
-                                ),
-                              );
+                                );
                             }
                           }
                         },

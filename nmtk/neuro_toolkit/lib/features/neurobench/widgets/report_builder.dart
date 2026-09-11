@@ -163,14 +163,12 @@ class _ReportBuilderState extends ConsumerState<ReportBuilder> {
               ZetaButton.primary(
                 onPressed: () {
                   if (_formKey.currentState!.validate()) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      NmtkSnackBars.success(
+                    NmtkSnackBars.success(
                         context,
                         latestResult == null
                             ? 'Report preview prepared. Run the benchmark to generate a fully populated export.'
                             : 'Generating report from the current result set...',
-                      ),
-                    );
+                      );
                   }
                 },
                 leadingIcon: ZetaIcons.note,

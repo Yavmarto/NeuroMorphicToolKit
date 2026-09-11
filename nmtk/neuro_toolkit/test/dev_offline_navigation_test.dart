@@ -135,8 +135,8 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      // Initially shows the sign-in popup over the mounted workspace backdrop
-      expect(find.text('Sign in to your server'), findsOneWidget);
+      // Initially shows the connect popup over the mounted workspace backdrop
+      expect(find.text('Connect to your server'), findsOneWidget);
       expect(find.text('DEV_OFFLINE_WORKSPACE_SHOWN'), findsOneWidget);
 
       // The dev bypass button should be present in debug mode
@@ -153,7 +153,7 @@ void main() {
 
       // Now ServerAccessGate should show the workspace child
       expect(find.text('DEV_OFFLINE_WORKSPACE_SHOWN'), findsOneWidget);
-      expect(find.text('Sign in to your server'), findsNothing);
+      expect(find.text('Connect to your server'), findsNothing);
     },
   );
 }

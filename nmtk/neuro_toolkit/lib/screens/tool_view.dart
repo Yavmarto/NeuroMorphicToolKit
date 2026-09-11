@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:nmtk_module_contracts/nmtk_module_contracts.dart';
 
+import 'package:neuro_toolkit/features/server/connect/connect_notifier.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/models/workspace_session.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
@@ -90,7 +91,9 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen>
     final tokens = NmtkShellTokens.of(context);
     final currentServerKey =
         ref.watch(selectedControlApiServiceProvider)?.baseUri.toString() ??
-        'disconnected';
+        (ref.watch(connectNotifierProvider).phase == ConnectPhase.devOffline
+            ? 'dev-offline'
+            : 'disconnected');
 
     final eligibleModules = moduleState == null
         ? const <Module>[]

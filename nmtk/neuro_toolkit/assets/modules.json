@@ -237,9 +237,9 @@
     "installStrategy": "pip",
     "startStrategy": "none",
     "uvicornTarget": "",
-    "showInLauncherNav": false,
-    "hasFrontend": false,
-    "frontendStatus": "No",
+    "showInLauncherNav": true,
+    "hasFrontend": true,
+    "frontendStatus": "Yes",
     "requiresMuJoCo": false,
     "remoteUrl": "https://api.github.com/repos/Completed-Spoon-6/Neurohub",
     "required": false,
@@ -253,7 +253,9 @@
       "requiredPorts": [
         9000
       ],
-      "requiredEnvironment": [],
+      "requiredEnvironment": [
+        "GITHUB_OAUTH_CLIENT_ID"
+      ],
       "secretFields": [],
       "defaultContainerImage": "ghcr.io/completed-spoon-6/neurohub:latest",
       "chartTemplateId": "nmtk-backend",

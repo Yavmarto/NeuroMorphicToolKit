@@ -372,6 +372,8 @@ class DeploymentTarget:
     domain: str = ""
     container_engine: str = "docker"
     secret_refs: dict[str, str] = field(default_factory=dict)
+    module_environment: dict[str, str] = field(default_factory=dict)
+    module_secret_refs: dict[str, str] = field(default_factory=dict)
     last_readiness: str = "unknown"
     last_deployed_version: str = ""
     last_failure_reason: str = ""
@@ -434,6 +436,24 @@ class DeploymentTarget:
             secret_refs=dict(
                 payload.get("secretRefs") or payload.get("secret_refs") or {}
             ),
+            module_environment={
+                str(key): str(value)
+                for key, value in (
+                    payload.get("moduleEnvironment")
+                    or payload.get("module_environment")
+                    or {}
+                ).items()
+                if str(key).strip() and str(value).strip()
+            },
+            module_secret_refs={
+                str(key): str(value)
+                for key, value in (
+                    payload.get("moduleSecretRefs")
+                    or payload.get("module_secret_refs")
+                    or {}
+                ).items()
+                if str(key).strip() and str(value).strip()
+            },
             last_readiness=str(payload.get("lastReadiness") or "unknown"),
             last_deployed_version=str(payload.get("lastDeployedVersion") or ""),
             last_failure_reason=str(payload.get("lastFailureReason") or ""),
@@ -460,6 +480,8 @@ class DeploymentTarget:
             "domain": self.domain,
             "containerEngine": self.container_engine,
             "secretRefs": dict(self.secret_refs),
+            "moduleEnvironment": dict(self.module_environment),
+            "moduleSecretRefs": dict(self.module_secret_refs),
             "lastReadiness": self.last_readiness,
             "lastDeployedVersion": self.last_deployed_version,
             "lastFailureReason": self.last_failure_reason,

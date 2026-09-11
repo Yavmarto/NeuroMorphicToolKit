@@ -670,12 +670,7 @@ class _CnlEditorState extends ConsumerState<CnlEditor> {
           .set(importedFile.text);
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('CNL file load failed: $error'),
-            showCloseIcon: true,
-          ),
-        );
+        NmtkSnackBars.info(context, 'CNL file load failed: $error');
       }
     } finally {
       if (mounted) setState(() => _isImporting = false);

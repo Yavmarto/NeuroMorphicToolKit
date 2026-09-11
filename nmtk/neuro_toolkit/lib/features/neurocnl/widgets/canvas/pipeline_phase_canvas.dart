@@ -797,14 +797,8 @@ class _PipelinePhaseCanvasState extends ConsumerState<PipelinePhaseCanvas>
                   ),
                 );
           } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  'Type mismatch: ${srcPort.type.name} → ${dstPort.type.name}',
-                ),
-                showCloseIcon: true,
-              ),
-            );
+            NmtkSnackBars.info(context, 'Type mismatch: ${srcPort.type.name} → ${dstPort.type.name}',
+                );
           }
           ref.read(canvasProvider.notifier).cancelConnecting();
           return;
@@ -956,14 +950,8 @@ class _PipelinePhaseCanvasState extends ConsumerState<PipelinePhaseCanvas>
         srcPort.type == dstPort.type;
 
     if (!compatible) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Type mismatch: ${srcPort.type.name} → ${dstPort.type.name}',
-          ),
-          showCloseIcon: true,
-        ),
-      );
+      NmtkSnackBars.info(context, 'Type mismatch: ${srcPort.type.name} → ${dstPort.type.name}',
+          );
       ref.read(canvasProvider.notifier).cancelConnecting();
       return;
     }
@@ -1058,16 +1046,10 @@ class _PipelinePhaseCanvasState extends ConsumerState<PipelinePhaseCanvas>
 
     if (entries.isEmpty) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            fromOutput
+      NmtkSnackBars.info(context, fromOutput
                 ? 'No node type in this phase accepts an input.'
                 : 'No node type in this phase produces an output.',
-          ),
-          showCloseIcon: true,
-        ),
-      );
+          );
       return;
     }
 
@@ -1240,12 +1222,7 @@ class _PipelinePhaseCanvasState extends ConsumerState<PipelinePhaseCanvas>
     final PipelineDagNodeType? type = resolvePipelineNodeType(text);
     if (type == null) {
       if (text.trim().isNotEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("No matching node type for '$text'."),
-            showCloseIcon: true,
-          ),
-        );
+        NmtkSnackBars.info(context, "No matching node type for '$text'.");
       }
       return;
     }

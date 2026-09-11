@@ -132,9 +132,7 @@ class PipelineNodePropertyPanel extends ConsumerWidget {
                       final message = outcome.replacedSelectedNode
                           ? 'Custom node saved and selected on the canvas.'
                           : 'Custom node saved to the reusable component palette.';
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(message), showCloseIcon: true),
-                      );
+                      NmtkSnackBars.info(context, message);
                     },
                   ),
                 ),
@@ -1191,14 +1189,10 @@ class _DatasetPathFieldState extends ConsumerState<DatasetPathField> {
     } catch (e) {
       if (!context.mounted) return;
       debugPrint('Dataset file selection failed: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Could not select the dataset file. '
-            'Check its permissions and try Browse again.',
-          ),
-          showCloseIcon: true,
-        ),
+      NmtkSnackBars.error(
+        context,
+        'Could not select the dataset file. '
+        'Check its permissions and try Browse again.',
       );
     }
   }

@@ -16,3 +16,13 @@ sealed class SimulatorRunState with _$SimulatorRunState {
     int? statusCode,
   }) = SimulatorRunError;
 }
+
+/// Plain-text failure reason for simulator run errors (message, HTTP code, details).
+String formatSimulatorRunError(SimulatorRunError error) {
+  final lines = <String>[
+    if (error.statusCode != null) 'HTTP ${error.statusCode}',
+    error.message,
+    ...error.details.where((detail) => detail != error.message),
+  ];
+  return lines.join('\n');
+}

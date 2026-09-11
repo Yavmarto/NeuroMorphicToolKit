@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
 import 'package:neuro_toolkit/features/neurocnl/models/canvas/canvas.dart';
 import 'package:neuro_toolkit/features/neurocnl/models/nir_node_type.dart';
@@ -160,12 +161,7 @@ mixin NetworkCanvasNodePlacementMixin<T extends ConsumerStatefulWidget>
     );
     if (type == null) {
       if (text.trim().isNotEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("No matching node type for '$text'."),
-            showCloseIcon: true,
-          ),
-        );
+        NmtkSnackBars.info(context, "No matching node type for '$text'.");
       }
       return;
     }
