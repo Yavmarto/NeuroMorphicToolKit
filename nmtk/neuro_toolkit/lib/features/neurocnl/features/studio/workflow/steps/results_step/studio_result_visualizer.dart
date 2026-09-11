@@ -605,6 +605,9 @@ class _StudioResultVisualizerState extends ConsumerState<StudioResultVisualizer>
     final contextLabelStyle = Theme.of(context).textTheme.labelSmall?.copyWith(
       color: Theme.of(context).colorScheme.onSurfaceVariant,
     );
+    final liveTraining = ref.watch(
+      studioResultSessionProvider.select((session) => session.isAnyRunning),
+    );
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -879,6 +882,7 @@ class _StudioResultVisualizerState extends ConsumerState<StudioResultVisualizer>
                               error: sourceUnavailable ?? _activityError,
                               playbackSession: _epochPlaybackSession,
                               playbackController: playbackClock,
+                              liveTraining: liveTraining,
                               onPlaybackComplete: () =>
                                   _advanceEpochPlayback(maxIndex),
                             ),

@@ -1,14 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:neuro_toolkit/features/neurocnl/models/canvas/canvas.dart';
+import 'package:neuro_toolkit/features/neurocnl/providers/canvas/canvas_provider.dart';
+import 'package:neuro_toolkit/features/neurocnl/providers/coactivation_provider.dart';
+import 'package:neuro_toolkit/features/neurocnl/providers/training_mode_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/coactivation_correlation.dart';
 import 'package:neuro_toolkit/features/neurocnl/utils/force_directed_layout.dart';
 import 'package:neuro_toolkit/features/neurocnl/widgets/brainviz_force_3d_view.dart';
 import 'package:neuro_toolkit/features/neurocnl/widgets/canvas/spike_playback_transport.dart';
 
 /// Results-tab brainviz: per-neuron force-directed layout driven by the same
-/// raster export and shared playback clock as the Grid/Raster tabs.
-class ResultsBrainvizPanel extends StatefulWidget {
+/// raster export and shared playback clock as the Grid/Raster tabs, or — while
+/// a training job is running — the live SSE spike-rate stream from
+/// [trainingModeProvider].
+class ResultsBrainvizPanel extends ConsumerStatefulWidget {
   const ResultsBrainvizPanel({
     super.key,
     required this.rasterId,
@@ -19,6 +25,7 @@ class ResultsBrainvizPanel extends StatefulWidget {
     required this.onPlaybackComplete,
     this.isLoading = false,
     this.error,
+    this.liveTraining = false,
   });
 
   final String rasterId;
@@ -30,11 +37,17 @@ class ResultsBrainvizPanel extends StatefulWidget {
   final bool isLoading;
   final String? error;
 
+  /// When true and [trainingModeProvider] is streaming rates, the panel renders
+  /// the canvas layer graph with incremental co-activation instead of the stored
+  /// per-neuron raster playback path.
+  final bool liveTraining;
+
   @override
-  State<ResultsBrainvizPanel> createState() => _ResultsBrainvizPanelState();
+  ConsumerState<ResultsBrainvizPanel> createState() =>
+      _ResultsBrainvizPanelState();
 }
 
-class _ResultsBrainvizPanelState extends State<ResultsBrainvizPanel>
+class _ResultsBrainvizPanelState extends ConsumerState<ResultsBrainvizPanel>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late CanvasGraph _graph;
@@ -66,6 +79,12 @@ class _ResultsBrainvizPanelState extends State<ResultsBrainvizPanel>
   @override
   void didUpdateWidget(covariant ResultsBrainvizPanel oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (widget.liveTraining && !oldWidget.liveTraining) {
+      ref.read(coactivationProvider.notifier).reset();
+      _window.clear();
+      _snapshot = const CoactivationSnapshot();
+      _lastFilledBin = -1;
+    }
     if (widget.rasterId != oldWidget.rasterId ||
         widget.duration != oldWidget.duration) {
       _loadRaster();
@@ -165,28 +184,45 @@ class _ResultsBrainvizPanelState extends State<ResultsBrainvizPanel>
     );
   }
 
+  bool _useLiveFeed(Map<String, double>? liveRates) =>
+      widget.liveTraining && liveRates != null && liveRates.isNotEmpty;
+
   @override
   Widget build(BuildContext context) {
-    if (widget.isLoading && widget.raster.isEmpty) {
+    final liveRates = ref.watch(trainingModeProvider);
+    final useLive = _useLiveFeed(liveRates);
+
+    if (widget.isLoading && widget.raster.isEmpty && !useLive) {
       return const Center(child: CircularProgressIndicator());
     }
-    if (widget.error != null) {
+    if (widget.error != null && !useLive) {
       return Center(child: Text(widget.error!));
     }
-    if (widget.raster.isEmpty || widget.duration <= 0) {
+    if (!useLive && (widget.raster.isEmpty || widget.duration <= 0)) {
+      if (widget.liveTraining) {
+        return const Center(
+          child: Text('Waiting for live training activations…'),
+        );
+      }
       return const Center(
         child: Text('No dynamics data available for this run.'),
       );
     }
 
-    final activity = _activityAtClock();
-    final clusterIndices = coactivationClusterIndices(_snapshot);
+    final graph = useLive ? ref.watch(canvasProvider).graph : _graph;
+    final activity = useLive ? liveRates! : _activityAtClock();
+    final snapshot = useLive
+        ? (ref.watch(coactivationProvider).snapshot ??
+              const CoactivationSnapshot())
+        : _snapshot;
+    final clusterIndices = coactivationClusterIndices(snapshot);
+    final viewKey = useLive ? 'live-training' : _loadedRasterId;
 
     return BrainvizForce3DView(
-      key: ValueKey(_loadedRasterId),
-      graph: _graph,
+      key: ValueKey(viewKey),
+      graph: graph,
       activity: activity,
-      correlationMatrix: _snapshot.correlations,
+      correlationMatrix: snapshot.correlations,
       nodeClusterIndices: clusterIndices.isEmpty ? null : clusterIndices,
       padding: 32,
     );
