@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -156,7 +157,15 @@ class _RunStepState extends ConsumerState<RunStep> {
     // before widget disposal, making the notifier's internal ref invalid.
     try {
       _trainingModeNotifier.clearDeferred();
-    } catch (_) {}
+    } on Object catch (error, stackTrace) {
+      // Expected when ProviderContainer tears down before widget disposal.
+      if (kDebugMode) {
+        debugPrint(
+          'RunStep.dispose: clearDeferred skipped after provider teardown: '
+          '$error\n$stackTrace',
+        );
+      }
+    }
     super.dispose();
   }
 

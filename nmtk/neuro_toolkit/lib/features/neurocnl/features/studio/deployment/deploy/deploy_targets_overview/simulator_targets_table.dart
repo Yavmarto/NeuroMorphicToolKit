@@ -7,11 +7,20 @@ import 'package:neuro_toolkit/features/neurocnl/providers/simulator_provider.dar
 import 'package:neuro_toolkit/features/neurocnl/widgets/simulator_panel.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/deploy/deploy_target_catalog/support.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/deploy/simulator_deploy_workspace/support.dart';
+import 'package:neuro_toolkit/features/neurocnl/providers/deploy_results_provider.dart';
+
+typedef FrameworkRuntimeRunCallback =
+    void Function(BuildContext context, String targetId);
 
 class SimulatorTargetsTable extends ConsumerWidget {
-  const SimulatorTargetsTable({super.key, required this.backends});
+  const SimulatorTargetsTable({
+    super.key,
+    required this.backends,
+    this.onFrameworkRun,
+  });
 
   final List<String> backends;
+  final FrameworkRuntimeRunCallback? onFrameworkRun;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -55,6 +64,9 @@ class SimulatorTargetsTable extends ConsumerWidget {
     WidgetRef ref,
     String backend,
   ) {
+    if (!kSimulatorDeployBackends.contains(backend)) {
+      return _frameworkRuntimeTargetRow(context, backend);
+    }
     final target = targetForId(backend);
     final settings = ref.watch(simulatorSettingsProvider(backend));
     final runState = ref.watch(simulatorRunProvider(backend));
@@ -200,6 +212,56 @@ class SimulatorTargetsTable extends ConsumerWidget {
             'T${settings.timesteps} · S${settings.seed} · '
             'FR ${settings.firingRate.toStringAsFixed(2)} · '
             'dt ${settings.dtMs.toStringAsFixed(1)}ms',
+            style: textStyles.bodySmall.copyWith(color: colors.mainSubtle),
+          ),
+        ),
+      ],
+    );
+  }
+
+  DataRow _frameworkRuntimeTargetRow(BuildContext context, String backend) {
+    final target = targetForId(backend);
+    final textStyles = Zeta.of(context).textStyles;
+    final colors = Zeta.of(context).colors;
+    final emptyCell = Text(
+      '—',
+      style: textStyles.bodySmall.copyWith(color: colors.mainSubtle),
+    );
+
+    return DataRow(
+      key: ValueKey('simulator-target-row-$backend'),
+      cells: [
+        DataCell(
+          Tooltip(
+            message: 'Open ${target.label} compatibility preview',
+            child: ZetaIconButton.text(
+              key: Key('simulator-target-run-$backend'),
+              size: ZetaWidgetSize.small,
+              icon: ZetaIcons.play,
+              semanticLabel: 'Open ${target.label} compatibility preview',
+              onPressed: onFrameworkRun == null
+                  ? null
+                  : () => onFrameworkRun!(context, backend),
+            ),
+          ),
+        ),
+        DataCell(
+          KeyedSubtree(
+            key: Key('simulator-target-row-$backend'),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(target.icon, size: 18, color: colors.mainDefault),
+                const SizedBox(width: 8),
+                Text(target.label, style: textStyles.bodyMedium),
+              ],
+            ),
+          ),
+        ),
+        DataCell(emptyCell),
+        DataCell(
+          Text(
+            'Notebook preview',
             style: textStyles.bodySmall.copyWith(color: colors.mainSubtle),
           ),
         ),

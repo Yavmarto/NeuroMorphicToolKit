@@ -12,7 +12,7 @@ import 'package:neuro_toolkit/features/neurocnl/features/studio/workflow/steps/d
 
 /// Targets the Review step can ever show something for — every simulator plus
 /// the hardware targets that produce a run result. Codegen/FPGA-only targets
-/// (`brian2`, `sinabs`, `rockpool`, `pynn`, `nengo`, `sc_neurocore_fpga`) are
+/// (`rockpool`, `pynn`, `sc_neurocore_fpga`) are
 /// preview/verdict only and never have a Review result, so they're left out of
 /// the target dropdown and the compare picker entirely.
 const List<String> reviewableTargets = <String>[

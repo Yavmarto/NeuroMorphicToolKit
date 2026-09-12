@@ -124,39 +124,50 @@ void main() {
       });
     }
 
-    // Codegen-only targets (brian2/sinabs/...) render the same way, but their
-    // preview button only appears once Setup has selected that platform.
-    const codegenTargets = <String>['brian2', 'sinabs'];
+    testWidgets("pynn export-only preview button opens its dialog", (
+      WidgetTester tester,
+    ) async {
+      await pumpDeployTarget(tester, target: 'snntorch_sim');
+      await tester.pumpAndSettle();
 
-    for (final target in codegenTargets) {
-      testWidgets("$target's code preview dialog opens", (
+      final previewButton = find.byKey(
+        const Key('export-only-target-preview-pynn'),
+      );
+      await tester.ensureVisible(previewButton);
+      await tester.pumpAndSettle();
+      await tester.tap(previewButton);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(Dialog), findsOneWidget);
+    });
+
+    const simulatorTargets = <String>[
+      'snntorch_sim',
+      'lava_sim',
+      'sc_neurocore_sim',
+      'brian2_sim',
+      'sinabs_sim',
+      'nengo_sim',
+    ];
+    const frameworkRuntimeTargets = <String>['rockpool'];
+    const allRuntimeTargets = <String>[
+      ...simulatorTargets,
+      ...frameworkRuntimeTargets,
+    ];
+
+    for (final target in frameworkRuntimeTargets) {
+      testWidgets("$target runtime preview dialog opens from its Run row", (
         WidgetTester tester,
       ) async {
-        await pumpDeployTarget(tester, target: target);
-
-        final container = ProviderScope.containerOf(
-          tester.element(find.byType(StudioScreen)),
-        );
-        if (!container
-            .read(workspaceProvider)
-            .selectedPlatforms
-            .contains(target)) {
-          container.read(workspaceProvider.notifier).togglePlatform(target);
-        }
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 16));
-
-        final previewButton = find.byKey(Key('codegen-target-preview-$target'));
-        await tester.ensureVisible(previewButton);
-        await tester.pumpAndSettle();
-        await tester.tap(previewButton);
+        await pumpDeployTarget(tester, target: 'snntorch_sim');
         await tester.pumpAndSettle();
 
-        // No spec is loaded in this minimal test harness, so the panel
-        // shows its empty-state prompt (`_CodegenPreviewPanel`'s
-        // `NmtkDeployLayout` branch only mounts once a network exists) —
-        // this just asserts the dialog itself opens with that target's
-        // panel inside, same as the hardware targets above.
+        final runButton = find.byKey(Key('simulator-target-run-$target'));
+        await tester.ensureVisible(runButton);
+        await tester.pumpAndSettle();
+        await tester.tap(runButton);
+        await tester.pumpAndSettle();
+
         expect(find.byType(Dialog), findsOneWidget);
         expect(
           find.descendant(
@@ -164,20 +175,14 @@ void main() {
             matching: find.textContaining('Architecture tab'),
           ),
           findsOneWidget,
-          reason: '$target code preview dialog must show its own content',
+          reason: '$target runtime preview dialog must show its own content',
         );
       });
     }
 
-    const simulatorTargets = <String>[
-      'snntorch_sim',
-      'lava_sim',
-      'sc_neurocore_sim',
-    ];
-
     for (final target in simulatorTargets) {
       testWidgets(
-        'picking $target opens the combined simulator targets table',
+        'picking $target opens the combined runtime targets table',
         (WidgetTester tester) async {
           await pumpDeployTarget(tester, target: target);
 
@@ -186,9 +191,7 @@ void main() {
             findsOneWidget,
           );
           expect(find.byType(NmtkDeployLayout), findsNothing);
-          // All three simulator targets appear as rows regardless of which
-          // one was picked from the deploy-target dropdown.
-          for (final backend in simulatorTargets) {
+          for (final backend in allRuntimeTargets) {
             expect(
               find.byKey(Key('simulator-target-row-$backend')),
               findsOneWidget,

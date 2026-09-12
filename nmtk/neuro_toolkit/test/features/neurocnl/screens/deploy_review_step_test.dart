@@ -86,7 +86,7 @@ void main() {
   testWidgets('a codegen-only target says so instead of promising results', (
     WidgetTester tester,
   ) async {
-    await _pumpReviewStep(tester, mockApi: mockApi, target: 'brian2');
+    await _pumpReviewStep(tester, mockApi: mockApi, target: 'pynn');
 
     expect(tester.takeException(), isNull);
     expect(find.textContaining('produces no run results'), findsOneWidget);

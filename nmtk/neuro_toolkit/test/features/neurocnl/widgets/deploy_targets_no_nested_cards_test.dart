@@ -103,11 +103,19 @@ void main() {
           reason: 'Missing hardware target row for $id.',
         );
       }
-      for (final id in ['lava_sim', 'snntorch_sim', 'sc_neurocore_sim']) {
+      for (final id in [
+        'lava_sim',
+        'snntorch_sim',
+        'sc_neurocore_sim',
+        'brian2_sim',
+        'sinabs_sim',
+        'nengo_sim',
+        'rockpool',
+      ]) {
         expect(
           find.byKey(Key('simulator-target-row-$id')),
           findsOneWidget,
-          reason: 'Missing simulator target row for $id.',
+          reason: 'Missing runtime target row for $id.',
         );
       }
     },

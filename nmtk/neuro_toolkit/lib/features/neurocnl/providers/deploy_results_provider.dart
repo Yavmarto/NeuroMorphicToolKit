@@ -11,6 +11,9 @@ const List<String> kSimulatorDeployBackends = <String>[
   'lava_sim',
   'snntorch_sim',
   'sc_neurocore_sim',
+  'brian2_sim',
+  'nengo_sim',
+  'sinabs_sim',
 ];
 
 /// True when the currently selected deploy target has produced a result the

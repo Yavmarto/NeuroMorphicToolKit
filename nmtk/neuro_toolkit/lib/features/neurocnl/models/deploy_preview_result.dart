@@ -3,17 +3,16 @@
 class DeployTargetInfo {
   const DeployTargetInfo({
     required this.id,
-    required this.kind,
+    this.runtimeCapable = false,
+    this.deployCapable = false,
     this.supportedNodes = const [],
     this.approximateNodes = const [],
     this.unsupportedNodes = const [],
   });
 
   final String id;
-
-  /// 'simulator' (dispatchable via /simulators/run) or 'codegen' (notebook
-  /// code generation only, via /notebook/generate-v2 and /notebook/preview).
-  final String kind;
+  final bool runtimeCapable;
+  final bool deployCapable;
   final List<String> supportedNodes;
   final List<String> approximateNodes;
   final List<String> unsupportedNodes;
@@ -25,7 +24,8 @@ class DeployTargetInfo {
             .toList(growable: false);
     return DeployTargetInfo(
       id: json['id'] as String? ?? '',
-      kind: json['kind'] as String? ?? 'codegen',
+      runtimeCapable: json['runtime_capable'] as bool? ?? false,
+      deployCapable: json['deploy_capable'] as bool? ?? false,
       supportedNodes: stringList('supported_nodes'),
       approximateNodes: stringList('approximate_nodes'),
       unsupportedNodes: stringList('unsupported_nodes'),

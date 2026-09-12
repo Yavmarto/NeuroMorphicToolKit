@@ -22,16 +22,15 @@ class DeployTargetsOverview extends ConsumerWidget {
     this.onManageHardwareTarget,
   });
 
-  // 'lava' (Lava / Loihi2) is deliberately not in this list even though its
-  // catalog `kind` is 'hardware' — it defaults to running the software
-  // simulator (`StudioLavaDeployState.runConfig` starts at `'sim'`) and only
-  // switches to real Loihi2 hardware when the user flips its own internal
-  // toggle, so it's grouped with the simulators below instead.
-  static const hardwareTargetIds = <String>[
-    'akida',
-    'pynq',
-    'sc_neurocore_fpga',
-  ];
+  // 'lava' (Lava / Loihi2) is deliberately not in this list even though it is
+  // deploy-capable — it defaults to running the software simulator
+  // (`StudioLavaDeployState.runConfig` starts at `'sim'`) and only switches to
+  // real Loihi2 hardware when the user flips its own internal toggle, so it's
+  // grouped with the simulators below instead.
+  static final hardwareTargetIds = deployTargets
+      .where((t) => t.deployCapable && t.id != 'lava')
+      .map((t) => t.id)
+      .toList(growable: false);
 
   /// Paired-device display label per hardware target id, if any.
   final Map<String, String> selectedDeviceLabels;
@@ -69,18 +68,36 @@ class DeployTargetsOverview extends ConsumerWidget {
               .where(selectedPlatforms.contains)
               .toList(growable: false)
         : kSimulatorDeployBackends;
+    final frameworkRuntimeIds = anyKnownSelected
+        ? frameworkRuntimeBackendIds()
+              .where(selectedPlatforms.contains)
+              .toList(growable: false)
+        : frameworkRuntimeBackendIds();
+    final runtimeBackendIds = <String>[
+      ...simulatorIds,
+      ...frameworkRuntimeIds,
+    ];
     final lavaSelected =
         !anyKnownSelected || selectedPlatforms.contains('lava');
-    final codegenIds = deployTargets
-        .where((t) => t.kind == 'codegen' && selectedPlatforms.contains(t.id))
-        .map((t) => t.id)
-        .toList(growable: false);
+    final exportOnlyIds = anyKnownSelected
+        ? deployTargets
+              .where(
+                (t) =>
+                    targetIsExportOnly(t.id) &&
+                    selectedPlatforms.contains(t.id),
+              )
+              .map((t) => t.id)
+              .toList(growable: false)
+        : deployTargets
+              .where((t) => targetIsExportOnly(t.id))
+              .map((t) => t.id)
+              .toList(growable: false);
 
     return Column(
       key: const Key('deploy-targets-overview'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        if (simulatorIds.isNotEmpty || lavaSelected) ...[
+        if (runtimeBackendIds.isNotEmpty || lavaSelected) ...[
           Wrap(
             alignment: WrapAlignment.spaceBetween,
             crossAxisAlignment: WrapCrossAlignment.center,
@@ -88,7 +105,7 @@ class DeployTargetsOverview extends ConsumerWidget {
             runSpacing: 8,
             children: [
               Text(
-                'Software Simulators',
+                'Runtime Targets',
                 style: textStyles.titleMedium.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
@@ -97,7 +114,7 @@ class DeployTargetsOverview extends ConsumerWidget {
                 RunAllSimulatorsButton(backends: simulatorIds),
             ],
           ),
-          if (simulatorIds.isNotEmpty) ...[
+          if (runtimeBackendIds.isNotEmpty) ...[
             const SizedBox(height: 12),
             // Table on the left, shared-settings card fixed to a 340px-wide
             // panel on the right (2-column field grid) — a full-width
@@ -109,10 +126,21 @@ class DeployTargetsOverview extends ConsumerWidget {
             // isn't room for both side by side, so it stacks instead.
             LayoutBuilder(
               builder: (context, constraints) {
-                final table = SimulatorTargetsTable(backends: simulatorIds);
+                final table = SimulatorTargetsTable(
+                  backends: runtimeBackendIds,
+                  onFrameworkRun: frameworkRuntimeIds.isEmpty
+                      ? null
+                      : (dialogContext, targetId) {
+                          onSelectTarget(targetId);
+                          showCodegenTargetDialog(dialogContext, targetId);
+                        },
+                );
                 final settings = SharedSimulatorSettingsCard(
                   backends: simulatorIds,
                 );
+                if (simulatorIds.isEmpty) {
+                  return table;
+                }
                 if (constraints.maxWidth < NmtkShellTokens.normalBreakpoint) {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -188,22 +216,29 @@ class DeployTargetsOverview extends ConsumerWidget {
             onOpenTarget: (String id) => _openHardwareTarget(context, id),
           ),
         ],
-        if (codegenIds.isNotEmpty) ...[
+        if (exportOnlyIds.isNotEmpty) ...[
           const SizedBox(height: 24),
           Text(
-            'Code Generation Targets',
+            'Export-only Targets',
             style: textStyles.titleMedium.copyWith(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'SpiNNaker handoff via PyNN — preview export code only, no in-app run.',
+            style: textStyles.bodySmall.copyWith(
+              color: Zeta.of(context).colors.mainSubtle,
+            ),
           ),
           const SizedBox(height: 12),
           Wrap(
             spacing: 8,
             runSpacing: 8,
             children: [
-              for (final id in codegenIds)
+              for (final id in exportOnlyIds)
                 ZetaButton.outline(
-                  key: Key('codegen-target-preview-$id'),
+                  key: Key('export-only-target-preview-$id'),
                   size: ZetaWidgetSize.small,
-                  label: '${targetLabel(id)} code',
+                  label: '${targetLabel(id)} export',
                   onPressed: () {
                     onSelectTarget(id);
                     showCodegenTargetDialog(context, id);
