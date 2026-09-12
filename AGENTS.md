@@ -241,19 +241,19 @@ the older `make backend-update`.
 **If a change still doesn't appear after a sync**, restart the `suite_api` container before
 assuming the patch is wrong — that distinguishes a stale reloader from a bad fix.
 
-**Build Android APK and copy to Box** (developer-only; not an end-user path):
+**Build Android APK + macOS DMG and copy to Box** (developer-only; not an end-user path):
 
 ```bash
 scripts/build_and_deliver_apk.sh
 ```
 
 Builds `nmtk/neuro_toolkit` as a **profile** build by default (`--debug` and `--release` are
-also available as flags) and copies the Android APK into the local Box sync folder (default
+also available as flags), builds the macOS DMG first then the Android APK, and copies each
+artifact into the local Box sync folder (default
 `~/Library/CloudStorage/Box-Box/NMTK/Builds`; override with `--box-dir` or `NMTK_BOX_DIR`).
-Pass `--with-dmg` to also build the macOS DMG installer, or `--dmg-only` for DMG only.
-Use `--skip-build` to copy existing artifacts without rebuilding.
+Use `--apk-only` or `--dmg-only` to build just one, or `--skip-build` to copy existing artifacts.
 If Box is not installed or synced, the copy is skipped with a warning and the script still exits 0.
-A DMG build failure does not block APK delivery when `--with-dmg` is used.
+A DMG build failure does not block APK delivery when both are requested.
 The macOS DMG path (`make build-macos-dmg-signed` → `create-dmg.sh`) uses the same Box copy
 helper and the same `NMTK_BOX_DIR` default.
 
