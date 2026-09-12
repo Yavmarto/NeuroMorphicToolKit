@@ -20,6 +20,7 @@ services:
       - NEUROCHIP_HW_WORKER_URL=http://neurochip-hw-worker:8002
       - NEUROCNL_PHYSICS_WORKER_URL=http://neurocnl-physics-worker:8006
       - NEUROCNL_LAVA_WORKER_URL=http://lava-backend:8012
+      - NEUROCNL_BRIAN2_WORKER_URL=http://brian2-backend:8013
       - SNN_MLIR_COMPILER_WORKER_URL=http://snn-mlir-compiler:8007
       # Remote Lava timeout — must exceed Lava's cold-start compilation (30–90 s).
       # Increase this if the warm-up isn't active or the network is unusually large.
@@ -51,6 +52,9 @@ services:
       lava-backend:
         # Lava is an optional accelerator for the core API. A cold or
         # degraded Lava install must not prevent suite_api from starting.
+        condition: service_started
+        required: false
+      brian2-backend:
         condition: service_started
         required: false
     restart: unless-stopped
@@ -142,6 +146,22 @@ services:
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8012/health')"]
       start_period: 120s
+      <<: *default-healthcheck-params
+    restart: unless-stopped
+    networks:
+      - backend-net
+
+  brian2-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.brian2
+    ports:
+      - "${BRIAN2_BACKEND_PORT:-8013}:8013"
+    environment:
+      - PYTHONUNBUFFERED=1
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8013/health')"]
+      start_period: 90s
       <<: *default-healthcheck-params
     restart: unless-stopped
     networks:

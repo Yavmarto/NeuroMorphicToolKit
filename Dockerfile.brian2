@@ -1,0 +1,20 @@
+FROM python:3.11-slim
+
+WORKDIR /repo
+
+RUN pip install --no-cache-dir \
+    "fastapi>=0.109.0" \
+    "uvicorn[standard]>=0.27.0" \
+    "brian2>=2.5.1" \
+    "numpy>=1.24.0" \
+    "nir>=1.0.0"
+
+COPY workers/brian2_backend/ workers/brian2_backend/
+COPY neurocnl/ /repo/neurocnl/
+RUN pip install --no-cache-dir --no-deps /repo/neurocnl
+
+RUN groupadd --system appgroup && useradd --system --gid appgroup appuser \
+ && chown -R appuser:appgroup /repo
+USER appuser
+
+CMD ["uvicorn", "workers.brian2_backend.main:app", "--host", "0.0.0.0", "--port", "8013"]
