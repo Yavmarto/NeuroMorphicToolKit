@@ -25,5 +25,38 @@ fi
 
 mkdir -p "$BOX_DIR"
 DEST="$BOX_DIR/$(basename "$SOURCE")"
-cp -f "$SOURCE" "$DEST"
-echo "Box copy: $DEST"
+BASENAME="$(basename "$DEST")"
+
+copy_to_dest() {
+  local target="$1"
+  rm -f "$target" 2>/dev/null || true
+  cp -X -f "$SOURCE" "$target" 2>/dev/null
+}
+
+# 1. Try direct copy to standard destination
+if copy_to_dest "$DEST"; then
+  echo "Box copy: $DEST"
+  exit 0
+fi
+
+# 2. Brief retry in case Box sync is temporarily holding the file
+sleep 1
+if copy_to_dest "$DEST"; then
+  echo "Box copy: $DEST"
+  exit 0
+fi
+
+# 3. Fallback for remote/SSH sessions where Box/macOS locks an existing file
+EXT="${BASENAME##*.}"
+STEM="${BASENAME%.*}"
+TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
+FALLBACK_DEST="$BOX_DIR/${STEM}-${TIMESTAMP}.${EXT}"
+
+if copy_to_dest "$FALLBACK_DEST"; then
+  echo "Box copy: $FALLBACK_DEST (saved with timestamp because primary destination is locked by Box/macOS)"
+  exit 0
+fi
+
+echo "Warning: could not copy to Box at $DEST (permissions or sync may block remote/SSH copies)." >&2
+echo "Artifact remains at: $SOURCE" >&2
+exit 0

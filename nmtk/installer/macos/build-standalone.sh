@@ -138,7 +138,8 @@ if [ "$SKIP_FLUTTER" = false ]; then
   echo "==> Building Flutter macOS app..."
   cd "$TOOLKIT_DIR"
   flutter pub get
-  flutter build macos --release
+  # ponytail: --no-tree-shake-icons keeps the full zeta-icons font (CEL-178, CEL-229).
+  flutter build macos --release --no-tree-shake-icons
   cd "$REPO_ROOT"
 else
   echo "==> Skipping Flutter build (--skip-flutter)"

@@ -44,7 +44,21 @@ echo "==> Staging app bundle in $STAGING_DIR..."
 # Copy the .app to the staging directory
 cp -R "$APP_PATH" "$STAGING_DIR/"
 
-# ponytail: hdiutil grep + 3 retries; upgrade path is create-dmg --skip-jenkins if flakiness persists.
+STAGED_APP="$STAGING_DIR/$(basename "$APP_PATH")"
+
+# Xcode's "Automatic" signing leaves the built app (and its nested Flutter
+# frameworks) signed with the local developer's personal "Apple Development"
+# certificate. That signature is only trusted on the machine it was built on;
+# on any other Mac, Gatekeeper's quarantine-triggered deep verification of it
+# fails and the app reports as "damaged and can't be opened" (CEL-182). When
+# no Developer ID identity was passed, re-sign the whole bundle ad-hoc so the
+# signature is internally consistent and Gatekeeper can actually verify it.
+if [ -z "$SIGNING_IDENTITY" ]; then
+  echo "==> Re-signing app ad-hoc for portability (no --sign identity provided)..."
+  codesign --force --deep --sign - "$STAGED_APP"
+fi
+
+# ponytail: hdiutil grep + 3 retries for transient mount/detach flakes.
 detach_stale_rw_dmgs() {
   local dmg_dir="$1"
   while read -r dev; do
@@ -69,26 +83,16 @@ detach_stale_rw_dmgs() {
 
 OUTPUT_DIR="$(dirname "$OUTPUT_PATH")"
 MAX_CREATE_DMG_ATTEMPTS=3
-# create-dmg's Finder AppleScript needs a foreground Finder session; agent/SSH
-# runs often have none. Waking Finder once is enough for the retry window.
-if [ "$(uname)" = "Darwin" ]; then
-  open -a Finder 2>/dev/null || true
-fi
 attempt=1
 while true; do
   detach_stale_rw_dmgs "$OUTPUT_DIR"
   rm -f "$OUTPUT_PATH"
 
   echo "==> Building DMG: $OUTPUT_FILE (attempt $attempt/$MAX_CREATE_DMG_ATTEMPTS)"
-  # First attempt tries the Finder-styled layout; once that AppleScript step
-  # has timed out (-1712), retries can't succeed without a foreground Finder
-  # session (e.g. headless/agent runs), so skip straight to a plain DMG.
-  EXTRA_FLAGS=""
-  if [ "$attempt" -gt 1 ]; then
-    EXTRA_FLAGS="--skip-jenkins"
-  fi
+  # ponytail: always --skip-jenkins; Finder AppleScript needs a foreground GUI
+  # session and routinely times out (-1712) over SSH/agent runs.
   if create-dmg \
-    $EXTRA_FLAGS \
+    --skip-jenkins \
     --volname "NeuroMorphic ToolKit ${VERSION}" \
     --window-pos 200 120 \
     --window-size 600 400 \
@@ -121,4 +125,6 @@ fi
 
 echo "Created $OUTPUT_FILE ($(du -sh "$OUTPUT_PATH" | awk '{print $1}'))"
 
-bash "$REPO_ROOT/scripts/copy_build_to_box.sh" "$OUTPUT_PATH"
+if [ "${NMTK_SKIP_BOX_COPY:-}" != 1 ]; then
+  bash "$REPO_ROOT/scripts/copy_build_to_box.sh" "$OUTPUT_PATH"
+fi

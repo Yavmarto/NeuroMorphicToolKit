@@ -1632,7 +1632,7 @@ packages:
     source: hosted
     version: "1.1.5"
   zeta_icons:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: zeta_icons
       sha256: "514d4c57c6c439986d70af176fc35e51041de81acc1ea5525c2351feeb236175"

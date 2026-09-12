@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# build_and_deliver_apk.sh — Build the NMTK Flutter launcher APK and copy it to the
-# Box-synced NMTK folder. macOS DMG delivery is opt-in.
+# build_and_deliver_apk.sh — Build the NMTK Flutter launcher (macOS DMG, then Android APK)
+# and copy artifacts to the Box-synced NMTK folder.
 #
 # Usage:
 #   scripts/build_and_deliver_apk.sh [OPTIONS]
@@ -9,8 +9,7 @@
 #   --debug        Build a debug build
 #   --profile      Build a profile build (default)
 #   --release      Build a release build
-#   --with-dmg     Also build/copy the macOS DMG (off by default)
-#   --apk-only     Only build/copy the Android APK (default; same as no flags)
+#   --apk-only     Only build/copy the Android APK (skip the macOS DMG)
 #   --dmg-only     Only build/copy the macOS DMG (skip the Android APK)
 #   --skip-build   Skip the flutter build steps; copy existing artifacts
 #   --box-dir DIR  Copy artifacts to DIR after build (default: $NMTK_BOX_DIR or
@@ -22,8 +21,8 @@
 # Examples:
 #   scripts/build_and_deliver_apk.sh
 #   scripts/build_and_deliver_apk.sh --debug
-#   scripts/build_and_deliver_apk.sh --with-dmg
-#   scripts/build_and_deliver_apk.sh --release --dmg-only
+#   scripts/build_and_deliver_apk.sh --release --apk-only
+#   scripts/build_and_deliver_apk.sh --dmg-only
 #   scripts/build_and_deliver_apk.sh --skip-build
 
 set -euo pipefail
@@ -37,7 +36,7 @@ DMG_OUTPUT_DIR="$FLUTTER_DIR/build/deliver"
 
 BUILD_MODE="profile"
 BUILD_APK=true
-BUILD_DMG=false
+BUILD_DMG=true
 SKIP_BUILD=false
 BOX_DIR="${NMTK_BOX_DIR:-}"
 DMG_VERSION="dev"
@@ -59,10 +58,6 @@ while [ $# -gt 0 ]; do
       ;;
     --release)
       BUILD_MODE="release"
-      shift
-      ;;
-    --with-dmg)
-      BUILD_DMG=true
       shift
       ;;
     --apk-only)
@@ -136,6 +131,18 @@ copy_to_box() {
   fi
 }
 
+# Non-release builds auto-connect to the dev backend without credentials
+# (CEL-220). Override the host with NMTK_DEV_SERVER_HOST when packaging.
+# ponytail: one define today; avoid mapfile (missing on macOS bash 3.2).
+flutter_non_release_define() {
+  case "$BUILD_MODE" in
+    release) printf '' ;;
+    *)
+      printf '%s' "--dart-define=NMTK_DEV_SERVER_HOST=${NMTK_DEV_SERVER_HOST:-192.168.2.90}"
+      ;;
+  esac
+}
+
 deliver_apk() {
   if [ ! -f "$APK_PATH" ]; then
     echo "APK not found at $APK_PATH" >&2
@@ -143,6 +150,19 @@ deliver_apk() {
     exit 1
   fi
   copy_to_box "$APK_PATH"
+}
+
+deliver_dmg() {
+  if [ ! -f "$DMG_PATH" ]; then
+    if [ "$BUILD_APK" = true ]; then
+      echo "Warning: DMG not available; continuing with APK only." >&2
+      return 1
+    fi
+    echo "DMG not found at $DMG_PATH" >&2
+    echo "Run without --skip-build, or build manually with nmtk/installer/macos/create-dmg.sh." >&2
+    exit 1
+  fi
+  copy_to_box "$DMG_PATH"
 }
 
 # Other agents/processes in this repo build the same Flutter project
@@ -167,15 +187,16 @@ acquire_build_lock() {
   trap 'rmdir "$BUILD_LOCK_DIR" 2>/dev/null || true' EXIT
 }
 
-# codesign needs the login keychain unlocked to sign the macOS app. On a
-# machine that's been idle (e.g. a headless dev box), the keychain can be
-# locked, which makes the macOS build fail with a signing error. Unlock it
-# up front; if it's already unlocked this is a harmless no-op.
+# codesign needs the login keychain unlocked to sign the macOS app. Only try
+# interactively — SSH/agent runs cannot answer the password prompt.
 unlock_login_keychain() {
   if [ "$(uname)" != "Darwin" ]; then
     return 0
   fi
   if ! command -v security >/dev/null 2>&1; then
+    return 0
+  fi
+  if [ ! -t 0 ]; then
     return 0
   fi
   echo "Unlocking login keychain for codesign..."
@@ -194,10 +215,14 @@ build_macos_with_retry() {
   while true; do
     if (
       cd "$FLUTTER_DIR"
+      _define="$(flutter_non_release_define)"
       case "$BUILD_MODE" in
-        debug) flutter build macos --debug ;;
-        profile) flutter build macos --profile ;;
-        *) flutter build macos --release ;;
+        # ponytail: --no-tree-shake-icons keeps the full zeta-icons font so a
+        # stale subset cannot map codepoints to missing/CJK fallback glyphs
+        # (CEL-178, CEL-229).
+        debug) flutter build macos --debug --no-tree-shake-icons ${_define:+"$_define"} ;;
+        profile) flutter build macos --profile --no-tree-shake-icons ${_define:+"$_define"} ;;
+        *) flutter build macos --release --no-tree-shake-icons ;;
       esac
     ); then
       return 0
@@ -225,21 +250,6 @@ fi
 if [ "$SKIP_BUILD" = false ]; then
   acquire_build_lock
 
-  if [ "$BUILD_APK" = true ]; then
-    echo "Building $BUILD_MODE APK from $FLUTTER_DIR ..."
-    (
-      cd "$FLUTTER_DIR"
-      case "$BUILD_MODE" in
-        debug) flutter build apk --debug ;;
-        # ponytail: --no-tree-shake-icons keeps the full zeta-icons font so a
-        # stale subset cannot map codepoints to CJK fallback glyphs (CEL-178).
-        profile) flutter build apk --profile --no-tree-shake-icons ;;
-        *) flutter build apk --release --no-tree-shake-icons ;;
-      esac
-    )
-    deliver_apk
-  fi
-
   if [ "$BUILD_DMG" = true ]; then
     unlock_login_keychain
     echo "Building $BUILD_MODE macOS app from $FLUTTER_DIR ..."
@@ -250,9 +260,10 @@ if [ "$SKIP_BUILD" = false ]; then
       echo "Building DMG from $APP_PATH ..."
       if (
         cd "$DMG_OUTPUT_DIR"
-        bash "$REPO_ROOT/nmtk/installer/macos/create-dmg.sh" "$APP_PATH" "$DMG_VERSION" "$SIGNING_IDENTITY"
+        NMTK_SKIP_BOX_COPY=1 bash "$REPO_ROOT/nmtk/installer/macos/create-dmg.sh" "$APP_PATH" "$DMG_VERSION" "$SIGNING_IDENTITY"
       ); then
         dmg_build_ok=true
+        deliver_dmg || true
       fi
     fi
     if [ "$dmg_build_ok" = false ]; then
@@ -263,24 +274,30 @@ if [ "$SKIP_BUILD" = false ]; then
       echo "Continuing with APK only." >&2
     fi
   fi
+
+  if [ "$BUILD_APK" = true ]; then
+    echo "Building $BUILD_MODE APK from $FLUTTER_DIR ..."
+    (
+      cd "$FLUTTER_DIR"
+      _define="$(flutter_non_release_define)"
+      case "$BUILD_MODE" in
+        debug) flutter build apk --debug ${_define:+"$_define"} ;;
+        # ponytail: --no-tree-shake-icons keeps the full zeta-icons font so a
+        # stale subset cannot map codepoints to CJK fallback glyphs (CEL-178).
+        profile) flutter build apk --profile --no-tree-shake-icons ${_define:+"$_define"} ;;
+        *) flutter build apk --release --no-tree-shake-icons ;;
+      esac
+    )
+    deliver_apk
+  fi
+fi
+
+if [ "$BUILD_DMG" = true ] && [ "$SKIP_BUILD" = true ]; then
+  deliver_dmg || [ "$BUILD_APK" = true ]
 fi
 
 if [ "$BUILD_APK" = true ] && [ "$SKIP_BUILD" = true ]; then
   deliver_apk
-fi
-
-if [ "$BUILD_DMG" = true ]; then
-  if [ ! -f "$DMG_PATH" ]; then
-    if [ "$BUILD_APK" = true ]; then
-      echo "Warning: DMG not available; delivered APK only." >&2
-    else
-      echo "DMG not found at $DMG_PATH" >&2
-      echo "Run without --skip-build, or build manually with nmtk/installer/macos/create-dmg.sh." >&2
-      exit 1
-    fi
-  else
-    copy_to_box "$DMG_PATH"
-  fi
 fi
 
 echo "Done."
