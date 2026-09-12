@@ -44,10 +44,7 @@ import 'package:neuro_toolkit/features/neurocnl/services/sc_neurocore_target_ser
 import 'package:neuro_toolkit/features/neurocnl/services/template_load_guard.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/workspace_payload_builder.dart';
 import 'package:neuro_toolkit/features/neurocnl/theme/app_theme.dart';
-import 'package:neuro_toolkit/features/neurocnl/widgets/studio_overlay_metrics.dart';
-import 'package:neuro_toolkit/features/neurocnl/screens/canvas/canvas_screen.dart';
 import 'package:neuro_toolkit/features/neurocnl/screens/hub/neurohub_workspace_save.dart';
-import 'package:neuro_toolkit/features/neurocnl/features/studio/shared/studio_shared.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/workspace/workspace_feature.dart'
     show
         WorkspaceTabViewData,
@@ -58,15 +55,14 @@ import 'package:neuro_toolkit/features/neurocnl/features/studio/workspace/worksp
 import 'package:neuro_toolkit/features/neurocnl/features/studio/workspace/presentation/workspace_open_overlay.dart';
 
 import 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/deployment_feature.dart';
-import 'package:neuro_toolkit/features/neurocnl/features/studio/workflow/steps/deploy_review_step/deploy_review_step.dart';
-import 'package:neuro_toolkit/features/neurocnl/features/studio/workflow/steps/run_step/run_step.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/workflow/steps/setup_step/setup_step.dart';
-import 'package:neuro_toolkit/features/neurocnl/features/studio/workspace/studio_top_bar/deploy_review_header.dart';
-import 'package:neuro_toolkit/features/neurocnl/features/studio/workspace/studio_top_bar/setup_header_actions.dart';
-import 'package:neuro_toolkit/features/neurocnl/features/studio/workspace/studio_top_bar/studio_utility_pill.dart';
-import 'package:neuro_toolkit/features/neurocnl/features/studio/workspace/studio_top_bar/studio_workflow_accordion.dart';
-import 'package:neuro_toolkit/features/neurocnl/features/studio/workspace/pipeline_stage_area/pipeline_stage_area.dart';
-import 'package:neuro_toolkit/features/neurocnl/features/studio/workspace/studio_step_drawer/studio_step_drawer.dart';
+import 'package:neuro_toolkit/features/neurocnl/features/studio/workspace/studio_screen_shell/studio_deploy_panel_host.dart';
+import 'package:neuro_toolkit/features/neurocnl/features/studio/workspace/studio_screen_shell/studio_desktop_shell.dart';
+import 'package:neuro_toolkit/features/neurocnl/features/studio/workspace/studio_screen_shell/studio_keyboard_shortcut_scope.dart';
+import 'package:neuro_toolkit/features/neurocnl/features/studio/workspace/studio_screen_shell/studio_layout_metrics.dart';
+import 'package:neuro_toolkit/features/neurocnl/features/studio/workspace/studio_screen_shell/studio_mobile_shell.dart';
+import 'package:neuro_toolkit/features/neurocnl/features/studio/assistant/studio_assistant_host.dart';
+import 'package:neuro_toolkit/features/neurocnl/features/studio/workspace/studio_screen_shell/studio_pipeline_step_content.dart';
 
 class StudioScreen extends ConsumerStatefulWidget {
   const StudioScreen({
@@ -316,30 +312,78 @@ class _StudioScreenState extends ConsumerState<StudioScreen>
     super.dispose();
   }
 
-  /// Dispatches on the step *name* rather than the raw index: the pipeline order
-  /// has changed twice now, and an index switch silently mis-routes every step
-  /// after the insertion point when it does.
-  Widget _buildStepContent(int index) => switch (index >= 0 &&
-          index < kStudioPipelineStepNames.length
-      ? kStudioPipelineStepNames[index]
-      : kDefaultStudioPipelineStep) {
-    'selectData' => SetupStep(
-      key: _setupStepKey,
-      showWorkspaceActions: MediaQuery.sizeOf(context).width < 1200,
+  Widget _buildStepContent(int index) {
+    return StudioPipelineStepContent(
+      index: index,
+      setupStepKey: _setupStepKey,
+      runResultView: _runResultView,
+      onRunResultViewChanged: _setRunResultView,
       onManageHardwareTarget: (targetId) =>
           _handleManageHardwareTarget(context, targetId),
-    ),
-    'defineModel' => const KeepAliveWrapper(
-      child: CanvasScreen(lockedTab: CanvasTab.architecture),
-    ),
-    'defineTrain' => _buildTrainingCanvas(),
-    'defineEval' => _buildEvalCanvas(),
-    'run' => KeepAliveWrapper(
-      child: RunStep(view: _runResultView, onViewChanged: _setRunResultView),
-    ),
-    'deployReview' => const DeployReviewStep(),
-    _ => DeployHardwareStep(child: _buildDeployPanel()),
-  };
+      showSetupWorkspaceActions: MediaQuery.sizeOf(context).width < 1200,
+      deployPanel: StudioDeployPanelHost(
+        selectedDeviceLabels: _selectedHardwareDeviceLabels,
+        selectedDeviceDataByTarget: _selectedHardwareDeviceData,
+        onSelectTarget: _selectDeployTarget,
+        onOpenInNeurosim: () => _openInNeurosim(ref.read(specTextProvider)),
+        onManageHardwareTarget: (targetId) =>
+            _handleManageHardwareTarget(context, targetId),
+        onSyncSelectedHardware: _syncSelectedHardwareProvider,
+        onScheduleDeployValidation: _scheduleDeployValidation,
+        onScheduleSimulatorPreflight: _scheduleSimulatorPreflight,
+      ),
+    );
+  }
+
+  void _handlePhaseSelected(
+    SnnWorkflowPhase phase, {
+    required bool platformsReady,
+    required Set<String> unlockedSteps,
+  }) {
+    if (!unlockedSteps.contains(phase.name)) {
+      _notifyPlatformRequired(platformsReady);
+      return;
+    }
+    final splitStep = _splitPipelineStep;
+    if (splitStep != null) {
+      final splitPhase = SnnWorkflowPhase.values.firstWhere(
+        (candidate) => candidate.name == splitStep,
+      );
+      if (snnStageForPhase(splitPhase) != snnStageForPhase(phase)) {
+        setState(() => _splitPipelineStep = null);
+      }
+    }
+    ref.read(workspaceProvider.notifier).setActivePipelineStep(phase.name);
+  }
+
+  void _handleSplitLeft(String stepName) {
+    final idx = kStudioPipelineStepNames.indexOf(stepName);
+    if (idx > 0) {
+      final adjacent = SnnWorkflowPhase.values[idx - 1];
+      final active = SnnWorkflowPhase.values[idx];
+      if (snnStageForPhase(adjacent) == snnStageForPhase(active)) {
+        setState(() => _splitPipelineStep = adjacent.name);
+      }
+    }
+  }
+
+  void _handleSplitRight(String stepName) {
+    final idx = kStudioPipelineStepNames.indexOf(stepName);
+    if (idx < kStudioPipelineStepNames.length - 1) {
+      final adjacent = SnnWorkflowPhase.values[idx + 1];
+      final active = SnnWorkflowPhase.values[idx];
+      if (snnStageForPhase(adjacent) == snnStageForPhase(active)) {
+        setState(() => _splitPipelineStep = adjacent.name);
+      }
+    }
+  }
+
+  void _clearSplitPipelineStep(String keepStep) {
+    setState(() => _splitPipelineStep = null);
+    if (ref.read(unlockedStepsProvider).contains(keepStep)) {
+      ref.read(workspaceProvider.notifier).setActivePipelineStep(keepStep);
+    }
+  }
 
   // ── D3 run/stop helper ────────────────────────────────────────────────────
 
@@ -820,10 +864,10 @@ class _StudioScreenState extends ConsumerState<StudioScreen>
       if (!_modelSyncNotificationsReady) return;
       if (!mounted) return;
       NmtkSnackBars.error(
-          context,
-          'Model sync failed — CNL still shows the last good version. '
-          'Review the Model canvas and correct or remove the unsupported node.',
-        );
+        context,
+        'Model sync failed — CNL still shows the last good version. '
+        'Review the Model canvas and correct or remove the unsupported node.',
+      );
     });
 
     final routeUri = _currentRouteUri();
@@ -837,359 +881,70 @@ class _StudioScreenState extends ConsumerState<StudioScreen>
       });
     }
 
-    // D3: Cmd+Enter / Ctrl+Enter triggers run from anywhere in the screen.
-    // The Focus wrapper (skipTraversal + autofocus) acts as a keyboard-event
-    // sink so that CallbackShortcuts fires even when no text field has focus.
-    final content = CallbackShortcuts(
-      bindings: <ShortcutActivator, VoidCallback>{
-        const SingleActivator(LogicalKeyboardKey.enter, meta: true):
-            _triggerRun,
-        const SingleActivator(LogicalKeyboardKey.enter, control: true):
-            _triggerRun,
-        const SingleActivator(LogicalKeyboardKey.keyS, meta: true): () =>
+    final content = StudioAssistantHost(
+      isMobile: MediaQuery.sizeOf(context).width < 900,
+      child: StudioKeyboardShortcutScope(
+        onTriggerRun: _triggerRun,
+        onSaveWorkspace: () =>
             _fileIo.runDesktopShortcutIfAllowed(_fileIo.saveWorkspace),
-        const SingleActivator(LogicalKeyboardKey.keyS, control: true): () =>
-            _fileIo.runDesktopShortcutIfAllowed(_fileIo.saveWorkspace),
-        const SingleActivator(
-          LogicalKeyboardKey.keyS,
-          meta: true,
-          shift: true,
-        ): () =>
+        onSaveWorkspaceAs: () =>
             _fileIo.runDesktopShortcutIfAllowed(_fileIo.saveWorkspaceAs),
-        const SingleActivator(
-          LogicalKeyboardKey.keyS,
-          control: true,
-          shift: true,
-        ): () =>
-            _fileIo.runDesktopShortcutIfAllowed(_fileIo.saveWorkspaceAs),
-        const SingleActivator(LogicalKeyboardKey.keyO, meta: true): () =>
+        onOpenWorkspace: () =>
             _fileIo.runDesktopShortcutIfAllowed(_fileIo.openWorkspace),
-        const SingleActivator(LogicalKeyboardKey.keyO, control: true): () =>
-            _fileIo.runDesktopShortcutIfAllowed(_fileIo.openWorkspace),
-        const SingleActivator(LogicalKeyboardKey.keyN, meta: true): () =>
-            _fileIo.runDesktopShortcutIfAllowed(_fileIo.newFile),
-        const SingleActivator(LogicalKeyboardKey.keyN, control: true): () =>
-            _fileIo.runDesktopShortcutIfAllowed(_fileIo.newFile),
-      },
-      child: Focus(
-        skipTraversal: true,
-        autofocus: true,
+        onNewFile: () => _fileIo.runDesktopShortcutIfAllowed(_fileIo.newFile),
         child: LayoutBuilder(
-          builder: (context, layoutConstraints) {
-            final isMobile = layoutConstraints.maxWidth < 600;
-            final tokens = context.nmtkTokens;
-            // SnnWorkflowStepper is a single row now (its own 8px container
-            // padding + one line of pill content), around 50-56px tall. 60
-            // leaves a small safety margin for text scaling without opening
-            // up a big dead band below it — this used to be 100 (sized for
-            // an older two-row stepper), which is why the Setup/Deploy row
-            // and Run's view switch used to float noticeably below it.
-            const stepperHeight = 60.0;
-            const readableContentHeaderHeight = 88.0;
-            final stepperMargin = tokens.compactGap;
-            const kCanvasSteps = {
-              'defineModel',
-              'defineTrain',
-              'defineEval',
-              'run',
-            };
-            // topInset used to reserve space for the floating stepper behind
-            // canvas steps — always 0 now: desktop steps fill full-screen and
-            // mobile has a real AppBar instead of a floating overlay.
-            const topInset = 0.0;
-            // Setup's load-from actions and Deploy Review's provenance row
-            // render on their own row directly below the stepper rather than
-            // squeezed beside it, so those steps' body content needs the
-            // extra row height reserved above it.
-            const belowStepperRowHeight = 56.0;
-            final showBelowStepperHeaderRow = switch (activeStep) {
-              'selectData' => layoutConstraints.maxWidth >= 1200,
-              'deployReview' => layoutConstraints.maxWidth >= 600,
-              _ => false,
-            };
-            // contentTopPad pushes readable content below the floating
-            // stepper for non-canvas steps on desktop; on mobile the AppBar
-            // already reserves that space, so it's 0.
-            final contentTopPad = isMobile
-                ? 0.0
-                : stepperMargin +
-                      readableContentHeaderHeight +
-                      stepperMargin +
-                      (showBelowStepperHeaderRow
-                          ? belowStepperRowHeight + stepperMargin
-                          : 0);
-
-            void handleStepSelected(SnnWorkflowPhase phase) {
-              if (!unlockedSteps.contains(phase.name)) {
-                _notifyPlatformRequired(platformsReady);
-                return;
-              }
-              final splitStep = _splitPipelineStep;
-              if (splitStep != null) {
-                final splitPhase = SnnWorkflowPhase.values.firstWhere(
-                  (candidate) => candidate.name == splitStep,
-                );
-                if (snnStageForPhase(splitPhase) != snnStageForPhase(phase)) {
-                  setState(() => _splitPipelineStep = null);
-                }
-              }
-              ref
-                  .read(workspaceProvider.notifier)
-                  .setActivePipelineStep(phase.name);
-            }
-
-            void handleStepNameSelected(String name) {
-              final phase = SnnWorkflowPhase.values.firstWhere(
-                (candidate) => candidate.name == name,
-              );
-              handleStepSelected(phase);
-            }
-
-            if (isMobile) {
-              final currentPhase = SnnWorkflowPhase.values.firstWhere(
-                (p) => p.name == activeStep,
-                orElse: () => SnnWorkflowPhase.defineModel,
-              );
-              final lockedPhaseNames = ref.watch(lockedPhasesProvider);
-              final lockedPhases = SnnWorkflowPhase.values
-                  .where((p) => lockedPhaseNames.contains(p.name))
-                  .toSet();
-
-              final mobileStageArea = PipelineStageArea(
-                activeStep: activeStep,
-                splitStep: _splitPipelineStep,
-                stepCount: kStudioPipelineStepNames.length,
-                stepBuilder: _buildStepContent,
-                frameBuilder: ({required Widget child}) => child,
-                canvasStepNames: kCanvasSteps,
-                unlockedStepNames: unlockedSteps,
-                topInset: topInset,
-                contentTopPad: contentTopPad,
-                onStepChanged: handleStepNameSelected,
-                onCollapse: (keepStep) {
-                  setState(() => _splitPipelineStep = null);
-                  if (unlockedSteps.contains(keepStep)) {
-                    ref
-                        .read(workspaceProvider.notifier)
-                        .setActivePipelineStep(keepStep);
-                  }
-                },
-              );
-
-              final prevPhase = currentPhase.index > 0
-                  ? SnnWorkflowPhase.values[currentPhase.index - 1]
-                  : null;
-              final nextPhase =
-                  currentPhase.index < kStudioPipelineStepNames.length - 1
-                  ? SnnWorkflowPhase.values[currentPhase.index + 1]
-                  : null;
-
-              return StudioOverlayMetrics(
-                stepperBottom: 0,
-                child: Scaffold(
-                  appBar: AppBar(
-                    // ZETA-MIGRATION-EXEMPT: no Zeta app bar exists; this is
-                    // the same rationale nmtk_ui_core's own mobile scaffold
-                    // uses for its hamburger/title bar.
-                    title: Text(
-                      '${kSnnStageLabels[snnStageForPhase(currentPhase)]} · '
-                      '${kSnnStepLabels[currentPhase] ?? currentPhase.name}',
-                      style: Zeta.of(context).textStyles.titleLarge,
-                    ),
-                    actions: [
-                      Tooltip(
-                        message: prevPhase != null
-                            ? 'Previous step'
-                            : 'No previous step',
-                        child: ZetaIconButton.text(
-                          icon: Icons.arrow_back,
-                          semanticLabel: 'Previous step',
-                          onPressed: prevPhase != null
-                              ? () => handleStepSelected(prevPhase)
-                              : null,
-                        ),
-                      ),
-                      Tooltip(
-                        message: nextPhase != null
-                            ? 'Next step'
-                            : 'No next step',
-                        child: ZetaIconButton.text(
-                          icon: Icons.arrow_forward,
-                          semanticLabel: 'Next step',
-                          onPressed: nextPhase != null
-                              ? () => handleStepSelected(nextPhase)
-                              : null,
-                        ),
-                      ),
-                      Tooltip(
-                        message: 'Save workspace',
-                        child: ZetaIconButton.text(
-                          icon: ZetaIcons.save,
-                          semanticLabel: 'Save workspace',
-                          onPressed: () => unawaited(_fileIo.saveWorkspace()),
-                        ),
-                      ),
-                      Tooltip(
-                        message: 'Save to Neurohub',
-                        child: ZetaIconButton.text(
-                          icon: ZetaIcons.cloud_upload,
-                          semanticLabel: 'Save to Neurohub',
-                          onPressed: () =>
-                              unawaited(commitWorkspaceToNeurohub()),
-                        ),
-                      ),
-                    ],
-                  ),
-                  drawer: StudioStepDrawer(
-                    workspaceName: workspaceTabs.workspaceName,
-                    currentPhase: currentPhase,
-                    lockedPhases: lockedPhases,
-                    onPhaseSelected: handleStepSelected,
-                    onEditServer: widget.onEditServer,
-                  ),
-                  body: mobileStageArea,
-                ),
-              );
-            }
-
-            final workflowAccordion = StudioWorkflowAccordion(
+        builder: (context, layoutConstraints) {
+          final metrics = StudioLayoutMetrics.forConstraints(
+            layoutConstraints: layoutConstraints,
+            tokens: context.nmtkTokens,
+            activeStep: activeStep,
+          );
+          if (metrics.isMobile) {
+            return StudioMobileShell(
               activeStep: activeStep,
-              splitStep: _splitPipelineStep,
-              onStepSelected: handleStepSelected,
-              onSplitLeft: (stepName) {
-                final idx = kStudioPipelineStepNames.indexOf(stepName);
-                if (idx > 0) {
-                  final adjacent = SnnWorkflowPhase.values[idx - 1];
-                  final active = SnnWorkflowPhase.values[idx];
-                  if (snnStageForPhase(adjacent) == snnStageForPhase(active)) {
-                    setState(() => _splitPipelineStep = adjacent.name);
-                  }
-                }
-              },
-              onSplitRight: (stepName) {
-                final idx = kStudioPipelineStepNames.indexOf(stepName);
-                if (idx < kStudioPipelineStepNames.length - 1) {
-                  final adjacent = SnnWorkflowPhase.values[idx + 1];
-                  final active = SnnWorkflowPhase.values[idx];
-                  if (snnStageForPhase(adjacent) == snnStageForPhase(active)) {
-                    setState(() => _splitPipelineStep = adjacent.name);
-                  }
-                }
-              },
-              onCollapse: (keepStep) {
-                setState(() => _splitPipelineStep = null);
-                if (unlockedSteps.contains(keepStep)) {
-                  ref
-                      .read(workspaceProvider.notifier)
-                      .setActivePipelineStep(keepStep);
-                }
-              },
-            );
-            final utilityPill = StudioUtilityPill(
-              files: workspaceTabs.files,
-              activeFileId: workspaceTabs.activeFileId,
-              workspaceName: workspaceTabs.workspaceName,
-              workspaceHeaderAction: widget.workspaceHeaderAction,
-              onSelected: (id) =>
-                  ref.read(workspaceProvider.notifier).setActiveFile(id),
-              onClosed: (id) =>
-                  ref.read(workspaceProvider.notifier).closeFile(id),
-              onSaveActiveFile: () => unawaited(_fileIo.saveWorkspace()),
-              onShareToNeurohub: () => unawaited(commitWorkspaceToNeurohub()),
-            );
-
-            final stageArea = PipelineStageArea(
-              activeStep: activeStep,
-              splitStep: _splitPipelineStep,
-              stepCount: kStudioPipelineStepNames.length,
+              unlockedSteps: unlockedSteps,
+              workspaceTabs: workspaceTabs,
+              splitPipelineStep: _splitPipelineStep,
+              metrics: metrics,
               stepBuilder: _buildStepContent,
-              frameBuilder: _buildWorkspaceFrame,
-              canvasStepNames: kCanvasSteps,
-              unlockedStepNames: unlockedSteps,
-              topInset: topInset,
-              contentTopPad: contentTopPad,
-              onStepChanged: handleStepNameSelected,
-              onCollapse: (keepStep) {
-                setState(() => _splitPipelineStep = null);
-                if (unlockedSteps.contains(keepStep)) {
-                  ref
-                      .read(workspaceProvider.notifier)
-                      .setActivePipelineStep(keepStep);
-                }
-              },
-            );
-
-            final safeInsets = MediaQuery.paddingOf(context);
-
-            final top = safeInsets.top + stepperMargin;
-            final utilityWidth = (layoutConstraints.maxWidth * 0.42).clamp(
-              248.0,
-              560.0,
-            );
-            final availableWorkflowWidth =
-                (layoutConstraints.maxWidth -
-                        utilityWidth -
-                        (stepperMargin * 3))
-                    .clamp(0.0, layoutConstraints.maxWidth * 0.48);
-            final stepperBottom = top + stepperHeight + stepperMargin;
-            // Sits right under the stepper's own drawn content rather than
-            // after its extra safety-margin padding too — tweak this to
-            // raise/lower the Setup load row and Deploy target-picker row.
-            final belowStepperHeaderTop = top + stepperHeight;
-            final Widget? belowStepperHeaderChild = switch (activeStep) {
-              'selectData' => SetupHeaderActions(
-                onLoadFromHub: () =>
-                    _setupStepKey.currentState?.openWorkspaceFromHub(),
-                onLoadFromDisk: () =>
-                    _setupStepKey.currentState?.loadWorkspaceFromDevice(),
-                onLoadFromServer: () =>
-                    _setupStepKey.currentState?.openWorkspaceFromServer(),
+              onPhaseSelected: (phase) => _handlePhaseSelected(
+                phase,
+                platformsReady: platformsReady,
+                unlockedSteps: unlockedSteps,
               ),
-              'deployReview' => const DeployReviewHeader(),
-              _ => null,
-            };
-            return StudioOverlayMetrics(
-              stepperBottom: stepperBottom,
-              readableContentBottom: contentTopPad,
-              belowStepperHeaderTop: belowStepperHeaderTop,
-              child: Stack(
-                children: [
-                  Positioned.fill(child: stageArea),
-                  Positioned(
-                    top: top,
-                    left: safeInsets.left + stepperMargin,
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                        maxWidth: availableWorkflowWidth,
-                      ),
-                      child: workflowAccordion,
-                    ),
-                  ),
-                  Positioned(
-                    top: top,
-                    right: safeInsets.right + stepperMargin,
-                    width: utilityWidth,
-                    child: Align(
-                      alignment: Alignment.topRight,
-                      child: utilityPill,
-                    ),
-                  ),
-                  if (showBelowStepperHeaderRow &&
-                      belowStepperHeaderChild != null)
-                    Positioned(
-                      top: belowStepperHeaderTop,
-                      left: safeInsets.left + stepperMargin + 20,
-                      right: safeInsets.right + stepperMargin,
-                      height: belowStepperRowHeight,
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: belowStepperHeaderChild,
-                      ),
-                    ),
-                ],
-              ),
+              onCollapseSplit: _clearSplitPipelineStep,
+              onSaveWorkspace: _fileIo.saveWorkspace,
+              onShareToNeurohub: commitWorkspaceToNeurohub,
+              onEditServer: widget.onEditServer,
             );
-          },
+          }
+          return StudioDesktopShell(
+            layoutConstraints: layoutConstraints,
+            activeStep: activeStep,
+            unlockedSteps: unlockedSteps,
+            workspaceTabs: workspaceTabs,
+            splitPipelineStep: _splitPipelineStep,
+            metrics: metrics,
+            setupStepKey: _setupStepKey,
+            stepBuilder: _buildStepContent,
+            frameBuilder: _buildWorkspaceFrame,
+            onPhaseSelected: (phase) => _handlePhaseSelected(
+              phase,
+              platformsReady: platformsReady,
+              unlockedSteps: unlockedSteps,
+            ),
+            onSplitLeft: _handleSplitLeft,
+            onSplitRight: _handleSplitRight,
+            onCollapseSplit: _clearSplitPipelineStep,
+            onActiveFileSelected: (id) =>
+                ref.read(workspaceProvider.notifier).setActiveFile(id),
+            onFileClosed: (id) =>
+                ref.read(workspaceProvider.notifier).closeFile(id),
+            onSaveWorkspace: _fileIo.saveWorkspace,
+            onShareToNeurohub: commitWorkspaceToNeurohub,
+            workspaceHeaderAction: widget.workspaceHeaderAction,
+          );
+        },
         ),
       ),
     );
@@ -1210,31 +965,6 @@ class _StudioScreenState extends ConsumerState<StudioScreen>
     );
   }
 
-  Widget _buildDeployPanel() {
-    // Still driven by whichever target a hardware/codegen dialog last opened
-    // (`_selectDeployTarget`, called from `DeployTargetsOverview`) — the
-    // combined tables render every target at once now, but validation and
-    // simulator preflight are still warmed for one "active" target at a time.
-    final selectedTarget = ref.watch(
-      workspaceProvider.select((workspace) => workspace.selectedDeployTarget),
-    );
-    _syncSelectedHardwareProvider(selectedTarget);
-    _scheduleDeployValidation(selectedTarget);
-    _scheduleSimulatorPreflight(selectedTarget);
-    return DeployWorkspacePanel(
-      key: const ValueKey('deploy-workspace-panel'),
-      selectedDeviceLabels: _selectedHardwareDeviceLabels,
-      selectedDeviceDataByTarget: _selectedHardwareDeviceData,
-      onSelectTarget: _selectDeployTarget,
-      onOpenInNeurosim: () => _openInNeurosim(ref.read(specTextProvider)),
-      // Same dialog Setup's "Manage Targets" opens. Without it the Akida panel's
-      // "Select or create an Akida host first" was a dead end that could only be
-      // resolved by navigating back to Setup.
-      onManageHardwareTarget: (targetId) =>
-          _handleManageHardwareTarget(context, targetId),
-    );
-  }
-
   Widget _buildWorkspaceFrame({required Widget child}) {
     final tokens = NmtkShellTokens.of(context);
     return DecoratedBox(
@@ -1247,18 +977,6 @@ class _StudioScreenState extends ConsumerState<StudioScreen>
         borderRadius: BorderRadius.circular(tokens.radiusLg),
         child: child,
       ),
-    );
-  }
-
-  Widget _buildTrainingCanvas() {
-    return const KeepAliveWrapper(
-      child: CanvasScreen(lockedTab: CanvasTab.pipelineTrain),
-    );
-  }
-
-  Widget _buildEvalCanvas() {
-    return const KeepAliveWrapper(
-      child: CanvasScreen(lockedTab: CanvasTab.pipelineEval),
     );
   }
 

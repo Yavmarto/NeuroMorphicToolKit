@@ -592,7 +592,7 @@ void main() {
           'lava',
           'snntorch_sim',
           'sc_neurocore_fpga',
-          'brian2',
+          'brian2_sim',
         ]) {
           if (!container
               .read(workspaceProvider)

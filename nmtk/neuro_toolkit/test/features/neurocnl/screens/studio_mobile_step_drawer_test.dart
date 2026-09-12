@@ -6,6 +6,7 @@ import 'package:neuro_toolkit/features/neurocnl/l10n/app_localizations.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/api_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/server_config_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/workspace_provider.dart';
+import 'package:neuro_toolkit/features/neurocnl/features/studio/workspace/studio_step_drawer/studio_step_drawer.dart';
 import 'package:neuro_toolkit/features/neurocnl/screens/studio_screen.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/server_config_service.dart';
 import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
@@ -75,6 +76,54 @@ void main() {
         .openDrawer();
     await tester.pumpAndSettle();
   }
+
+  testWidgets(
+    'mobile Studio inside shell chrome shows one hamburger and no local drawer',
+    (WidgetTester tester) async {
+      final mockApi = MockApiClient();
+      when(mockApi.getTemplates()).thenAnswer((_) async => const []);
+
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            apiClientProvider.overrideWithValue(mockApi),
+            workspaceBootstrapProvider.overrideWithValue(
+              const WorkspaceBootstrap(initialLocation: '/'),
+            ),
+          ],
+          child: const MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: NmtkMobileScaffold(
+              mode: NmtkShellMode.command,
+              navItems: const [
+                NmtkSidebarItem(
+                  id: 'neurocnl',
+                  label: 'Studio',
+                  icon: Icons.science_outlined,
+                ),
+              ],
+              selectedIndex: 0,
+              showBottomNavigation: false,
+              child: StudioScreen(),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Setup · Prepare'), findsOneWidget);
+      expect(find.byIcon(Icons.menu), findsNothing);
+      expect(find.byTooltip('Open navigation'), findsOneWidget);
+      expect(find.byType(StudioStepDrawer), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('mobile Studio screen shows a step title bar with Save, and a '
       'drawer with the workspace name and step list', (
