@@ -16,6 +16,8 @@ class _SucceedingProvisionService extends ProvisionService {
     String sudoPrivateKey = '',
     required String containerEngine,
     RemoteReinstallMode reinstallMode = RemoteReinstallMode.preserveData,
+    Map<String, String> moduleEnvironment = const <String, String>{},
+    Map<String, String> moduleSecrets = const <String, String>{},
     void Function(DeploymentJob job)? onProgress,
     JobRegistry? registry,
   }) async {
@@ -45,6 +47,8 @@ class _FailingProvisionService extends ProvisionService {
     String sudoPrivateKey = '',
     required String containerEngine,
     RemoteReinstallMode reinstallMode = RemoteReinstallMode.preserveData,
+    Map<String, String> moduleEnvironment = const <String, String>{},
+    Map<String, String> moduleSecrets = const <String, String>{},
     void Function(DeploymentJob job)? onProgress,
     JobRegistry? registry,
   }) async {

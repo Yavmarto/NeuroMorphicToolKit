@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:neuro_toolkit/features/server/connect/connect_build_policy.dart';
 import 'package:neuro_toolkit/features/server/connect/connect_notifier.dart';
 import 'package:neuro_toolkit/features/server/connect/connect_service.dart';
 import 'package:neuro_toolkit/screens/server_access_gate.dart';
@@ -30,17 +31,15 @@ class _FakeConnectNotifier extends ConnectNotifier {
         phase: ConnectPhase.connected,
         session: ConnectSession(
           host: '192.168.2.90',
-          username: '',
-          sessionToken: '',
+          username: 'alice',
+          sessionToken: 'tok-1',
         ),
         savedHost: '192.168.2.90',
       );
     } else {
       state = const ConnectState(
         phase: ConnectPhase.failed,
-        failureCause:
-            'Could not reach 192.168.2.90. Confirm the address and that '
-            'the server is running, then try again.',
+        failureCause: 'Incorrect username or password.',
         savedHost: '192.168.2.90',
       );
     }
@@ -57,10 +56,11 @@ class _FakeConnectNotifier extends ConnectNotifier {
       phase: ConnectPhase.connected,
       session: ConnectSession(
         host: request.host,
-        username: '',
-        sessionToken: '',
+        username: request.appUsername,
+        sessionToken: 'tok-1',
       ),
       savedHost: request.host,
+      savedUsername: request.appUsername,
     );
   }
 }
@@ -83,9 +83,11 @@ void main() {
     final notifier = _FakeConnectNotifier('reconnect-ok');
     await tester.pumpWidget(_harness(notifier));
 
-    // While reconnect is in flight, the gate shows a reconnecting view.
+    // While reconnect is in flight, the gate shows a reconnecting view and
+    // hides the workspace so empty-module UI cannot flash underneath.
     await tester.pump();
     expect(find.text('Reconnecting to your server…'), findsOneWidget);
+    expect(find.text('WORKSPACE'), findsNothing);
 
     await tester.pumpAndSettle();
     expect(find.text('WORKSPACE'), findsOneWidget);
@@ -100,10 +102,29 @@ void main() {
 
       await tester.pumpAndSettle();
 
-      expect(find.text('Connect to your server'), findsOneWidget);
-      expect(find.byKey(const Key('server-connect-connect')), findsOneWidget);
+      expect(
+        find.text(
+          ConnectBuildPolicy.requiresCredentialAuth
+              ? 'Sign in to your server'
+              : 'Connect to your server',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.byKey(
+          Key(
+            ConnectBuildPolicy.requiresCredentialAuth
+                ? 'server-connect-sign-in'
+                : 'server-connect-connect',
+          ),
+        ),
+        findsOneWidget,
+      );
       // The failed reconnect's reason is surfaced on the form.
-      expect(find.textContaining('Could not reach'), findsWidgets);
+      expect(
+        find.textContaining('Incorrect username or password'),
+        findsWidgets,
+      );
       // The workspace stays mounted behind the popup (CEL-103).
       expect(find.text('WORKSPACE'), findsOneWidget);
     },
@@ -148,8 +169,24 @@ void main() {
 
     // Back on the connect form, not stuck in the setup dead end (CEL-88).
     expect(find.text('Set up your server'), findsNothing);
-    expect(find.text('Connect to your server'), findsOneWidget);
-    expect(find.byKey(const Key('server-connect-connect')), findsOneWidget);
+    expect(
+      find.text(
+        ConnectBuildPolicy.requiresCredentialAuth
+            ? 'Sign in to your server'
+            : 'Connect to your server',
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(
+        Key(
+          ConnectBuildPolicy.requiresCredentialAuth
+              ? 'server-connect-sign-in'
+              : 'server-connect-connect',
+        ),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets(
@@ -159,12 +196,25 @@ void main() {
       await tester.pumpWidget(_harness(notifier));
       await tester.pumpAndSettle();
 
-      // The host is prefilled from the failed reconnect's saved host, so no
-      // input is needed before tapping connect.
-      await tester.ensureVisible(
-        find.byKey(const Key('server-connect-connect')),
+      if (ConnectBuildPolicy.requiresCredentialAuth) {
+        await tester.enterText(
+          find.byKey(const Key('server-connect-username')),
+          'alice',
+        );
+        await tester.enterText(
+          find.byKey(const Key('server-connect-password')),
+          'secret',
+        );
+      }
+      final connectButton = find.byKey(
+        Key(
+          ConnectBuildPolicy.requiresCredentialAuth
+              ? 'server-connect-sign-in'
+              : 'server-connect-connect',
+        ),
       );
-      await tester.tap(find.byKey(const Key('server-connect-connect')));
+      await tester.ensureVisible(connectButton);
+      await tester.tap(connectButton);
       // The gate flips to `connected` and unmounts ServerConnectScreen while
       // its `connect()` await is still pending -- flutter_test rethrows any
       // exception from that dangling future, so this settling without error

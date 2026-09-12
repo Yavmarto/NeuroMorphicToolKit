@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:neuro_toolkit/features/server/connect/connect_build_policy.dart';
 import 'package:neuro_toolkit/features/server/connect/connect_notifier.dart';
+import 'package:neuro_toolkit/features/server/connect/connect_service.dart';
+import 'package:neuro_toolkit/features/server/shared/target_store.dart';
 import 'package:neuro_toolkit/models/workspace_session.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/screens/server_access_gate.dart';
@@ -117,7 +120,13 @@ void main() {
     'ServerConnectScreen dev button transitions ServerAccessGate to child',
     (tester) async {
       SharedPreferences.setMockInitialValues(const {});
-      final container = ProviderContainer();
+      final container = ProviderContainer(
+        overrides: [
+          connectServiceProvider.overrideWithValue(
+            _UnreachableConnectService(),
+          ),
+        ],
+      );
       addTearDown(container.dispose);
 
       await tester.pumpWidget(
@@ -136,7 +145,14 @@ void main() {
       await tester.pumpAndSettle();
 
       // Initially shows the connect popup over the mounted workspace backdrop
-      expect(find.text('Connect to your server'), findsOneWidget);
+      expect(
+        find.text(
+          ConnectBuildPolicy.requiresCredentialAuth
+              ? 'Sign in to your server'
+              : 'Connect to your server',
+        ),
+        findsOneWidget,
+      );
       expect(find.text('DEV_OFFLINE_WORKSPACE_SHOWN'), findsOneWidget);
 
       // The dev bypass button should be present in debug mode
@@ -153,7 +169,33 @@ void main() {
 
       // Now ServerAccessGate should show the workspace child
       expect(find.text('DEV_OFFLINE_WORKSPACE_SHOWN'), findsOneWidget);
-      expect(find.text('Connect to your server'), findsNothing);
+      expect(
+        find.text(
+          ConnectBuildPolicy.requiresCredentialAuth
+              ? 'Sign in to your server'
+              : 'Connect to your server',
+        ),
+        findsNothing,
+      );
     },
   );
+}
+
+class _UnreachableConnectService implements ConnectService {
+  @override
+  Future<ConnectSession> login({
+    required String host,
+    required String username,
+    required String credential,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<ConnectSession> reconnect(ConnectTarget target) =>
+      throw UnimplementedError();
+
+  @override
+  Future<bool> probe({
+    required String host,
+    Duration timeout = const Duration(seconds: 2),
+  }) async => false;
 }

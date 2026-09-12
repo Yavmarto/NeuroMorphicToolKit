@@ -18,7 +18,7 @@ from fastapi import APIRouter
 
 from suite_api.config import settings
 from suite_api.domains.jupyter.router import probe_jupyter_doctor
-from suite_api.middleware import ADMIN_HEADER, _load_admin_token
+from suite_api.middleware import ADMIN_HEADER, load_admin_token
 from suite_api.schemas.doctor import (
     DoctorCheck,
     DoctorReport,
@@ -61,7 +61,7 @@ async def modules_health() -> dict[str, Any]:
         start = time.perf_counter()
         try:
             async with httpx.AsyncClient(timeout=5.0) as client:
-                admin_token = _load_admin_token()
+                admin_token = load_admin_token()
                 headers = {ADMIN_HEADER: admin_token} if admin_token else {}
                 resp = await client.get(url, headers=headers)
             status = "online" if resp.status_code == 200 else "degraded"

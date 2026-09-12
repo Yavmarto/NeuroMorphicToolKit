@@ -20,7 +20,7 @@ from .http_transport import (
     send_json,
     stream_deployment_sse,
 )
-from .launcher_auth import InvalidCredentialsError
+from .launcher_auth import CredentialStoreError, InvalidCredentialsError
 from .runtime_errors import RuntimeRequestError
 
 LOGGER = logging.getLogger(__name__)
@@ -712,6 +712,19 @@ class LauncherControlHandler(BaseHTTPRequestHandler):
                 HTTPStatus.UNAUTHORIZED,
                 code="invalid_credentials",
                 message=str(exc),
+            )
+        except CredentialStoreError as exc:
+            LOGGER.error(
+                "credential_store_unavailable request_id=%s method=%s path=%s",
+                self._request_id,
+                method,
+                path,
+            )
+            self._send_error(
+                HTTPStatus.SERVICE_UNAVAILABLE,
+                code="credential_store_unavailable",
+                message=str(exc),
+                retryable=True,
             )
         except RuntimeRequestError as exc:
             status = (

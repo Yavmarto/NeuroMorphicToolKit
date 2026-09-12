@@ -28,6 +28,46 @@ def _launcher_control_url() -> str:
     return os.getenv("NMTK_LAUNCHER_CONTROL_URL", "http://launcher-control:8091").strip()
 
 
+_SESSION_TOKEN_CACHE_TTL_S = float(
+    os.getenv("NMTK_SESSION_TOKEN_CACHE_TTL_S", "30").strip() or "30"
+)
+# ponytail: in-process dict; upgrade to shared cache if suite_api scales horizontally.
+_SESSION_TOKEN_CACHE_MAX = 1024
+_session_token_cache: dict[str, tuple[bool, float]] = {}
+
+
+def _session_token_cache_get(token: str) -> bool | None:
+    entry = _session_token_cache.get(token)
+    if entry is None:
+        return None
+    valid, expires_at = entry
+    if time.monotonic() >= expires_at:
+        _session_token_cache.pop(token, None)
+        return None
+    return valid
+
+
+def _session_token_cache_set(token: str, valid: bool) -> None:
+    if len(_session_token_cache) >= _SESSION_TOKEN_CACHE_MAX:
+        now = time.monotonic()
+        expired = [
+            key
+            for key, (_, expires_at) in _session_token_cache.items()
+            if now >= expires_at
+        ]
+        for key in expired:
+            _session_token_cache.pop(key, None)
+        if len(_session_token_cache) >= _SESSION_TOKEN_CACHE_MAX:
+            for key in list(_session_token_cache)[: _SESSION_TOKEN_CACHE_MAX // 2]:
+                _session_token_cache.pop(key, None)
+    _session_token_cache[token] = (valid, time.monotonic() + _SESSION_TOKEN_CACHE_TTL_S)
+
+
+def clear_session_token_cache() -> None:
+    """Clear cached introspection results (tests only)."""
+    _session_token_cache.clear()
+
+
 async def _session_token_valid(token: str) -> bool:
     """Ask launcher-control whether a connect-session bearer token is live.
 
@@ -38,6 +78,9 @@ async def _session_token_valid(token: str) -> bool:
     """
     if not token:
         return False
+    cached = _session_token_cache_get(token)
+    if cached is not None:
+        return cached
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
             resp = await client.get(
@@ -45,9 +88,12 @@ async def _session_token_valid(token: str) -> bool:
                 headers={"Authorization": f"Bearer {token}"},
             )
     except httpx.HTTPError:
+        # ponytail: do not negative-cache transport blips; retry on next request.
         logger.warning("session_token_introspection_failed")
         return False
-    return resp.status_code == 200
+    valid = resp.status_code == 200
+    _session_token_cache_set(token, valid)
+    return valid
 
 
 def _load_admin_token() -> str:
@@ -59,6 +105,11 @@ def _load_admin_token() -> str:
             logger.exception("admin_token_file_unreadable")
             return ""
     return os.getenv("NMTK_ADMIN_TOKEN", "").strip()
+
+
+def load_admin_token() -> str:
+    """Return the configured suite administrator token, if any."""
+    return _load_admin_token()
 
 
 def admin_token_valid(provided: str) -> bool:

@@ -5,14 +5,21 @@ from __future__ import annotations
 
 import json
 import os
+import threading
 import unittest
+import urllib.error
+import urllib.request
 from pathlib import Path
 from unittest import mock
 
 import bcrypt
 from base import LauncherControlServiceTestBase
 
-from nmtk.launcher_control.launcher_auth import InvalidCredentialsError
+import nmtk.launcher_control.server as launcher_server
+from nmtk.launcher_control.launcher_auth import (
+    CredentialStoreError,
+    InvalidCredentialsError,
+)
 
 
 class TestLauncherAppCredentialLogin(LauncherControlServiceTestBase):
@@ -57,6 +64,66 @@ class TestLauncherAppCredentialLogin(LauncherControlServiceTestBase):
     def test_login_requires_username_and_password(self) -> None:
         with self.assertRaises(ValueError):
             self.state.login({"username": "", "password": ""})
+
+    def test_login_raises_when_users_file_missing(self) -> None:
+        missing = str(self.repo_root / "no-such-users.json")
+        with mock.patch.dict(
+            os.environ, {"NMTK_APP_USERS_FILE": missing}, clear=False
+        ):
+            with self.assertRaises(CredentialStoreError):
+                self.state.login({"username": "alice", "password": "secret"})
+
+    def test_login_raises_when_users_file_is_invalid_json(self) -> None:
+        broken = self.repo_root / "broken-users.json"
+        broken.write_text("not-json", encoding="utf-8")
+        with mock.patch.dict(
+            os.environ, {"NMTK_APP_USERS_FILE": str(broken)}, clear=False
+        ):
+            with self.assertRaises(CredentialStoreError):
+                self.state.login({"username": "alice", "password": "secret"})
+
+    def test_login_logs_structured_error_when_users_file_missing(self) -> None:
+        missing = str(self.repo_root / "no-such-users.json")
+        with mock.patch.dict(
+            os.environ, {"NMTK_APP_USERS_FILE": missing}, clear=False
+        ):
+            with self.assertLogs("nmtk.launcher_control.launcher_auth", level="ERROR") as logs:
+                with self.assertRaises(CredentialStoreError):
+                    self.state.login({"username": "alice", "password": "secret"})
+        self.assertTrue(
+            any("app_users_load_failed" in record.message for record in logs.records)
+        )
+
+    def test_login_http_returns_503_when_credential_store_broken(self) -> None:
+        missing = str(self.repo_root / "no-such-users.json")
+        server = launcher_server.create_server("127.0.0.1", 0)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        self.addCleanup(server.shutdown)
+        self.addCleanup(server.server_close)
+        self.addCleanup(thread.join, 1.0)
+        base = f"http://127.0.0.1:{server.server_address[1]}"
+        request = urllib.request.Request(
+            f"{base}/api/launcher/auth/login",
+            data=json.dumps({"username": "alice", "password": "secret"}).encode(
+                "utf-8"
+            ),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with mock.patch.dict(
+            os.environ, {"NMTK_APP_USERS_FILE": missing}, clear=False
+        ):
+            with self.assertRaises(urllib.error.HTTPError) as exc_info:
+                urllib.request.urlopen(request, timeout=5)
+        payload = json.loads(exc_info.exception.read().decode("utf-8"))
+        self.assertEqual(exc_info.exception.code, 503)
+        self.assertEqual(
+            payload["detail"]["code"],
+            "credential_store_unavailable",
+        )
+        self.assertIn("credential store", payload["detail"]["message"].lower())
+        self.assertTrue(payload["detail"]["retryable"])
 
     def test_session_token_from_login_is_valid_until_expiry(self) -> None:
         password_hash = bcrypt.hashpw(b"correct horse", bcrypt.gensalt()).decode(

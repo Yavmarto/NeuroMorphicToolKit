@@ -44,13 +44,15 @@ class _ServerAccessGateState extends ConsumerState<ServerAccessGate> {
       if (!_isConnectedPhase(phase)) {
         // Fire-and-forget; the notifier updates [connectNotifierProvider],
         // which this widget watches to decide what to render.
-        ref.read(connectNotifierProvider.notifier).reconnectOnOpen().whenComplete(
-          () {
-            _reconnectPending = false;
-            if (!mounted) return;
-            _syncPopup(ref.read(connectNotifierProvider).phase);
-          },
-        );
+        ref
+            .read(connectNotifierProvider.notifier)
+            .reconnectOnOpen()
+            .whenComplete(() {
+              _reconnectPending = false;
+              if (!mounted) return;
+              setState(() {});
+              _syncPopup(ref.read(connectNotifierProvider).phase);
+            });
       } else {
         _reconnectPending = false;
       }
@@ -79,13 +81,18 @@ class _ServerAccessGateState extends ConsumerState<ServerAccessGate> {
     return Stack(
       fit: StackFit.expand,
       children: [
-        widget.child,
+        // Keep the workspace mounted but hidden so module state survives
+        // reconnect, without flashing "NeuroStudio Not Available" underneath
+        // the semi-transparent barrier (CEL-227).
+        Visibility(
+          visible: !showReconnectingOverlay,
+          maintainState: true,
+          maintainAnimation: true,
+          child: widget.child,
+        ),
         if (showReconnectingOverlay)
           const Positioned.fill(
-            child: ModalBarrier(
-              dismissible: false,
-              color: Colors.black26,
-            ),
+            child: ModalBarrier(dismissible: false, color: Colors.black26),
           ),
         if (showReconnectingOverlay)
           const Center(

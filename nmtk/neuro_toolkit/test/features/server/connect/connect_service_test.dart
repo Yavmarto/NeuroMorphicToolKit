@@ -19,13 +19,14 @@ void main() {
       );
     });
 
-    final session = await ConnectService(httpClient: client).login(
-      host: '192.168.2.90',
-      username: 'ada',
-      credential: 'hunter2',
-    );
+    final session = await ConnectService(
+      httpClient: client,
+    ).login(host: '192.168.2.90', username: 'ada', credential: 'hunter2');
 
-    expect(requestedUri.toString(), 'http://192.168.2.90:8090/api/launcher/auth/login');
+    expect(
+      requestedUri.toString(),
+      'http://192.168.2.90:8090/api/launcher/auth/login',
+    );
     expect(requestedBody, {'username': 'ada', 'password': 'hunter2'});
     expect(session.host, '192.168.2.90');
     expect(session.username, 'ada');
@@ -35,11 +36,9 @@ void main() {
   test('login throws ConnectException on wrong credentials', () async {
     final client = MockClient((request) async => http.Response('', 401));
     expect(
-      () => ConnectService(httpClient: client).login(
-        host: '192.168.2.90',
-        username: 'ada',
-        credential: 'wrong',
-      ),
+      () => ConnectService(
+        httpClient: client,
+      ).login(host: '192.168.2.90', username: 'ada', credential: 'wrong'),
       throwsA(isA<ConnectException>()),
     );
   });
@@ -47,23 +46,21 @@ void main() {
   test('login throws ConnectException when unreachable', () async {
     final client = MockClient((request) async => throw Exception('refused'));
     expect(
-      () => ConnectService(httpClient: client).login(
-        host: '192.168.2.90',
-        username: 'ada',
-        credential: 'hunter2',
-      ),
+      () => ConnectService(
+        httpClient: client,
+      ).login(host: '192.168.2.90', username: 'ada', credential: 'hunter2'),
       throwsA(isA<ConnectException>()),
     );
   });
 
   test('login throws ConnectException on a malformed response', () async {
-    final client = MockClient((request) async => http.Response('not json', 200));
+    final client = MockClient(
+      (request) async => http.Response('not json', 200),
+    );
     expect(
-      () => ConnectService(httpClient: client).login(
-        host: '192.168.2.90',
-        username: 'ada',
-        credential: 'hunter2',
-      ),
+      () => ConnectService(
+        httpClient: client,
+      ).login(host: '192.168.2.90', username: 'ada', credential: 'hunter2'),
       throwsA(isA<ConnectException>()),
     );
   });

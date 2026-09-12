@@ -15,6 +15,7 @@ the existing shared `admin-token` mechanism, not a replacement for it.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import secrets
 import threading
@@ -23,6 +24,8 @@ from pathlib import Path
 from typing import Any
 
 import bcrypt
+
+LOGGER = logging.getLogger(__name__)
 
 _SESSION_TTL_SECONDS = 24 * 60 * 60
 # Computed once so a request for an unknown username still pays the same
@@ -33,6 +36,10 @@ _DUMMY_HASH = bcrypt.hashpw(b"nmtk-timing-dummy", bcrypt.gensalt())
 
 class InvalidCredentialsError(Exception):
     """Raised for both an unknown username and a wrong password."""
+
+
+class CredentialStoreError(Exception):
+    """Raised when the provisioned app-credential store cannot be read."""
 
 
 class LauncherAuthMixin:
@@ -92,14 +99,38 @@ def _load_app_users() -> dict[str, str]:
     path = Path(users_file)
     try:
         raw = path.read_text(encoding="utf-8")
-    except OSError:
-        return {}
+    except OSError as exc:
+        LOGGER.error(
+            "app_users_load_failed path=%s reason=read_error error=%s",
+            path,
+            exc,
+        )
+        raise CredentialStoreError(
+            f"Could not read the app credential store at {path}. "
+            "Check file permissions and that backend setup completed."
+        ) from exc
     try:
         data = json.loads(raw)
-    except json.JSONDecodeError:
-        return {}
+    except json.JSONDecodeError as exc:
+        LOGGER.error(
+            "app_users_load_failed path=%s reason=invalid_json error=%s",
+            path,
+            exc,
+        )
+        raise CredentialStoreError(
+            f"The app credential store at {path} is not valid JSON. "
+            "Re-run backend setup or repair the credential file."
+        ) from exc
     if not isinstance(data, dict):
-        return {}
+        LOGGER.error(
+            "app_users_load_failed path=%s reason=invalid_shape type=%s",
+            path,
+            type(data).__name__,
+        )
+        raise CredentialStoreError(
+            f"The app credential store at {path} must be a JSON object "
+            "mapping usernames to password hashes."
+        )
     return {
         key: value
         for key, value in data.items()
