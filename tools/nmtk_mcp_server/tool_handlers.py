@@ -248,6 +248,33 @@ class ToolHandlerContext:
         return _json_text(load_modules_manifest(self.paths))
 
 
+TOOL_NAMES: tuple[str, ...] = (
+    "validate_cnl",
+    "suite_health",
+    "launcher_doctor",
+    "list_modules",
+    "get_cnl_authoring_guide",
+    "submit_simulation",
+    "poll_simulation_job",
+    "check_deployability",
+    "prepare_neurochip_handoff",
+    "save_deerflow_packet",
+    "load_local_state",
+)
+
+
+def run_tool(
+    name: str,
+    args: dict[str, Any],
+    ctx: ToolHandlerContext,
+) -> dict[str, Any]:
+    """Dispatch a named MCP tool through a shared handler context."""
+    if name not in TOOL_NAMES:
+        raise KeyError(f"Unknown tool: {name}")
+    handler = getattr(ctx, name)
+    return handler(**args)
+
+
 def _dump_result(result: ToolResult) -> dict[str, Any]:
     return result.model_dump(mode="json")
 

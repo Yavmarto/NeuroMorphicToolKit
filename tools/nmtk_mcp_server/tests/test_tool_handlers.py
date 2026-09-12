@@ -21,7 +21,7 @@ from tools.nmtk_mcp_server.simulation_client import (
     SimulationJobResponse,
     SimulationJobStatus,
 )
-from tools.nmtk_mcp_server.tool_handlers import ToolHandlerContext
+from tools.nmtk_mcp_server.tool_handlers import ToolHandlerContext, run_tool
 
 
 class _FakeNeuroCnlClient:
@@ -145,6 +145,11 @@ def test_tool_handlers_return_tool_result_envelopes(tmp_path: Path) -> None:
     context = _context(tmp_path)
 
     assert context.validate_cnl("neuron A spikes.")["status"] == "ok"
+    assert run_tool(
+        "validate_cnl",
+        {"spec": "neuron A spikes."},
+        context,
+    ) == context.validate_cnl("neuron A spikes.")
     assert context.suite_health()["details"] == {"status": "ok", "service": "suite_api"}
     assert context.launcher_doctor()["status"] == "preflight_failed"
     assert context.list_modules()["details"]["modules"][0]["id"] == "neurocnl"
