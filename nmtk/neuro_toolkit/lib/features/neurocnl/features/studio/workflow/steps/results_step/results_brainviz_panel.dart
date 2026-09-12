@@ -57,6 +57,8 @@ class _ResultsBrainvizPanelState extends ConsumerState<ResultsBrainvizPanel>
   );
   CoactivationSnapshot _snapshot = const CoactivationSnapshot();
   int _lastFilledBin = -1;
+  int _displayBin = -1;
+  Map<String, double> _displayActivity = const <String, double>{};
   String _loadedRasterId = '';
 
   bool get _usesSharedClock => widget.playbackController != null;
@@ -117,6 +119,8 @@ class _ResultsBrainvizPanelState extends ConsumerState<ResultsBrainvizPanel>
     _window.clear();
     _snapshot = const CoactivationSnapshot();
     _lastFilledBin = -1;
+    _displayBin = -1;
+    _displayActivity = const <String, double>{};
     if (!_usesSharedClock) {
       _controller
         ..stop()
@@ -136,9 +140,12 @@ class _ResultsBrainvizPanelState extends ConsumerState<ResultsBrainvizPanel>
     final timeMs = _currentTimeMs.clamp(0.0, widget.duration);
     final targetBin = (timeMs / binMs).floor().clamp(0, binCount - 1);
 
+    var dirty = false;
     if (targetBin < _lastFilledBin) {
       _window.clear();
       _lastFilledBin = -1;
+      _displayBin = -1;
+      dirty = true;
     }
 
     while (_lastFilledBin < targetBin) {
@@ -146,11 +153,23 @@ class _ResultsBrainvizPanelState extends ConsumerState<ResultsBrainvizPanel>
       final sample = _binnedRatesForBin(_lastFilledBin, binMs);
       if (sample.isNotEmpty) {
         _window.addSample(sample);
+        dirty = true;
       }
     }
 
-    _snapshot = CoactivationSnapshot.fromWindow(_window);
-    setState(() {});
+    if (dirty) {
+      _snapshot = CoactivationSnapshot.fromWindow(_window);
+    }
+
+    if (targetBin != _displayBin) {
+      _displayBin = targetBin;
+      _displayActivity = _binnedRatesForBin(targetBin, binMs);
+      dirty = true;
+    }
+
+    if (dirty) {
+      setState(() {});
+    }
   }
 
   Map<String, double> _binnedRatesForBin(int bin, double binMs) {
@@ -169,19 +188,6 @@ class _ResultsBrainvizPanelState extends ConsumerState<ResultsBrainvizPanel>
       return counts.map((id, _) => MapEntry(id, 0.0));
     }
     return counts.map((id, count) => MapEntry(id, count / peak));
-  }
-
-  Map<String, double> _activityAtClock() {
-    if (widget.raster.isEmpty || widget.duration <= 0) {
-      return const <String, double>{};
-    }
-    final binMs = kCoactivationDefaultBinMs;
-    final binCount = (widget.duration / binMs).ceil();
-    if (binCount == 0) return const <String, double>{};
-    return _binnedRatesForBin(
-      (_currentTimeMs / binMs).floor().clamp(0, binCount - 1),
-      binMs,
-    );
   }
 
   bool _useLiveFeed(Map<String, double>? liveRates) =>
@@ -210,7 +216,7 @@ class _ResultsBrainvizPanelState extends ConsumerState<ResultsBrainvizPanel>
     }
 
     final graph = useLive ? ref.watch(canvasProvider).graph : _graph;
-    final activity = useLive ? liveRates! : _activityAtClock();
+    final activity = useLive ? liveRates! : _displayActivity;
     final snapshot = useLive
         ? (ref.watch(coactivationProvider).snapshot ??
               const CoactivationSnapshot())

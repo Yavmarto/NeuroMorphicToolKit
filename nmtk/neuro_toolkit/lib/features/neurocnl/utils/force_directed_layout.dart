@@ -634,16 +634,13 @@ class Vec3 {
 
   static const Vec3 zero = Vec3(0, 0, 0);
 
-  Vec3 operator +(Vec3 other) =>
-      Vec3(x + other.x, y + other.y, z + other.z);
+  Vec3 operator +(Vec3 other) => Vec3(x + other.x, y + other.y, z + other.z);
 
-  Vec3 operator -(Vec3 other) =>
-      Vec3(x - other.x, y - other.y, z - other.z);
+  Vec3 operator -(Vec3 other) => Vec3(x - other.x, y - other.y, z - other.z);
 
   Vec3 operator *(double scalar) => Vec3(x * scalar, y * scalar, z * scalar);
 
-  double get distance =>
-      math.sqrt(x * x + y * y + z * z);
+  double get distance => math.sqrt(x * x + y * y + z * z);
 
   double distanceTo(Vec3 other) => (this - other).distance;
 
@@ -676,9 +673,19 @@ class ForceDirectedLayout3D {
 
   int _iterations = 0;
   double _kineticEnergy = double.infinity;
+  int _positionsRevision = 0;
+  Map<String, Vec3>? _positionsView;
+
+  /// Bumps whenever [_positions] changes so painters can skip identity checks.
+  int get positionsRevision => _positionsRevision;
 
   Map<String, Vec3> get positions =>
-      Map<String, Vec3>.unmodifiable(_positions);
+      _positionsView ??= Map<String, Vec3>.unmodifiable(_positions);
+
+  void _markPositionsDirty() {
+    _positionsView = null;
+    _positionsRevision++;
+  }
 
   bool get isSettled =>
       _kineticEnergy <= config.settleEpsilon ||
@@ -708,6 +715,7 @@ class ForceDirectedLayout3D {
       );
       _velocities[node.id] = Vec3.zero;
     }
+    _markPositionsDirty();
   }
 
   int relax([int? iterations]) {
@@ -797,6 +805,7 @@ class ForceDirectedLayout3D {
 
     _kineticEnergy = energy / count;
     _iterations++;
+    _markPositionsDirty();
     return _kineticEnergy;
   }
 
@@ -805,6 +814,7 @@ class ForceDirectedLayout3D {
     _positions[nodeId] = position;
     _velocities[nodeId] = Vec3.zero;
     _pinned.add(nodeId);
+    _markPositionsDirty();
   }
 
   void updateGraph(CanvasGraph graph) {
@@ -824,6 +834,7 @@ class ForceDirectedLayout3D {
     _iterations = 0;
     _kineticEnergy = double.infinity;
     _correlations = null;
+    _markPositionsDirty();
   }
 
   void advance() {
@@ -851,6 +862,8 @@ class CorrelationForceBrainvizLayout3D {
   bool get isSettled => _engine.isSettled;
 
   Map<String, Vec3> get positions => _engine.positions;
+
+  int get positionsRevision => _engine.positionsRevision;
 
   void setCorrelations(Map<String, Map<String, double>>? correlations) {
     _engine.setCorrelations(correlations);
