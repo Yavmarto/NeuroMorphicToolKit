@@ -27,6 +27,7 @@ from suite_api.domains.neurosim.router import router as neurosim_router
 from suite_api.errors import error_response
 from suite_api.middleware import attach_middleware
 from suite_api.routers import health
+from suite_api.routers.studio_agent import router as studio_agent_router
 
 
 @asynccontextmanager
@@ -109,6 +110,7 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
 
 
 app.include_router(health.router, prefix="/api/suite", tags=["health"])
+app.include_router(studio_agent_router)
 app.include_router(neurocnl_router)
 app.include_router(neurosim_router)
 app.include_router(neurochip_router)

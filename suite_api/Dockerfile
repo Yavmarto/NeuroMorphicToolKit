@@ -62,6 +62,7 @@ RUN pip install --no-cache-dir Neurobench/neurobench/ \
  && pip install --no-cache-dir --no-deps "./neurocnl[training,studio,rockpool,synsense,norse]"
 
 # ── suite_api ─────────────────────────────────────────────────────────────────
+COPY tools/nmtk_mcp_server/ tools/nmtk_mcp_server/
 COPY suite_api/ suite_api/
 RUN pip install --no-cache-dir suite_api/ \
  && python -c "import suite_api.main"

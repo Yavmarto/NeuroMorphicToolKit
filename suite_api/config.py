@@ -41,6 +41,12 @@ class Settings(BaseSettings):
     # (e.g. http://my-server:8008/lab).  Override via JUPYTER_PUBLIC_URL env var.
     jupyter_public_url: str = "http://localhost:8008/lab"
 
+    # Studio assistant LLM harness (Flutter settings hook: expose via future API).
+    studio_llm_provider: str | None = None
+    studio_llm_model: str | None = None
+    ollama_base_url: str = "http://127.0.0.1:11434"
+    lmstudio_base_url: str = "http://127.0.0.1:1234"
+
     model_config = {"env_file": ".env", "extra": "ignore"}
 
 
