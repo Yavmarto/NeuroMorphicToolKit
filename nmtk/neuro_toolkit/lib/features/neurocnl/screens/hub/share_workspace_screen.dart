@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
 import 'package:neuro_toolkit/features/neurocnl/providers/neurohub_provider.dart';
@@ -59,10 +60,10 @@ class ShareWorkspaceScreen extends ConsumerStatefulWidget {
 }
 
 class _ShareWorkspaceScreenState extends ConsumerState<ShareWorkspaceScreen> {
-  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
   bool _submitting = false;
   String? _errorMessage;
+  String? _nameError;
 
   @override
   void initState() {
@@ -76,8 +77,24 @@ class _ShareWorkspaceScreenState extends ConsumerState<ShareWorkspaceScreen> {
     super.dispose();
   }
 
+  String? _validateName(String value) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) {
+      return 'Enter a name for this workspace repo.';
+    }
+    if (slugifyWorkspaceName(trimmed).isEmpty) {
+      return 'Name must contain at least one letter or number.';
+    }
+    return null;
+  }
+
   Future<void> _submit() async {
-    if (_submitting || !(_formKey.currentState?.validate() ?? false)) {
+    if (_submitting) {
+      return;
+    }
+    final nameError = _validateName(_nameController.text);
+    if (nameError != null) {
+      setState(() => _nameError = nameError);
       return;
     }
     final name = _nameController.text.trim();
@@ -95,7 +112,7 @@ class _ShareWorkspaceScreenState extends ConsumerState<ShareWorkspaceScreen> {
             private: true,
           );
       if (!mounted) return;
-      Navigator.of(context).pop(created);
+      context.pop(created);
     } on NeurohubException catch (error) {
       if (error.statusCode == 401) {
         await ref
@@ -131,7 +148,7 @@ class _ShareWorkspaceScreenState extends ConsumerState<ShareWorkspaceScreen> {
         leading: IconButton(
           icon: const Icon(Icons.close),
           tooltip: 'Close',
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => context.pop(),
         ),
       ),
       body: Center(
@@ -139,41 +156,27 @@ class _ShareWorkspaceScreenState extends ConsumerState<ShareWorkspaceScreen> {
           constraints: const BoxConstraints(maxWidth: 560),
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: <Widget>[
-                  Text(
-                    'Publish this workspace as a private GitHub repository '
-                    'on your connected GitHub account.',
-                    style: textStyles.bodyLarge.copyWith(
-                      color: colors.mainSubtle,
-                    ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                Text(
+                  'Publish this workspace as a private GitHub repository '
+                  'on your connected GitHub account.',
+                  style: textStyles.bodyLarge.copyWith(
+                    color: colors.mainSubtle,
                   ),
-                  const SizedBox(height: 20),
-                  TextFormField(
-                    key: const Key('share-workspace-name-field'),
-                    controller: _nameController,
-                    autofocus: true,
-                    textCapitalization: TextCapitalization.words,
-                    decoration: const InputDecoration(
-                      labelText: 'Workspace name',
-                      hintText: 'e.g. Gesture model',
-                    ),
-                    validator: (value) {
-                      final trimmed = value?.trim() ?? '';
-                      if (trimmed.isEmpty) {
-                        return 'Enter a name for this workspace repo.';
-                      }
-                      final slug = slugifyWorkspaceName(trimmed);
-                      if (slug.isEmpty) {
-                        return 'Name must contain at least one letter or number.';
-                      }
-                      return null;
-                    },
-                    onChanged: (_) => setState(() {}),
-                  ),
+                ),
+                const SizedBox(height: 20),
+                NmtkTextInput(
+                  key: const Key('share-workspace-name-field'),
+                  controller: _nameController,
+                  label: 'Workspace name',
+                  placeholder: 'e.g. Gesture model',
+                  errorText: _nameError,
+                  onChange: (_) => setState(() {
+                    _nameError = null;
+                  }),
+                ),
                   const SizedBox(height: 8),
                   Text(
                     slugPreview.isEmpty
@@ -202,34 +205,33 @@ class _ShareWorkspaceScreenState extends ConsumerState<ShareWorkspaceScreen> {
                     ),
                   ],
                   const SizedBox(height: 24),
-                  Row(
-                    children: <Widget>[
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: _submitting
-                              ? null
-                              : () => Navigator.of(context).pop(),
-                          child: const Text('Cancel'),
-                        ),
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: NmtkOutlinedButton(
+                        label: 'Cancel',
+                        onPressed: _submitting ? null : () => context.pop(),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: NmtkPrimaryButton(
-                          key: const Key('share-workspace-submit'),
-                          label: _submitting
-                              ? 'Sharing…'
-                              : 'Share as new workspace repo',
-                          onPressed: _submitting ? null : _submit,
-                        ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: NmtkPrimaryButton(
+                        key: const Key('share-workspace-submit'),
+                        label: _submitting
+                            ? 'Sharing…'
+                            : 'Share as new workspace repo',
+                        onPressed: _submitting ? null : _submit,
                       ),
-                    ],
-                  ),
-                  if (_submitting) ...[
-                    const SizedBox(height: 16),
-                    const LinearProgressIndicator(),
+                    ),
                   ],
+                ),
+                if (_submitting) ...[
+                  const SizedBox(height: 16),
+                  const Center(
+                    child: ZetaProgressCircle(size: ZetaCircleSizes.s),
+                  ),
                 ],
-              ),
+              ],
             ),
           ),
         ),

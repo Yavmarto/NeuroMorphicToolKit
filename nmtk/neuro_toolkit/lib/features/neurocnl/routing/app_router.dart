@@ -9,6 +9,7 @@ import 'package:neuro_toolkit/features/neurocnl/providers/server_config_provider
 import 'package:neuro_toolkit/features/neurocnl/providers/api_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/screens/canvas_host_screen.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/studio_feature.dart';
+import 'package:neuro_toolkit/features/neurocnl/routing/neurohub_routes.dart';
 import 'package:neuro_toolkit/providers/riverpod_providers.dart'
     show NeurocnlBackendDegradedNotifier, neurocnlBackendDegradedProvider;
 
@@ -89,6 +90,7 @@ GoRouter createAppRouter({
               );
             },
           ),
+          ...neurohubRoutes(),
         ],
       ),
     ],
@@ -130,9 +132,6 @@ class AppShell extends ConsumerStatefulWidget {
 }
 
 class _AppShellState extends ConsumerState<AppShell> {
-  bool _mujocoAvailable = false;
-  bool _healthLoading = true;
-  bool _backendOnline = true;
   late NeurocnlBackendDegradedNotifier _degradedNotifier;
 
   @override
@@ -166,21 +165,8 @@ class _AppShellState extends ConsumerState<AppShell> {
     try {
       final client = ref.read(apiClientProvider);
       final result = await client.health();
-      if (mounted) {
-        setState(() {
-          _mujocoAvailable = result.mujocoAvailable;
-          _backendOnline = true;
-          _healthLoading = false;
-        });
-      }
       _publishBackendDegraded(result.status.toLowerCase() == 'degraded');
     } catch (_) {
-      if (mounted) {
-        setState(() {
-          _backendOnline = false;
-          _healthLoading = false;
-        });
-      }
       _publishBackendDegraded(true);
     }
   }
@@ -208,9 +194,7 @@ class _AppShellState extends ConsumerState<AppShell> {
     });
 
     if (!widget.showNavigationChrome) {
-      return Scaffold(
-        body: SafeArea(bottom: false, child: widget.child),
-      );
+      return Scaffold(body: SafeArea(bottom: false, child: widget.child));
     }
 
     // No shell-level top bar: the Studio screen renders its own IDE-style

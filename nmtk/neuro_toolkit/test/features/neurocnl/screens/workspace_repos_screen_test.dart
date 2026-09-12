@@ -3,10 +3,12 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 import 'package:neuro_toolkit/features/neurocnl/providers/neurohub_provider.dart';
+import 'package:neuro_toolkit/features/neurocnl/routing/neurohub_routes.dart';
 import 'package:neuro_toolkit/features/neurocnl/screens/hub/share_workspace_screen.dart';
 import 'package:neuro_toolkit/features/neurocnl/screens/hub/workspace_repos_screen.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/neurohub_client.dart';
@@ -29,20 +31,22 @@ class _MemoryTokenStorage implements NeurohubTokenStorage {
 }
 
 class _Host extends StatelessWidget {
-  const _Host({required this.child});
-
-  final Widget child;
+  const _Host();
 
   @override
   Widget build(BuildContext context) {
+    final router = GoRouter(
+      initialLocation: NeurohubRoutes.workspaces,
+      routes: neurohubRoutes(),
+    );
     return ZetaProvider(
       initialContrast: ZetaContrast.aa,
       initialThemeMode: ThemeMode.dark,
-      builder: (context, light, dark, mode) => MaterialApp(
+      builder: (context, light, dark, mode) => MaterialApp.router(
         theme: light,
         darkTheme: dark,
         themeMode: mode,
-        home: Scaffold(body: child),
+        routerConfig: router,
       ),
     );
   }
@@ -117,7 +121,7 @@ Future<void> _pumpRepos(
           ),
         ),
       ],
-      child: const _Host(child: WorkspaceReposScreen()),
+      child: const _Host(),
     ),
   );
   await tester.pump();

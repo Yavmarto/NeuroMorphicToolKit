@@ -3,10 +3,12 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 import 'package:neuro_toolkit/features/neurocnl/providers/neurohub_provider.dart';
+import 'package:neuro_toolkit/features/neurocnl/routing/neurohub_routes.dart';
 import 'package:neuro_toolkit/features/neurocnl/screens/hub/share_workspace_screen.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/neurohub_client.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/neurohub_session_storage.dart';
@@ -34,14 +36,24 @@ class _Host extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final router = GoRouter(
+      initialLocation: '/',
+      routes: <RouteBase>[
+        GoRoute(
+          path: '/',
+          builder: (context, state) => Scaffold(body: child),
+        ),
+        ...neurohubRoutes(),
+      ],
+    );
     return ZetaProvider(
       initialContrast: ZetaContrast.aa,
       initialThemeMode: ThemeMode.dark,
-      builder: (context, light, dark, mode) => MaterialApp(
+      builder: (context, light, dark, mode) => MaterialApp.router(
         theme: light,
         darkTheme: dark,
         themeMode: mode,
-        home: Scaffold(body: child),
+        routerConfig: router,
       ),
     );
   }
@@ -106,10 +118,8 @@ class _ShareLauncherState extends State<_ShareLauncher> {
   NeurohubWorkspace? result;
 
   Future<void> _open() async {
-    final created = await Navigator.of(context).push<NeurohubWorkspace>(
-      MaterialPageRoute<NeurohubWorkspace>(
-        builder: (context) => const ShareWorkspaceScreen(),
-      ),
+    final created = await context.push<NeurohubWorkspace>(
+      NeurohubRoutes.shareWorkspace,
     );
     if (created != null && mounted) {
       setState(() => result = created);
@@ -221,9 +231,10 @@ void main() {
       await tester.tap(find.byKey(const Key('share-workspace-submit')));
       await tester.pump();
 
+      // ZetaTextInput renders the error label twice (field label + error line).
       expect(
         find.text('Enter a name for this workspace repo.'),
-        findsOneWidget,
+        findsAtLeastNWidgets(1),
       );
       expect(calls, 0);
       expect(find.byType(ShareWorkspaceScreen), findsOneWidget);
