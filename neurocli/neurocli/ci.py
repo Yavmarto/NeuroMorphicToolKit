@@ -181,20 +181,26 @@ def golden_paths_command(
     combo (nir+snntorch) must also run to completion. Writes a JSON summary
     (stdout and/or ``--output``) and exits non-zero if any combo failed.
     """
-    base_url = api_url
-    if base_url is None:
-        if target:
-            base_url = f"http://{target.split('@')[-1]}:9000"
-        else:
-            from neurocli.studio import _resolve_base_url
+    if api_url is not None:
+        base_url = api_url.rstrip("/")
+        resolved_target = target
+        results = [_one_golden_path(path, base_url, epochs) for path in _GOLDEN_PATHS]
+    elif target is not None:
+        with _connect(target, json_mode) as backend:
+            base_url = backend.urls["suite"]
+            resolved_target = backend.target.id
+            results = [_one_golden_path(path, base_url, epochs) for path in _GOLDEN_PATHS]
+    else:
+        from neurocli.studio import _resolve_base_url
 
-            base_url = _resolve_base_url(None)
+        base_url = _resolve_base_url(None)
+        resolved_target = None
+        results = [_one_golden_path(path, base_url, epochs) for path in _GOLDEN_PATHS]
 
-    results = [_one_golden_path(path, base_url, epochs) for path in _GOLDEN_PATHS]
     failed = [r["id"] for r in results if not r.get("ok")]
     summary: dict[str, object] = {
         "status": "failed" if failed else "ok",
-        "target": target or base_url,
+        "target": resolved_target or target or base_url,
         "api_url": base_url,
         "epochs": epochs,
         "golden_paths": results,

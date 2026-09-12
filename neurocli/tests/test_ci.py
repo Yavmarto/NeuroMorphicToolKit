@@ -198,6 +198,71 @@ def test_golden_paths_exits_nonzero_when_generate_fails(golden_failing_backend) 
     assert len(payload["failed"]) == 5
 
 
+def test_golden_paths_honors_manifest_port_with_target(monkeypatch) -> None:
+    """--target must use manifest suite port, not a hardcoded :9000."""
+    server = ThreadingHTTPServer(("127.0.0.1", 0), _GoldenBackend)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    manifest_port = server.server_address[1]
+
+    def fake_remote_ports() -> dict[str, int]:
+        return {"launcher": 8090, "suite": manifest_port, "jupyter": 8008}
+
+    monkeypatch.setattr("neurocli.session.remote_ports", fake_remote_ports)
+
+    result = runner.invoke(
+        app,
+        ["ci", "golden-paths", "--target", "127.0.0.1", "--json"],
+    )
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.stdout)
+    assert payload["api_url"] == f"http://127.0.0.1:{manifest_port}"
+    assert payload["status"] == "ok"
+    server.shutdown()
+    server.server_close()
+
+
+def test_golden_paths_target_uses_connect_tunnel_url(monkeypatch) -> None:
+    """Remote --target must go through _connect (tunnel), not http://host:9000."""
+    from neurocli.session import LOCAL_TARGET
+
+    tunnel_suite_url = "http://127.0.0.1:54321"
+
+    class _FakeBackend:
+        target = LOCAL_TARGET
+
+        def __init__(self) -> None:
+            self.urls = {"suite": tunnel_suite_url, "launcher": "http://x", "jupyter": "http://y"}
+
+        def __enter__(self) -> _FakeBackend:
+            return self
+
+        def __exit__(self, *_exc: object) -> None:
+            return
+
+    seen_targets: list[str | None] = []
+
+    def fake_connect(target: str | None, json_mode: bool) -> _FakeBackend:
+        seen_targets.append(target)
+        return _FakeBackend()
+
+    def fake_one_golden_path(path, base_url: str, epochs: int) -> dict[str, object]:
+        assert base_url == tunnel_suite_url
+        return {"id": path.id, "ok": True}
+
+    monkeypatch.setattr("neurocli.ci._connect", fake_connect)
+    monkeypatch.setattr("neurocli.ci._one_golden_path", fake_one_golden_path)
+
+    result = runner.invoke(
+        app,
+        ["ci", "golden-paths", "--target", "user@192.168.2.90", "--json"],
+    )
+    assert result.exit_code == 0, result.output
+    assert seen_targets == ["user@192.168.2.90"]
+    payload = json.loads(result.stdout)
+    assert payload["api_url"] == tunnel_suite_url
+
+
 def test_golden_paths_missing_workspace_file(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("NMTK_SUITE_API_URL", "http://x.test")
     import neurocli.ci as ci_mod
