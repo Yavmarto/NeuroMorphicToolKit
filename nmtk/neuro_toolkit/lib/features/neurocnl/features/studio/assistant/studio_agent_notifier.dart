@@ -160,6 +160,26 @@ class StudioAgentNotifier extends Notifier<StudioAgentState> {
     return snapshot.copyWithProviders(providers);
   }
 
+  /// ponytail: picks first PATH-resolved CLI harness; upgrade path is user preference store.
+  Future<StudioAgentProvidersSnapshot> _autoSelectDesktopHarness(
+    StudioAgentProvidersSnapshot snapshot,
+  ) async {
+    if (!StudioLocalHarness.isSupported || snapshot.activeProviderId != null) {
+      return snapshot;
+    }
+    final providerId = StudioLocalHarness.firstAvailableCliProviderId(
+      snapshot.providers,
+    );
+    if (providerId == null) {
+      return snapshot;
+    }
+    return _enrichProviderSnapshot(
+      await ref
+          .read(studioAgentServiceProvider)
+          .updateActiveProvider(providerId: providerId),
+    );
+  }
+
   String _nextEntryId() {
     _entryCounter += 1;
     return 'entry-$_entryCounter';
@@ -193,9 +213,10 @@ class StudioAgentNotifier extends Notifier<StudioAgentState> {
     }
     state = state.copyWith(isLoadingProviders: true, clearError: true);
     try {
-      final snapshot = _enrichProviderSnapshot(
+      var snapshot = _enrichProviderSnapshot(
         await ref.read(studioAgentServiceProvider).fetchProviders(),
       );
+      snapshot = await _autoSelectDesktopHarness(snapshot);
       state = state.copyWith(
         providersSnapshot: snapshot,
         isLoadingProviders: false,
@@ -312,9 +333,7 @@ class StudioAgentNotifier extends Notifier<StudioAgentState> {
       return;
     }
 
-    await ensureSession(
-      workspaceId: ref.read(workspaceProvider).workspaceName,
-    );
+    await ensureSession(workspaceId: ref.read(workspaceProvider).workspaceName);
     final sessionId = state.sessionId;
     if (sessionId == null) {
       return;
@@ -339,6 +358,13 @@ class StudioAgentNotifier extends Notifier<StudioAgentState> {
     );
 
     final service = ref.read(studioAgentServiceProvider);
+    if (state.providersSnapshot != null &&
+        state.providersSnapshot!.activeProviderId == null) {
+      final snapshot = await _autoSelectDesktopHarness(
+        state.providersSnapshot!,
+      );
+      state = state.copyWith(providersSnapshot: snapshot);
+    }
     var resolvedToolCalls = toolCalls;
     String? assistantContent;
     final activeProviderId = state.providersSnapshot?.activeProviderId;
@@ -348,9 +374,9 @@ class StudioAgentNotifier extends Notifier<StudioAgentState> {
       try {
         final session = await service.fetchSession(sessionId);
         final rawMessages = session['messages'] as List<dynamic>? ?? const [];
-        final messages = rawMessages
-            .whereType<Map<String, dynamic>>()
-            .toList(growable: false);
+        final messages = rawMessages.whereType<Map<String, dynamic>>().toList(
+          growable: false,
+        );
         final instructions = await service.fetchInstructionsMarkdown();
         final localResult = await StudioLocalHarness.maybeRun(
           providerId: activeProviderId!,
@@ -363,10 +389,7 @@ class StudioAgentNotifier extends Notifier<StudioAgentState> {
           resolvedToolCalls = localResult.toolCalls;
         }
       } on StudioLocalHarnessException catch (error) {
-        state = state.copyWith(
-          isStreaming: false,
-          errorMessage: error.message,
-        );
+        state = state.copyWith(isStreaming: false, errorMessage: error.message);
         return;
       }
     }

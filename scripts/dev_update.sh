@@ -575,6 +575,8 @@ classify_path() {
 
     # Live via the suite_api bind mount — no container work at all.
     suite_api/*|neurocnl/backend/*)          PATH_ACTIONS+=("RELOAD:suite_api") ;;
+    # studio_agent imports tools.nmtk_mcp_server at startup (suite_api/Dockerfile:65).
+    tools/nmtk_mcp_server/*)                 PATH_ACTIONS+=("RELOAD:suite_api") ;;
 
     # Module frontends are Flutter packages compiled into the launcher app, not
     # backend code. Listed before the module-wide rebuild rules below so a Dart

@@ -74,6 +74,9 @@
 # /repo at runtime, so both the build and the mount need them.
 # suite_api/Dockerfile copies this shared runtime contract before NeuroCNL.
 + /nmtk_sdk/***
+# suite_api/Dockerfile:65; studio_agent imports tools.nmtk_mcp_server at runtime.
++ /tools/
++ /tools/nmtk_mcp_server/***
 # suite_api/Dockerfile:34,50; workers/neurocnl_physics/Dockerfile:26.
 + /neurocnl/***
 # suite_api/Dockerfile:44; Dockerfile.lava; workers/neurochip_hw/Dockerfile:16.

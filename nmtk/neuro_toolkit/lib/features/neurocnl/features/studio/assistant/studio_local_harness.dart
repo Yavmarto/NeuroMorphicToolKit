@@ -17,11 +17,22 @@ class StudioLocalHarness {
   };
 
   static bool get isSupported =>
-      !kIsWeb &&
-      (Platform.isMacOS || Platform.isLinux || Platform.isWindows);
+      !kIsWeb && (Platform.isMacOS || Platform.isLinux || Platform.isWindows);
 
   static bool isCliProvider(String? providerId) =>
       providerId != null && cliProviderIds.contains(providerId);
+
+  /// First desktop CLI harness in provider list order, after [mergeDesktopProbes].
+  static String? firstAvailableCliProviderId(
+    Iterable<StudioLlmProviderInfo> providers,
+  ) {
+    for (final provider in providers) {
+      if (provider.available && isCliProvider(provider.providerId)) {
+        return provider.providerId;
+      }
+    }
+    return null;
+  }
 
   /// Mark CLI providers available when binaries exist on this desktop.
   static StudioAgentProvidersSnapshot mergeDesktopProbes(
@@ -50,11 +61,13 @@ class StudioLocalHarness {
           );
         })
         .toList(growable: false);
-    return snapshot.copyWithProviders(providers).copyWith(
-      probeHostNote:
-          'CLI harnesses run on this desktop. HTTP providers (Ollama, LM Studio) '
-          'are detected on the connected backend.',
-    );
+    return snapshot
+        .copyWithProviders(providers)
+        .copyWith(
+          probeHostNote:
+              'CLI harnesses run on this desktop. HTTP providers (Ollama, LM Studio) '
+              'are detected on the connected backend.',
+        );
   }
 
   static Future<StudioLocalHarnessResult?> maybeRun({
@@ -78,12 +91,7 @@ class StudioLocalHarness {
       messages: messages,
       instructionsMarkdown: instructionsMarkdown,
     );
-    final argv = [
-      binary,
-      ...spec.prefixArgs,
-      prompt,
-      ...spec.suffixArgs,
-    ];
+    final argv = [binary, ...spec.prefixArgs, prompt, ...spec.suffixArgs];
     final process = await Process.start(
       argv.first,
       argv.sublist(1),
@@ -109,7 +117,10 @@ class StudioLocalHarness {
       if (result.exitCode != 0) {
         return null;
       }
-      final line = (result.stdout as String).split(RegExp(r'\r?\n')).first.trim();
+      final line = (result.stdout as String)
+          .split(RegExp(r'\r?\n'))
+          .first
+          .trim();
       return line.isEmpty ? null : line;
     }
     final result = await Process.run('which', [binary], runInShell: false);
@@ -121,18 +132,24 @@ class StudioLocalHarness {
   }
 
   static String? _binaryForProvider(String providerId) {
+    return binaryForProviderInPath(providerId, Platform.environment['PATH']);
+  }
+
+  /// ponytail: test hook only — [pathEnv] is the raw PATH string, not a directory list.
+  @visibleForTesting
+  static String? binaryForProviderInPath(String providerId, String? pathEnv) {
     final spec = _specForProvider(providerId);
     if (spec == null) {
       return null;
     }
-    final path = Platform.environment['PATH'];
-    if (path == null) {
+    if (pathEnv == null) {
       return null;
     }
     final names = Platform.isWindows
         ? <String>[spec.binary, '${spec.binary}.exe', '${spec.binary}.cmd']
         : <String>[spec.binary];
-    for (final dir in path.split(Platform.pathSeparator)) {
+    final pathDelimiter = Platform.isWindows ? ';' : ':';
+    for (final dir in pathEnv.split(pathDelimiter)) {
       for (final name in names) {
         final candidate = '$dir${Platform.pathSeparator}$name';
         if (File(candidate).existsSync()) {
@@ -172,7 +189,9 @@ class StudioLocalHarness {
     final hasInstructions = messages.any(
       (message) =>
           message['role'] == 'system' &&
-          (message['content'] as String? ?? '').contains('nmtk-studio-assistant'),
+          (message['content'] as String? ?? '').contains(
+            'nmtk-studio-assistant',
+          ),
     );
     if (!hasInstructions && instructionsMarkdown.trim().isNotEmpty) {
       lines.add(instructionsMarkdown.trim());
@@ -207,10 +226,12 @@ class StudioLocalHarness {
     }
     try {
       final payload = jsonDecode(candidate) as Map<String, dynamic>;
-      final content = (payload['content'] as String?) ??
+      final content =
+          (payload['content'] as String?) ??
           (payload['response'] as String?) ??
           text.trim();
-      final rawCalls = payload['tool_calls'] as List<dynamic>? ??
+      final rawCalls =
+          payload['tool_calls'] as List<dynamic>? ??
           ((payload['message'] as Map<String, dynamic>?)?['tool_calls']
               as List<dynamic>?);
       final toolCalls = <StudioToolCallRequest>[];
@@ -230,10 +251,7 @@ class StudioLocalHarness {
           ),
         );
       }
-      return StudioLocalHarnessResult(
-        content: content,
-        toolCalls: toolCalls,
-      );
+      return StudioLocalHarnessResult(content: content, toolCalls: toolCalls);
     } on FormatException {
       return StudioLocalHarnessResult(content: text.trim());
     }
