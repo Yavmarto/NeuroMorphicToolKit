@@ -27,6 +27,24 @@ class _FakeSecretStorage implements ConnectSecretStorage {
   Future<void> delete(String key) async => _values.remove(key);
 }
 
+class _TrackingSecretStorage implements ConnectSecretStorage {
+  _TrackingSecretStorage({this.onRead});
+
+  final void Function()? onRead;
+
+  @override
+  Future<String?> read(String key) async {
+    onRead?.call();
+    return null;
+  }
+
+  @override
+  Future<void> write(String key, String value) async {}
+
+  @override
+  Future<void> delete(String key) async {}
+}
+
 Future<TargetStore> _fakeTargetStore({bool throwOnWrite = false}) async {
   return TargetStore(
     preferences: await SharedPreferences.getInstance(),
@@ -240,6 +258,43 @@ void main() {
     skip: ConnectBuildPolicy.requiresCredentialAuth
         ? 'release-only credential connect'
         : false,
+  );
+
+  test(
+    'reconnectOnOpen probes saved host without reading secure storage',
+    () async {
+      SharedPreferences.setMockInitialValues({});
+      var secureReads = 0;
+      final container = ProviderContainer(
+        overrides: [
+          connectServiceProvider.overrideWithValue(
+            _FakeConnectService(reachable: true),
+          ),
+          targetStoreProvider.overrideWith((ref) async {
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setString(
+              'connect.targets.v1',
+              '[{"host":"10.0.0.5","appUsername":"","updatedAt":"2026-09-13T00:00:00.000"}]',
+            );
+            return TargetStore(
+              preferences: prefs,
+              secureStorage: _TrackingSecretStorage(
+                onRead: () => secureReads++,
+              ),
+            );
+          }),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      await container.read(connectNotifierProvider.notifier).reconnectOnOpen();
+
+      final state = container.read(connectNotifierProvider);
+      expect(state.phase, ConnectPhase.connected);
+      expect(state.savedHost, '10.0.0.5');
+      expect(secureReads, 0);
+    },
+    skip: ConnectBuildPolicy.requiresCredentialAuth ? 'release-only' : false,
   );
 
   test(

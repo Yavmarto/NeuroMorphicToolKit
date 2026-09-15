@@ -86,8 +86,10 @@ class ConnectNotifier extends Notifier<ConnectState> {
 
     if (!ConnectBuildPolicy.requiresCredentialAuth) {
       final store = await ref.read(targetStoreProvider.future);
-      final last = await store.loadLastTarget();
-      final host = last?.host ?? ConnectBuildPolicy.defaultDevServerHost;
+      // ponytail: prefs-only host lookup — mobile keychain reads must not
+      // block profile/debug auto-connect before the /health probe (CEL-226).
+      final host =
+          await store.loadLastHost() ?? ConnectBuildPolicy.defaultDevServerHost;
       await _connectToHost(host);
       return;
     }
@@ -155,8 +157,9 @@ class ConnectNotifier extends Notifier<ConnectState> {
           phase: ConnectPhase.failed,
           savedHost: host,
           failureCause:
-              'Could not reach $normalizedHost. Confirm the address and that '
-              'the server is running, then try again.',
+              'Could not reach $normalizedHost. Confirm the address, that the '
+              'server is running, and that this device is on the same Wi‑Fi '
+              'network as the server, then try again.',
         );
         return;
       }

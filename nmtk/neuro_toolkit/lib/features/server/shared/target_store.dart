@@ -113,7 +113,11 @@ class TargetStore {
       final credential =
           await _secureStorage.read('$_credentialPrefix$host') ?? '';
       targets.add(
-        ConnectTarget.fromJson(entry, sessionToken: token, credential: credential),
+        ConnectTarget.fromJson(
+          entry,
+          sessionToken: token,
+          credential: credential,
+        ),
       );
     }
     return targets;
@@ -131,6 +135,26 @@ class TargetStore {
     return targets.first;
   }
 
+  /// Host-only lookup for debug/profile auto-connect (CEL-226).
+  ///
+  /// Reads plain prefs only — no keychain/Keystore round-trip — so mobile
+  /// cold start does not block on secure storage before the health probe.
+  Future<String?> loadLastHost() async {
+    final entries = _loadEntries();
+    if (entries.isEmpty) return null;
+    entries.sort((a, b) {
+      final aAt =
+          DateTime.tryParse(a['updatedAt'] as String? ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0);
+      final bAt =
+          DateTime.tryParse(b['updatedAt'] as String? ?? '') ??
+          DateTime.fromMillisecondsSinceEpoch(0);
+      return bAt.compareTo(aAt);
+    });
+    final host = entries.first['host'] as String? ?? '';
+    return host.isEmpty ? null : host;
+  }
+
   Future<void> saveTarget(ConnectTarget target) async {
     final withTimestamp = target.copyWith(updatedAt: DateTime.now());
     final entries = _loadEntries();
@@ -144,10 +168,12 @@ class TargetStore {
       entries[index] = entry;
     }
     await _preferences.setString(_targetsKey, jsonEncode(entries));
-    await _secureStorage.write(
-      '$_tokenPrefix${withTimestamp.host}',
-      withTimestamp.sessionToken,
-    );
+    if (withTimestamp.sessionToken.isNotEmpty) {
+      await _secureStorage.write(
+        '$_tokenPrefix${withTimestamp.host}',
+        withTimestamp.sessionToken,
+      );
+    }
     if (withTimestamp.credential.isNotEmpty) {
       await _secureStorage.write(
         '$_credentialPrefix${withTimestamp.host}',

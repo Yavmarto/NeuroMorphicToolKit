@@ -8,7 +8,12 @@ Dev build shows stuck **Reconnecting to your server…** overlay with **NeuroStu
 - Likely connect gate race or dev auth policy mismatch (CEL-220/CEL-198)
 
 ## Delegation
-- CEL-227 — Engineer: fix connect flow
-- CEL-228 — QA: verify after CEL-227 (blocked)
+- CEL-227 — Engineer: fix connect flow (done)
+- CEL-228 — QA: macOS verify (done)
+- CEL-232 — QA: mobile profile verify (PASS 3/3 on CPH2173)
 
-Parent CEL-226 blocked on CEL-227.
+## Mobile fix (2026-09-13)
+- `loadLastHost()` skips keychain before profile/debug probe
+- No empty secure-storage writes on credential-free connect
+
+CEL-232 QA PASS (2026-09-13): physical Android E2E 3/3. Parent ready to close once CEL-232 marked done.
