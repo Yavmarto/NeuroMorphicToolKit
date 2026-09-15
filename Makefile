@@ -1,4 +1,4 @@
-.PHONY: release help dev dev-a dev-i dev-web dev-native clean-all bump-version ci notices notices-check suite_api_dev check-devices docker docker-a docker-i docker-all docker-ex docker-ex-deploy docker-ex-m docker-ex-a docker-ex-i docker-ex-down docker-ex-all docker-ex-all-m docker-ex-all-a docker-ex-all-i secrets-init macos-signing-check build-macos-dmg-signed webtop-build webtop-up webtop-down webtop webtop-trust
+.PHONY: release help dev dev-a dev-i dev-web dev-native clean-all bump-version ci notices notices-check suite_api_dev check-devices docker docker-a docker-i docker-all docker-ex docker-ex-deploy docker-ex-m docker-ex-a docker-ex-i docker-ex-down docker-ex-all docker-ex-all-m docker-ex-all-a docker-ex-all-i secrets-init macos-signing-check build-macos-dmg-signed webtop-build webtop-up webtop-down webtop webtop-trust voyager-compile-spike voyager-aipu-spike qnn-cpu-spike qnn-fetch-qairt jetson-compile-spike coral-compile-spike
 
 # OS detection for Flutter device targeting
 OS := $(shell uname)
@@ -59,6 +59,12 @@ help:
 	@echo "  make webtop-up                - Start the webtop container (auto-trusts the local CA on first run)"
 	@echo "  make webtop-trust             - Install the webtop mkcert CA into the host trust store"
 	@echo "  make webtop-down              - Stop the webtop container"
+	@echo "  make voyager-compile-spike    - Compile YOLOv8n to .axm via Voyager SDK (Ubuntu 22.04 Docker)"
+	@echo "  make voyager-aipu-spike       - Run .axm on Metis AIPU + CPU baseline (native Linux + board)"
+	@echo "  make qnn-fetch-qairt          - Download/extract QAIRT Community SDK (needs Qualcomm portal access)"
+	@echo "  make qnn-cpu-spike            - Convert YOLOv8n via QNN and run libQnnCpu.so (Ubuntu 22.04 Docker)"
+	@echo "  make coral-compile-spike      - Export YOLOv8n to TFLite + edgetpu_compiler (Ubuntu 22.04 Docker, no Coral USB)"
+	@echo "  make jetson-compile-spike     - TensorRT parse YOLOv8n ONNX (NVIDIA GPU Docker, no Jetson board)"
 	@echo ""
 
 dev:
@@ -410,6 +416,29 @@ webtop-down:
 	docker compose -f docker-compose.webtop.yml down
 
 webtop: webtop-build webtop-up
+
+# Compiler-only Voyager SDK spike (CEL-237). Requires Docker. Output: ./voyager-compile-out/
+voyager-compile-spike:
+	@bash scripts/voyager_compile_spike.sh ./voyager-compile-out
+
+# AIPU runtime spike (CEL-238). Requires native Linux host with Metis board + metis-dkms.
+voyager-aipu-spike:
+	@bash scripts/voyager_aipu_spike.sh ./voyager-compile-out
+
+# QAIRT/QNN CPU-backend spike (CEL-245). Requires Docker + extracted QAIRT SDK at QAIRT_SDK_ROOT.
+qnn-fetch-qairt:
+	@bash scripts/qnn_fetch_qairt.sh ./qairt-download
+
+qnn-cpu-spike:
+	@bash scripts/qnn_cpu_spike.sh ./qnn-cpu-out
+
+# TensorRT compile-only spike (CEL-246). Requires Docker + NVIDIA GPU (desktop OK, no Jetson board).
+jetson-compile-spike:
+	@bash scripts/jetson_compile_spike.sh ./jetson-compile-out
+
+# Compiler-only Coral Edge TPU spike (CEL-244). Requires Docker. Output: ./coral-compile-out/
+coral-compile-spike:
+	@bash scripts/coral_compile_spike.sh ./coral-compile-out
 
 build-macos-dmg-signed:
 	@BUILD_ARGS=(--dmg); \
