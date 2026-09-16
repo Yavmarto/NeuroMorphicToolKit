@@ -30,6 +30,13 @@ class ModuleNotifier extends _$ModuleNotifier {
   int? _pollInFlightGeneration;
   int _consecutivePollFailures = 0;
 
+  // build() must never read `state`/`state.value` — Riverpod throws "Tried to
+  // read the state of an uninitialized provider" if a notifier's build()
+  // reads its own state while it's being (re)computed. Active tabs need to
+  // survive a rebuild (e.g. reconnecting to a server), so track them here
+  // instead and keep this in sync whenever activeModuleIds actually changes.
+  List<String> _activeModuleIds = const [];
+
   @override
   Future<ModuleState> build() async {
     _updateService = ref.read(updateServiceProvider);
@@ -110,7 +117,7 @@ class ModuleNotifier extends _$ModuleNotifier {
         modules: modules,
         pythonAvailable: true,
         mujocoAvailable: true,
-        activeModuleIds: state.value?.activeModuleIds ?? [],
+        activeModuleIds: _activeModuleIds,
       );
     } catch (e) {
       debugPrint('Failed to load bundled modules in dev offline mode: $e');
@@ -137,7 +144,7 @@ class ModuleNotifier extends _$ModuleNotifier {
       pythonAvailable: settings.pythonAvailable,
       mujocoAvailable: settings.mujocoAvailable,
       pendingLauncherUpdate: pendingUpdate,
-      activeModuleIds: state.value?.activeModuleIds ?? [],
+      activeModuleIds: _activeModuleIds,
     );
   }
 
@@ -221,6 +228,7 @@ class ModuleNotifier extends _$ModuleNotifier {
         final newActiveIds = List<String>.from(nextState.activeModuleIds)
           ..removeWhere((id) => staleIds.contains(id));
         nextState = nextState.copyWith(activeModuleIds: newActiveIds);
+        _activeModuleIds = newActiveIds;
         changed = true;
       }
 
@@ -433,6 +441,7 @@ class ModuleNotifier extends _$ModuleNotifier {
     if (!updatedActiveIds.contains(moduleId)) {
       updatedActiveIds.add(moduleId);
     }
+    _activeModuleIds = updatedActiveIds;
 
     final updatedModules = List<Module>.from(currentState.modules);
     updatedModules[index] = updatedModules[index].copyWith(
@@ -497,6 +506,7 @@ class ModuleNotifier extends _$ModuleNotifier {
 
     final updatedActiveIds = List<String>.from(currentState.activeModuleIds)
       ..remove(moduleId);
+    _activeModuleIds = updatedActiveIds;
 
     state = AsyncData(
       currentState.copyWith(
@@ -598,6 +608,7 @@ class ModuleNotifier extends _$ModuleNotifier {
 
     final updatedActiveIds = List<String>.from(currentState.activeModuleIds)
       ..remove(moduleId);
+    _activeModuleIds = updatedActiveIds;
 
     state = AsyncData(
       currentState.copyWith(
@@ -621,6 +632,7 @@ class ModuleNotifier extends _$ModuleNotifier {
 
     final updatedActiveIds = List<String>.from(currentState.activeModuleIds)
       ..remove(moduleId);
+    _activeModuleIds = updatedActiveIds;
     state = AsyncData(currentState.copyWith(activeModuleIds: updatedActiveIds));
   }
 
