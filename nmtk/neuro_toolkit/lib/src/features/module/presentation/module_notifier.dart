@@ -78,10 +78,23 @@ class ModuleNotifier extends _$ModuleNotifier {
       if (!_isCurrentServer(generation, controlApi.baseUri)) {
         return state;
       }
-      await _startSwitchableNavModules(state.modules);
-      if (!_isCurrentServer(generation, controlApi.baseUri)) {
-        return state;
-      }
+      // _startSwitchableNavModules() calls launchModule(), which reads and
+      // writes this notifier's own `state`. Calling it here, still inside
+      // build(), would mutate `state` before build() has returned its first
+      // value — Riverpod detects that reentrant self-access and throws
+      // "Tried to read the state of an uninitialized provider" or "Tried to
+      // rebuild moduleProvider multiple times in the same frame" depending
+      // on timing (CEL-270). Deferring it to run after this build() call
+      // resolves lets it operate on an already-initialized provider.
+      final capturedGeneration = generation;
+      final capturedBaseUri = controlApi.baseUri;
+      final modulesToLaunch = state.modules;
+      unawaited(
+        Future<void>.delayed(Duration.zero, () async {
+          if (!_isCurrentServer(capturedGeneration, capturedBaseUri)) return;
+          await _startSwitchableNavModules(modulesToLaunch);
+        }),
+      );
 
       // Setup polling timer
       _startRefreshTimer();
