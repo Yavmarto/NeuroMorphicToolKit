@@ -41,6 +41,15 @@ class ModuleNotifier extends _$ModuleNotifier {
   Future<ModuleState> build() async {
     _updateService = ref.read(updateServiceProvider);
     final bootstrapState = ref.watch(launcherBootstrapStateProvider);
+    // launcherBootstrapStateProvider is itself derived from
+    // connectNotifierProvider (via selectedControlApiServiceProvider), so
+    // this must always be watched too, not just when !canUseControlApi.
+    // Watching it conditionally created a diamond dependency with two paths
+    // of different shapes reaching this notifier, which toggled on/off
+    // across builds and caused Riverpod to rebuild this provider twice in
+    // the same frame ("Tried to rebuild moduleProvider multiple times in
+    // the same frame").
+    final connectState = ref.watch(connectNotifierProvider);
     final controlApi = bootstrapState.canUseControlApi
         ? ref.watch(controlApiServiceProvider)
         : null;
@@ -54,7 +63,6 @@ class ModuleNotifier extends _$ModuleNotifier {
     final generation = _serverGeneration;
 
     if (!bootstrapState.canUseControlApi) {
-      final connectState = ref.watch(connectNotifierProvider);
       if (connectState.phase == ConnectPhase.devOffline) {
         return _loadBundledModules();
       }
