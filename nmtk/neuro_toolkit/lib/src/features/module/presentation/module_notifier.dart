@@ -50,9 +50,10 @@ class ModuleNotifier extends _$ModuleNotifier {
     // the same frame ("Tried to rebuild moduleProvider multiple times in
     // the same frame").
     final connectState = ref.watch(connectNotifierProvider);
-    final controlApi = bootstrapState.canUseControlApi
-        ? ref.watch(controlApiServiceProvider)
-        : null;
+    // Same reasoning: watch the nullable selectedControlApiServiceProvider
+    // unconditionally instead of the throwing controlApiServiceProvider
+    // conditionally, so this dependency's shape never toggles either.
+    final controlApi = ref.watch(selectedControlApiServiceProvider);
     final serverUri = controlApi?.baseUri ?? bootstrapState.baseUri;
 
     if (_activeServerUri != serverUri) {

@@ -12,11 +12,18 @@ class WorkspaceNotifier extends _$WorkspaceNotifier {
   @override
   Future<WorkspaceState> build() async {
     final bootstrapState = ref.watch(launcherBootstrapStateProvider);
-    if (!bootstrapState.canUseControlApi) {
+    // launcherBootstrapStateProvider is itself derived from
+    // selectedControlApiServiceProvider, so that must always be watched too,
+    // not just when canUseControlApi. Watching controlApiServiceProvider
+    // (which throws when unselected) only inside this branch created a
+    // diamond dependency whose shape toggled across builds and could cause
+    // Riverpod to rebuild this provider twice in the same frame. See
+    // module_notifier.dart (CEL-270) for the same fix.
+    final controlApi = ref.watch(selectedControlApiServiceProvider);
+    if (!bootstrapState.canUseControlApi || controlApi == null) {
       return const WorkspaceState();
     }
 
-    final controlApi = ref.watch(controlApiServiceProvider);
     try {
       final snapshot = await controlApi.fetchWorkspace();
       return WorkspaceState(
