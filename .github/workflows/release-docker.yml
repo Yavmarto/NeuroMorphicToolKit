@@ -107,7 +107,31 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
             type=sha,format=short
 
-      - name: Build and push
+      - name: Build (load only, no push yet)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ${{ matrix.file }}
+          platforms: linux/amd64
+          push: false
+          load: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+             NMTK_VERSION=${{ steps.meta.outputs.version }}
+             ${{ matrix.image == 'neurocnl-physics-worker' && 'INSTALL_PHYSICS=1' || '' }}
+
+      # Scan the built image before it is published; a CRITICAL/HIGH finding
+      # blocks the push instead of shipping a vulnerable image.
+      - name: Trivy image scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ghcr.io/${{ github.repository }}/${{ matrix.image }}:latest
+          trivyignores: '.trivyignore'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+
+      - name: Push
         uses: docker/build-push-action@v5
         with:
           context: .

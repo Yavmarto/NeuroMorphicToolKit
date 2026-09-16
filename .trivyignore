@@ -1,0 +1,9 @@
+# Accepted-risk findings for the Trivy scans in
+# .github/workflows/security-scan.yml (Dockerfile config scan) and
+# .github/workflows/release-docker.yml (built image scan).
+#
+# One CVE/GHSA/AVD ID per line, followed by a short reason and a link to the
+# issue/PR that accepted the risk. Lines starting with # are ignored.
+#
+# Example:
+# CVE-2023-00000  base image fix pending upstream, tracked in CEL-000

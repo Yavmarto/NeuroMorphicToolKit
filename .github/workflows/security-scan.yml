@@ -47,11 +47,22 @@ jobs:
         with:
           python-version: '3.12'
       - name: Run pip-audit
+        shell: bash
         run: |
           pip install pip-audit
-          # Audit root and submodules
-          pip-audit || true
-          find . -name "requirements.txt" -exec pip-audit -r {} \; || true
+          IGNORE_ARGS=()
+          if [ -f .pip-audit-ignore ]; then
+            while IFS= read -r line; do
+              case "$line" in
+                ''|'#'*) continue ;;
+              esac
+              CVE_ID="$(echo "$line" | awk '{print $1}')"
+              IGNORE_ARGS+=(--ignore-vuln "$CVE_ID")
+            done < .pip-audit-ignore
+          fi
+          # Audit root and submodules; a real, non-ignored finding fails the job.
+          pip-audit "${IGNORE_ARGS[@]}"
+          find . -name "requirements.txt" -exec pip-audit -r {} "${IGNORE_ARGS[@]}" \;
 
   owasp-dependency-check:
     runs-on: [self-hosted, Linux, X64]
@@ -72,3 +83,16 @@ jobs:
         with:
           name: dependency-check-report
           path: reports
+
+  dockerfile-scan:
+    runs-on: [self-hosted, Linux, X64]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trivy config scan (Dockerfiles)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: 'config'
+          scan-ref: '.'
+          trivyignores: '.trivyignore'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
