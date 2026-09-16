@@ -60,8 +60,20 @@ class BenchmarkExecutionController extends _$BenchmarkExecutionController {
   BenchmarkExecutionState build() {
     _trackedJobId = ref.read(activeJobIdProvider);
     final activeBenchmark = ref.read(activeBenchmarkProvider);
+
+    // build() must never read `state` while it's being computed — Riverpod
+    // throws "Tried to read the state of an uninitialized provider" if it
+    // does. Compute the initial draft locally instead of going through
+    // `_resetDraft`, which assigns to `state`.
+    var initialState = const BenchmarkExecutionState();
     if (activeBenchmark != null) {
-      _resetDraft(activeBenchmark);
+      _draftBenchmarkId = activeBenchmark.id;
+      initialState = initialState.copyWith(
+        draft: BenchmarkRunDraft.fromDefaults(
+          benchmarkId: activeBenchmark.id,
+          defaultParams: activeBenchmark.defaultParams,
+        ),
+      );
     }
     if (_trackedJobId != null) {
       unawaited(_refreshJob(_trackedJobId!, startPolling: true));
@@ -75,7 +87,7 @@ class BenchmarkExecutionController extends _$BenchmarkExecutionController {
     );
     ref.listen<String?>(activeJobIdProvider, (_, next) => syncTrackedJob(next));
 
-    return const BenchmarkExecutionState();
+    return initialState;
   }
 
   Timer? _pollTimer;
