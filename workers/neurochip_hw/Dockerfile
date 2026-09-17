@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.14-slim
 WORKDIR /app
 
 # Pre-install Neurochip base deps before copying source — cache survives
