@@ -13,7 +13,7 @@ mypy
 
 #= LIBRARY — neurocnl/neurocnl/ tests (requires full package install)
 nengo>=3.2.0
-numpy>=1.24.0
+numpy>=2.5.3
 nir>=1.0.0
 structlog>=24.1.0
 
