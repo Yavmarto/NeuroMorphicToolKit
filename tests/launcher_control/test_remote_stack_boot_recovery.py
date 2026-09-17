@@ -8,7 +8,12 @@ def test_install_registers_boot_recovery_before_starting_containers() -> None:
     install_script = (BUNDLE / "install.sh").read_text()
 
     install_index = install_script.index('nmtk-stack.sh install "$ENGINE"')
-    start_index = install_script.index('nmtk-stack.sh start "$ENGINE"')
+    # The main update flow must register boot recovery before it starts the
+    # stack. The rollback path also starts the stack and is defined earlier in
+    # the file, so look for the start that follows the registration.
+    start_index = install_script.index(
+        'nmtk-stack.sh start "$ENGINE"', install_index
+    )
     assert install_index < start_index
     assert "could not be registered to start automatically" in install_script
 
