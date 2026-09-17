@@ -727,11 +727,29 @@ jobs:
             flutter analyze --directory Neurosense/frontend
           fi
 
+  # Parses every workflow file and fails when one is invalid. A workflow with a
+  # needs: entry pointing at a removed job never runs at all, so the failure is
+  # silent unless something checks the files themselves (CEL-306, CEL-313).
+  validate-workflows:
+    runs-on: [self-hosted, Linux, X64]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install PyYAML
+        run: python -m pip install pyyaml
+      - name: Validate workflow files
+        run: python scripts/ci/validate_workflows.py
+
   # Summary job that branch protection can require
   ci-passed:
     runs-on: [self-hosted, Linux, X64]
     needs:
       - pre-commit
+      - validate-workflows
       - test-neurochip
       - test-neurochip-frontend
       - test-neurosense
@@ -763,10 +781,14 @@ jobs:
           echo "  reference-assets: ${{ needs.test-reference-assets.result }}"
           echo "  macos-installer: ${{ needs.test-macos-installer-signing.result }}"
           echo "  windows-installer: ${{ needs.test-windows-installer-signing.result }}"
+          echo "  validate-workflows: ${{ needs.validate-workflows.result }}"
 
-          # Fail if any job failed (skipped is OK — means no changes in that module)
+          # Fail on anything that is neither success nor skipped (skipped means
+          # no changes in that module). cancelled and startup failures must fail
+          # the gate too, not pass silently.
           for result in \
             "${{ needs.pre-commit.result }}" \
+            "${{ needs.validate-workflows.result }}" \
             "${{ needs.test-neurochip.result }}" \
             "${{ needs.test-neurochip-frontend.result }}" \
             "${{ needs.test-neurosense.result }}" \
@@ -781,8 +803,8 @@ jobs:
             "${{ needs.test-reference-assets.result }}" \
             "${{ needs.test-macos-installer-signing.result }}" \
             "${{ needs.test-windows-installer-signing.result }}"; do
-            if [ "$result" = "failure" ]; then
-              echo "::error::One or more test jobs failed"
+            if [ "$result" != "success" ] && [ "$result" != "skipped" ]; then
+              echo "::error::ci-passed gate: a needed job ended with '$result'"
               exit 1
             fi
           done

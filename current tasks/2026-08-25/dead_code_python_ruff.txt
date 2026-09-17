@@ -1,4 +1,0 @@
-Neurobench/neurobench/test_fastapi_slowapi.py:29:5: F841 Local variable `diff` is assigned to but never used
-Neurobench/neurobench/test_slowapi_issue.py:19:5: F841 Local variable `diff` is assigned to but never used
-Found 2 errors.
-No fixes available (2 hidden fixes can be enabled with the `--unsafe-fixes` option).

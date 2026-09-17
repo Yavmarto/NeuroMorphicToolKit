@@ -1,0 +1,60 @@
+name: CI Runner Health
+
+# Scheduled watchdog for the self-hosted runner fleet. ADR-0012: the runners have
+# no automatic fallback, so a runner outage blocks the whole pipeline. This runs
+# on a GitHub-hosted runner on purpose — it must keep working when every
+# self-hosted runner is down. See docs/ci-runners.md.
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+    inputs:
+      queued_threshold_minutes:
+        description: Minutes a job may stay queued before it is an alert
+        required: false
+        default: '30'
+      dry_run:
+        description: Detect and report only; do not write alerts or issues
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: read
+  actions: read
+  issues: write
+
+concurrency:
+  group: runner-health
+  cancel-in-progress: false
+
+jobs:
+  runner-health:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install PyYAML
+        run: python -m pip install pyyaml
+
+      - name: Validate workflow files
+        run: python scripts/ci/validate_workflows.py
+
+      - name: Check runner health
+        if: always()
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RUNNER_ADMIN_TOKEN: ${{ secrets.RUNNER_ADMIN_TOKEN }}
+          ALERTMANAGER_URL: ${{ secrets.ALERTMANAGER_URL }}
+          QUEUED_THRESHOLD_MINUTES: ${{ inputs.queued_threshold_minutes || '30' }}
+        run: |
+          python scripts/ci/runner_health_check.py \
+            ${{ inputs.dry_run && '--dry-run' || '' }}

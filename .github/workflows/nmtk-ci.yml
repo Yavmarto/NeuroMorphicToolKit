@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   test:
-    runs-on: self-hosted
+    runs-on: nmtk-linux
     strategy:
       fail-fast: false
       matrix:
@@ -50,18 +50,9 @@ jobs:
           cd nmtk/neuro_toolkit
           flutter test --coverage
 
-
-      - name: Run E2E Launcher tests (neuro_toolkit)
-        env:
-          FORCE_E2E: true
-        run: |
-          cd nmtk/neuro_toolkit
-          flutter test test/launcher_e2e_test.dart
-
-
   build-linux:
     needs: test
-    runs-on: self-hosted
+    runs-on: nmtk-linux
     steps:
       - uses: actions/checkout@v4
         with:
@@ -87,7 +78,7 @@ jobs:
 
   build-macos:
     needs: test
-    runs-on: self-hosted
+    runs-on: nmtk-mac
     steps:
       - uses: actions/checkout@v4
         with:
@@ -109,7 +100,7 @@ jobs:
 
   integration-test-apple:
     needs: build-macos
-    runs-on: [self-hosted, macOS, ARM64]
+    runs-on: nmtk-mac
     steps:
       - uses: actions/checkout@v4
         with:

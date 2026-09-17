@@ -18,7 +18,7 @@ Download the app, install the backend in one step or connect to an existing one,
 
 ### 1. Download the app
 
-Grab the latest NMTK desktop app from the [Releases page](https://github.com/Completed-Spoon-6/NeuroMorphicToolKit/releases) for macOS, Windows, or Linux.
+Grab the latest NMTK desktop app from the [Releases page](https://github.com/Yavmarto/NeuroMorphicToolKit/releases) for macOS, Windows, or Linux.
 
 ### 2. Install the backend — or connect to one
 
@@ -64,7 +64,7 @@ Module READMEs use exactly three terms, and mean them literally:
 - **`needs hardware`** — the code path exists but requires a physical device or a vendor SDK that shipped images do not install.
 - **`not implemented`** — no working path today.
 
-neurocnl additionally uses a `faithful` / `approximate` / `unsupported` scale. That is a *per-export-target fidelity* rating — a different axis from the three terms above. See its [Support Matrix](./neurocnl/docs/support_matrix.md).
+neurocnl additionally uses a `faithful` / `approximate` / `unsupported` scale. That is a *per-export-target fidelity* rating — a different axis from the three terms above. See its [Support Matrix](./neurocnl/docs/support_matrix.md), or the public [NIR Round-Trip Fidelity Leaderboard](./docs/hardware/support-matrix.md) for the same scale applied to two fixed benchmarks (N-MNIST, SHD) with reproducible scripts and measured accuracy.
 
 ---
 
@@ -104,6 +104,8 @@ No one needs a terminal, a Python environment, or knowledge of the infrastructur
 
 ## Documentation
 
+- **[Demo guides](./docs/guides/README.md)** — reproducible N-MNIST (simulation) and SHD-on-Akida walkthroughs.
+- **[NIR Round-Trip Fidelity Leaderboard](./docs/hardware/support-matrix.md)** — per-target `faithful`/`approximate`/`unsupported` ratings and measured accuracy, reproducible from committed scripts.
 - **[AGENTS.md](./AGENTS.md)** — repository conventions and developer paths.
 - **[CONTRIBUTING.md](./CONTRIBUTING.md)** — how to contribute.
 - **[CODING_STYLE_GUIDE.md](./CODING_STYLE_GUIDE.md)** — style rules, including the Flutter design system.
