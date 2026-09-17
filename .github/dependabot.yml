@@ -1,0 +1,66 @@
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "pub"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "docker"
+    directory: "/Neurobench"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "docker"
+    directory: "/Neurochip"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "docker"
+    directory: "/Neurohub"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "docker"
+    directory: "/Neurosense"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "docker"
+    directory: "/neurocnl/backend"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "docker"
+    directory: "/suite_api"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "docker"
+    directory: "/workers/jupyter_server"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "docker"
+    directory: "/workers/neurobench_runner"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "docker"
+    directory: "/workers/neurochip_hw"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "docker"
+    directory: "/workers/neurocnl_physics"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "docker"
+    directory: "/workers/neurosense_hw"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "docker"
+    directory: "/workers/snn_mlir_compiler"
+    schedule:
+      interval: "weekly"

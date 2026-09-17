@@ -1,0 +1,33 @@
+{
+    "id": "ecg_classification",
+    "name": "ECG Arrhythmia Classification",
+    "description": "4-class cardiac arrhythmia classification on the PTB-XL ECG dataset using a spiking network. Evaluates accuracy and energy efficiency for always-on biosignal monitoring workloads. Reference task from NeuroBench v1.0.",
+    "task_type": "classification",
+    "executor": "cnl",
+    "input_spec": {
+        "type": "synthetic",
+        "synthetic_config": {
+            "n_classes": 4,
+            "n_samples": 2190,
+            "n_leads": 12,
+            "sequence_length": 250,
+            "sample_rate_hz": 100
+        },
+        "recording_session_id": null,
+        "data_path": null
+    },
+    "assertions": [],
+    "scoring": {
+        "primary_metric": "accuracy",
+        "secondary_metrics": ["energy_uj", "memory_kb"],
+        "higher_is_better": true,
+        "pass_threshold": 0.80
+    },
+    "default_params": {
+        "n_steps": 250,
+        "batch_size": 64,
+        "threshold": 1.0,
+        "beta": 0.85
+    },
+    "builtin": true
+}

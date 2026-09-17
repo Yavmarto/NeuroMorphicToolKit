@@ -1,0 +1,84 @@
+# Build the version-matched Neurochip wheel once at image-build time. Remote
+# Akida updates must never depend on Poetry or a source checkout at runtime.
+FROM python:3.12-slim AS neurochip-artifact-builder
+
+RUN pip install --no-cache-dir build poetry-core
+
+WORKDIR /build
+COPY Neurochip/ /build/Neurochip/
+# Neurochip's pyproject declares nmtk_contracts as a ../nmtk_contracts path
+# dependency; copying it keeps the wheel build warning-free instead of logging
+# "Path /build/nmtk_contracts for nmtk_contracts does not exist".
+COPY nmtk_contracts/ /build/nmtk_contracts/
+COPY nmtk/launcher_control/runtime_artifact.py /build/runtime_artifact.py
+RUN python -m build --wheel --no-isolation --outdir /artifacts /build/Neurochip \
+ && python /build/runtime_artifact.py /artifacts
+
+# Launcher control service — orchestrates module state, workspace, and
+# hardware provisioning (PYNQ/Akida SSH). Suite_api is managed by Docker
+# Compose, not by this process (--no-manage-suite-api).
+FROM python:3.12-slim
+
+# openssh-client + rsync are required for PYNQ and Akida SSH provisioning.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends openssh-client rsync \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# packaging is used for version comparison in server.py.
+# bcrypt is used to check app-credential logins in launcher_auth.py.
+RUN pip install --no-cache-dir packaging bcrypt prometheus-client
+
+# Copy the launcher control package and its entry-point script.
+COPY nmtk/__init__.py nmtk/__init__.py
+COPY nmtk/metrics_core.py nmtk/metrics_core.py
+COPY nmtk/http_metrics.py nmtk/http_metrics.py
+COPY nmtk/launcher_control/ nmtk/launcher_control/
+COPY scripts/launcher_control_service.py scripts/launcher_control_service.py
+
+# modules.json is read at startup to load module definitions.
+# assets/ also contains overlay staging files for PYNQ provisioning.
+COPY nmtk/neuro_toolkit/assets/ nmtk/neuro_toolkit/assets/
+COPY --from=neurochip-artifact-builder /artifacts/ /app/artifacts/neurochip/
+
+# The PYNQ overlay-v1 package (~4.4 MB) ships inside the image so Install
+# Overlay works with no user action. Synthesis needs Linux + Vivado 2022.x, and
+# this stage has no Neurochip source tree for the launcher to read it from, so
+# the files live next to the wheel under NMTK_NEUROCHIP_ARTIFACT_DIR — which is
+# the second place `overlay_staging_candidates()` looks.
+COPY Neurochip/overlay_staging/pynq_z2/ /app/artifacts/neurochip/overlay_staging/pynq_z2/
+
+# A missing overlay would make every reachable PYNQ board fail before its
+# first SSH call. Keep this in the image build so a release cannot publish a
+# launcher-control image with an incomplete hardware package.
+RUN test -s /app/artifacts/neurochip/overlay_staging/pynq_z2/snn_overlay.bit \
+ && test -s /app/artifacts/neurochip/overlay_staging/pynq_z2/snn_overlay.hwh \
+ && test -s /app/artifacts/neurochip/overlay_staging/pynq_z2/overlay_manifest.json
+
+# State and secrets are redirected to Docker volumes via these env vars.
+# Matches the volume mount points declared in docker-compose.yml.
+ENV NMTK_STATE_DIR=/app/state
+ENV NMTK_DATA_DIR=/app/data
+ENV NMTK_NEUROCHIP_ARTIFACT_DIR=/app/artifacts/neurochip
+ENV PYTHONUNBUFFERED=1
+
+# Create a non-root user. State/data directories are created here so Docker
+# seeds the named volumes with the correct ownership on first mount.
+RUN addgroup --system appuser \
+ && adduser --system --no-create-home --ingroup appuser appuser \
+ && mkdir -p /app/state /app/data \
+ && chown -R appuser:appuser /app/state /app/data
+USER appuser
+
+EXPOSE 8091
+
+# --no-manage-suite-api: Docker Compose owns suite_api lifecycle, not us.
+# Internal port is always 8091. LAUNCHER_CONTROL_PORT in docker-compose.yml
+# controls only the host-side published port (default 8090, matching the
+# Flutter app's NMTK_CONTROL_API_PORT default so bare-IP connections work).
+CMD ["python", "scripts/launcher_control_service.py", \
+     "--host", "0.0.0.0", \
+     "--port", "8091", \
+     "--no-manage-suite-api", \
+     "--external-probe-host", "host.docker.internal"]

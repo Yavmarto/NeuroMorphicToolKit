@@ -1,0 +1,811 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+
+defaults:
+  run:
+    shell: bash
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  detect-changes:
+    runs-on: [self-hosted, Linux, X64]
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      neurochip: ${{ steps.filter.outputs.neurochip }}
+      neurochip_frontend: ${{ steps.filter.outputs.neurochip_frontend }}
+      neurosense: ${{ steps.filter.outputs.neurosense }}
+      neurosense_frontend: ${{ steps.filter.outputs.neurosense_frontend }}
+      neurohub: ${{ steps.filter.outputs.neurohub }}
+      neurohub_frontend: ${{ steps.filter.outputs.neurohub_frontend }}
+      neurocnl: ${{ steps.filter.outputs.neurocnl }}
+      neurobench: ${{ steps.filter.outputs.neurobench }}
+      neurotoolkit: ${{ steps.filter.outputs.neurotoolkit }}
+      macos_installer: ${{ steps.filter.outputs.macos_installer }}
+      windows_installer: ${{ steps.filter.outputs.windows_installer }}
+      suite_api: ${{ steps.filter.outputs.suite_api }}
+      workers: ${{ steps.filter.outputs.workers }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+          fetch-depth: 0
+      - name: Update submodules safely
+        run: git submodule update --init
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            neurochip:
+              - 'Neurochip/neurochip/**'
+            neurochip_frontend:
+              - 'Neurochip/frontend/**'
+            neurosense:
+              - 'Neurosense/**'
+              - '!Neurosense/frontend/**'
+            neurosense_frontend:
+              - 'Neurosense/frontend/**'
+            neurohub:
+              - 'Neurohub/**'
+              - '!Neurohub/frontend/**'
+            neurohub_frontend:
+              - 'Neurohub/frontend/**'
+            neurocnl:
+              - 'neurocnl'
+              - 'neurocnl/**'
+            neurobench:
+              - 'Neurobench/neurobench/**'
+            neurotoolkit:
+              - 'neurocnl'
+              - 'nmtk/neuro_toolkit/**'
+            macos_installer:
+              - 'nmtk/installer/macos/**'
+              - 'tests/test_macos_installer_signing.py'
+              - '.github/workflows/release-desktop.yml'
+            windows_installer:
+              - 'nmtk/installer/windows/**'
+              - 'tests/test_windows_installer_signing.py'
+              - '.github/workflows/release-desktop.yml'
+            suite_api:
+              - 'suite_api/**'
+              - 'workers/**'
+              - 'scripts/ci/suiteapi.sh'
+              - 'tests/integration/**'
+            workers:
+              - 'workers/**'
+
+  test-suite-api:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.suite_api == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.11', '3.12']
+    runs-on: [self-hosted, Linux, X64]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Run canonical Suite API checks
+        run: bash scripts/ci/suiteapi.sh
+
+  test-reference-assets:
+    runs-on: [self-hosted, Linux, X64]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/cache@v4
+        with:
+          path: .cache/nmtk/reference-assets
+          key: reference-assets-${{ hashFiles('tools/reference_assets.lock.json') }}
+      - name: Fetch and verify pinned reference assets
+        run: |
+          python tools/reference_assets.py fetch all
+          python tools/reference_assets.py verify all
+      - name: Test reference resolver
+        run: |
+          python -m pip install pytest
+          python -m pytest -q tests/test_reference_assets.py
+
+  pre-commit:
+    runs-on: [self-hosted, Linux, X64]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Python diagnostics
+        run: |
+          python --version
+          python -m pip --version
+          which python || true
+          which pytest || true
+      - name: Install pre-commit
+        run: python -m pip install pre-commit
+      - name: Run pre-commit
+        run: pre-commit run --all-files
+
+  test-neurochip:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.neurochip == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - [self-hosted, macOS, ARM64]
+          - [self-hosted, Windows, X64]
+          - [self-hosted, Linux, X64]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Add Git to PATH (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
+      - name: Configure tool cache
+        shell: bash
+        run: |
+          TOOL_CACHE="${RUNNER_TEMP}/_tool_cache"
+          mkdir -p "$TOOL_CACHE"
+          echo "AGENT_TOOLSDIRECTORY=$TOOL_CACHE" >> "$GITHUB_ENV"
+          echo "RUNNER_TOOL_CACHE=$TOOL_CACHE" >> "$GITHUB_ENV"
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+      - name: Update submodule
+        run: git submodule update --init Neurochip
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+        env:
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_tool_cache
+      - name: Python diagnostics
+        run: |
+          python --version
+          python -m pip --version
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            where python || true
+            where pytest || true
+          else
+            which python || true
+            which pytest || true
+          fi
+      - name: Install dependencies
+        run: |
+          python -m pip install poetry
+          cd Neurochip
+          poetry install --no-interaction
+      - name: Lint with ruff
+        run: |
+          cd Neurochip
+          poetry run ruff check .
+          poetry run ruff format --check .
+      - name: Type check with mypy
+        run: |
+          cd Neurochip
+          poetry run mypy .
+      - name: Run tests
+        run: |
+          cd Neurochip
+          poetry run pytest --tb=short --hypothesis-show-statistics
+
+  test-neurosense:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.neurosense == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - [self-hosted, macOS, ARM64]
+          - [self-hosted, Windows, X64]
+          - [self-hosted, Linux, X64]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Add Git to PATH (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
+      - name: Configure tool cache
+        shell: bash
+        run: |
+          TOOL_CACHE="${RUNNER_TEMP}/_tool_cache"
+          mkdir -p "$TOOL_CACHE"
+          echo "AGENT_TOOLSDIRECTORY=$TOOL_CACHE" >> "$GITHUB_ENV"
+          echo "RUNNER_TOOL_CACHE=$TOOL_CACHE" >> "$GITHUB_ENV"
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+      - name: Update submodule
+        run: git submodule update --init Neurosense
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+        env:
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_tool_cache
+      - name: Python diagnostics
+        run: |
+          python --version
+          python -m pip --version
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            where python || true
+            where pytest || true
+          else
+            which python || true
+            which pytest || true
+          fi
+      - name: Install dependencies
+        run: |
+          python -m pip install -e "./Neurosense[dev]"
+          python -m pip install ruff mypy
+      - name: Lint with ruff
+        run: |
+          cd Neurosense
+          python -m ruff check .
+          python -m ruff format --check .
+      - name: Type check with mypy
+        run: |
+          cd Neurosense
+          python -m mypy neurosense
+      - name: Run tests
+        run: |
+          cd Neurosense
+          python -m pytest --tb=short --hypothesis-show-statistics
+
+  test-workers:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.workers == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - [self-hosted, macOS, ARM64]
+          - [self-hosted, Windows, X64]
+          - [self-hosted, Linux, X64]
+        workspace:
+          - neurobench_runner
+          - neurocnl_physics
+          - neurosense_hw
+          - neurochip_hw
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Add Git to PATH (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
+      - name: Configure tool cache
+        shell: bash
+        run: |
+          TOOL_CACHE="${RUNNER_TEMP}/_tool_cache"
+          mkdir -p "$TOOL_CACHE"
+          echo "AGENT_TOOLSDIRECTORY=$TOOL_CACHE" >> "$GITHUB_ENV"
+          echo "RUNNER_TOOL_CACHE=$TOOL_CACHE" >> "$GITHUB_ENV"
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+        env:
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_tool_cache
+      - name: Python diagnostics
+        run: |
+          python --version
+          python -m pip --version
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            where python || true
+            where pytest || true
+          else
+            which python || true
+            which pytest || true
+          fi
+      - name: Install dependencies
+        run: python -m pip install -e "./workers/${{ matrix.workspace }}[dev]"
+      - name: Lint with ruff
+        run: |
+          cd workers/${{ matrix.workspace }}
+          python -m ruff check .
+          python -m ruff format --check .
+      - name: Type check with mypy
+        run: |
+          cd workers/${{ matrix.workspace }}
+          python -m mypy main.py
+      - name: Run tests
+        shell: bash
+        run: |
+          cd workers/${{ matrix.workspace }}
+          if compgen -G "test_*.py" > /dev/null 2>&1 || compgen -G "*_test.py" > /dev/null 2>&1 || [ -d tests ]; then
+            python -m pytest --tb=short --hypothesis-show-statistics
+          else
+            echo "No tests present for ${{ matrix.workspace }} yet; skipping."
+          fi
+
+  test-neurohub:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.neurohub == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - [self-hosted, macOS, ARM64]
+          - [self-hosted, Windows, X64]
+          - [self-hosted, Linux, X64]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Add Git to PATH (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
+      - name: Configure tool cache
+        shell: bash
+        run: |
+          TOOL_CACHE="${RUNNER_TEMP}/_tool_cache"
+          mkdir -p "$TOOL_CACHE"
+          echo "AGENT_TOOLSDIRECTORY=$TOOL_CACHE" >> "$GITHUB_ENV"
+          echo "RUNNER_TOOL_CACHE=$TOOL_CACHE" >> "$GITHUB_ENV"
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+      - name: Update submodule
+        run: git submodule update --init Neurohub
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+        env:
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_tool_cache
+      - name: Python diagnostics
+        run: |
+          python --version
+          python -m pip --version
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            where python || true
+            where pytest || true
+          else
+            which python || true
+            which pytest || true
+          fi
+      - name: Install dependencies
+        run: python -m pip install -e "./Neurohub[dev]"
+      - name: Lint with ruff
+        run: |
+          cd Neurohub
+          python -m ruff check .
+          python -m ruff format --check .
+      - name: Type check with mypy
+        run: |
+          cd Neurohub
+          python -m mypy neurohub
+      - name: Run tests
+        run: |
+          cd Neurohub
+          python -m pytest --tb=short --hypothesis-show-statistics
+
+  test-neurocnl-backend:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.neurocnl == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - [self-hosted, macOS, ARM64]
+          - [self-hosted, Windows, X64]
+          - [self-hosted, Linux, X64]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Add Git to PATH (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
+      - name: Configure tool cache
+        shell: bash
+        run: |
+          TOOL_CACHE="${RUNNER_TEMP}/_tool_cache"
+          mkdir -p "$TOOL_CACHE"
+          echo "AGENT_TOOLSDIRECTORY=$TOOL_CACHE" >> "$GITHUB_ENV"
+          echo "RUNNER_TOOL_CACHE=$TOOL_CACHE" >> "$GITHUB_ENV"
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+      - name: Update required submodules
+        run: |
+          git -c http.https://github.com/.extraheader="AUTHORIZATION: basic ${{ secrets.GITHUB_TOKEN }}" submodule update --init neurocnl
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+        env:
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_tool_cache
+      - name: Python diagnostics
+        run: |
+          python --version
+          python -m pip --version
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            where python || true
+            where pytest || true
+          else
+            which python || true
+            which pytest || true
+          fi
+      - name: Install core package
+        run: |
+          python -m pip install -e ./neurocnl
+          python -m pip install 'pytest>=8,<9' httpx ruff mypy
+      - name: Lint with ruff
+        run: |
+          cd neurocnl
+          python -m ruff check .
+          python -m ruff format --check .
+      - name: Type check with mypy
+        run: |
+          cd neurocnl
+          python -m mypy neurocnl
+      - name: Install backend deps
+        run: |
+          cd neurocnl/backend
+          python -m pip install -r requirements.txt
+      - name: Run core tests
+        run: |
+          cd neurocnl
+          python -m pytest neurocnl/ -v --tb=short
+      - name: Run backend tests
+        run: |
+          cd neurocnl/backend
+          PYTHONPATH=. python -m pytest tests --tb=short
+
+  test-neurobench:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.neurobench == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - [self-hosted, macOS, ARM64]
+          - [self-hosted, Windows, X64]
+          - [self-hosted, Linux, X64]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Add Git to PATH (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
+      - name: Configure tool cache
+        shell: bash
+        run: |
+          TOOL_CACHE="${RUNNER_TEMP}/_tool_cache"
+          mkdir -p "$TOOL_CACHE"
+          echo "AGENT_TOOLSDIRECTORY=$TOOL_CACHE" >> "$GITHUB_ENV"
+          echo "RUNNER_TOOL_CACHE=$TOOL_CACHE" >> "$GITHUB_ENV"
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+      - name: Update submodule
+        run: git submodule update --init Neurobench neurocnl
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+        env:
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_tool_cache
+      - name: Python diagnostics
+        run: |
+          python --version
+          python -m pip --version
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            where python || true
+            where pytest || true
+          else
+            which python || true
+            which pytest || true
+          fi
+      - name: Install poetry
+        run: python -m pip install poetry
+      - name: Install dependencies
+        run: cd Neurobench/neurobench && poetry install
+      - name: Lint with ruff
+        run: |
+          cd Neurobench/neurobench
+          poetry run ruff check .
+          poetry run ruff format --check .
+      - name: Type check with mypy
+        run: |
+          cd Neurobench/neurobench
+          poetry run mypy .
+      - name: Run tests
+        run: |
+          cd Neurobench/neurobench
+          poetry run pytest --tb=short --hypothesis-show-statistics
+
+  test-neurotoolkit:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.neurotoolkit == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - [self-hosted, macOS, ARM64]
+          - [self-hosted, Windows, X64]
+          - [self-hosted, Linux, X64]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Add Git to PATH (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+      - name: Update compiled feature submodules
+        run: git submodule update --init neurocnl Neurobench
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: false
+      - name: Install dependencies
+        run: |
+          flutter pub get --directory nmtk/neuro_toolkit
+      - name: Analyze
+        run: |
+          flutter analyze --directory nmtk/neuro_toolkit
+      - name: Run tests
+        run: |
+          cd nmtk/neuro_toolkit && flutter test --coverage
+
+  test-macos-installer-signing:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.macos_installer == 'true'
+    runs-on: [self-hosted, Linux, X64]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pytest
+        run: python -m pip install pytest
+      - name: Verify macOS signing release plumbing
+        run: python -m pytest tests/test_macos_installer_signing.py -v --tb=short --noconftest
+
+  test-windows-installer-signing:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.windows_installer == 'true'
+    runs-on: [self-hosted, Linux, X64]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install pytest
+        run: python -m pip install pytest
+      - name: Verify Windows signing release plumbing
+        run: python -m pytest tests/test_windows_installer_signing.py -v --tb=short --noconftest
+
+  test-neurochip-frontend:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.neurochip_frontend == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - [self-hosted, macOS, ARM64]
+          - [self-hosted, Windows, X64]
+          - [self-hosted, Linux, X64]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Add Git to PATH (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+          fetch-depth: 0
+      - name: Update submodules safely
+        run: git submodule update --init || true
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: false
+      - name: Install dependencies
+        run: |
+          if [ -d "Neurochip/frontend" ] && [ -f "Neurochip/frontend/pubspec.yaml" ]; then
+            flutter pub get --directory Neurochip/frontend
+          fi
+      - name: Analyze
+        run: |
+          if [ -d "Neurochip/frontend" ] && [ -f "Neurochip/frontend/pubspec.yaml" ]; then
+            flutter analyze --directory Neurochip/frontend
+          fi
+
+  test-neurohub-frontend:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.neurohub_frontend == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - [self-hosted, macOS, ARM64]
+          - [self-hosted, Windows, X64]
+          - [self-hosted, Linux, X64]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Add Git to PATH (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+          fetch-depth: 0
+      - name: Update submodules safely
+        run: git submodule update --init || true
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: false
+      - name: Install dependencies
+        run: |
+          if [ -d "Neurohub/frontend" ] && [ -f "Neurohub/frontend/pubspec.yaml" ]; then
+            flutter pub get --directory Neurohub/frontend
+          fi
+      - name: Analyze
+        run: |
+          if [ -d "Neurohub/frontend" ] && [ -f "Neurohub/frontend/pubspec.yaml" ]; then
+            flutter analyze --directory Neurohub/frontend
+          fi
+
+  test-neurosense-frontend:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.neurosense_frontend == 'true'
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - [self-hosted, macOS, ARM64]
+          - [self-hosted, Windows, X64]
+          - [self-hosted, Linux, X64]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Add Git to PATH (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+          fetch-depth: 0
+      - name: Update submodules safely
+        run: git submodule update --init || true
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: false
+      - name: Install dependencies
+        run: |
+          if [ -d "Neurosense/frontend" ] && [ -f "Neurosense/frontend/pubspec.yaml" ]; then
+            flutter pub get --directory Neurosense/frontend
+          fi
+      - name: Analyze
+        run: |
+          if [ -d "Neurosense/frontend" ] && [ -f "Neurosense/frontend/pubspec.yaml" ]; then
+            flutter analyze --directory Neurosense/frontend
+          fi
+
+  # Parses every workflow file and fails when one is invalid. A workflow with a
+  # needs: entry pointing at a removed job never runs at all, so the failure is
+  # silent unless something checks the files themselves (CEL-306, CEL-313).
+  validate-workflows:
+    runs-on: [self-hosted, Linux, X64]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install PyYAML
+        run: python -m pip install pyyaml
+      - name: Validate workflow files
+        run: python scripts/ci/validate_workflows.py
+
+  # Summary job that branch protection can require
+  ci-passed:
+    runs-on: [self-hosted, Linux, X64]
+    needs:
+      - pre-commit
+      - validate-workflows
+      - test-neurochip
+      - test-neurochip-frontend
+      - test-neurosense
+      - test-neurosense-frontend
+      - test-neurohub
+      - test-neurohub-frontend
+      - test-neurobench
+      - test-neurocnl-backend
+      - test-neurotoolkit
+      - test-reference-assets
+      - test-macos-installer-signing
+      - test-windows-installer-signing
+      - test-suite-api
+      - test-workers
+    if: always()
+    steps:
+      - name: Check results
+        shell: bash
+        run: |
+          echo "Results:"
+          echo "  neurochip:      ${{ needs.test-neurochip.result }}"
+          echo "  neurosense:     ${{ needs.test-neurosense.result }}"
+          echo "  neurohub:       ${{ needs.test-neurohub.result }}"
+          echo "  neurobench:     ${{ needs.test-neurobench.result }}"
+          echo "  neurocnl:       ${{ needs.test-neurocnl-backend.result }}"
+          echo "  neurotoolkit:   ${{ needs.test-neurotoolkit.result }}"
+          echo "  suite-api:      ${{ needs.test-suite-api.result }}"
+          echo "  workers:        ${{ needs.test-workers.result }}"
+          echo "  reference-assets: ${{ needs.test-reference-assets.result }}"
+          echo "  macos-installer: ${{ needs.test-macos-installer-signing.result }}"
+          echo "  windows-installer: ${{ needs.test-windows-installer-signing.result }}"
+          echo "  validate-workflows: ${{ needs.validate-workflows.result }}"
+
+          # Fail on anything that is neither success nor skipped (skipped means
+          # no changes in that module). cancelled and startup failures must fail
+          # the gate too, not pass silently.
+          for result in \
+            "${{ needs.pre-commit.result }}" \
+            "${{ needs.validate-workflows.result }}" \
+            "${{ needs.test-neurochip.result }}" \
+            "${{ needs.test-neurochip-frontend.result }}" \
+            "${{ needs.test-neurosense.result }}" \
+            "${{ needs.test-neurosense-frontend.result }}" \
+            "${{ needs.test-neurohub.result }}" \
+            "${{ needs.test-neurohub-frontend.result }}" \
+            "${{ needs.test-neurobench.result }}" \
+            "${{ needs.test-neurocnl-backend.result }}" \
+            "${{ needs.test-neurotoolkit.result }}" \
+            "${{ needs.test-suite-api.result }}" \
+            "${{ needs.test-workers.result }}" \
+            "${{ needs.test-reference-assets.result }}" \
+            "${{ needs.test-macos-installer-signing.result }}" \
+            "${{ needs.test-windows-installer-signing.result }}"; do
+            if [ "$result" != "success" ] && [ "$result" != "skipped" ]; then
+              echo "::error::ci-passed gate: a needed job ended with '$result'"
+              exit 1
+            fi
+          done
+          echo "All checks passed (or were skipped)"

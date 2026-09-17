@@ -1,0 +1,23 @@
+__pycache__
+*.pyc
+*.pyo
+*.egg-info/
+.pytest_cache
+
+# Flutter/Dart build artifacts
+frontend/.dart_tool/
+frontend/build/
+frontend/.packages
+frontend/.pub-cache/
+frontend/.pub/
+.DS_Store
+
+# Hypothesis cache
+.hypothesis/
+recordings/*.hdf5
+venv
+.venv
+build
+build/lib
+/recordings_smoke_test/
+Neurosense_shell_adapter/.dart_tool

@@ -1,0 +1,140 @@
+{
+  "version": 1,
+  "description": "Canonical edge test-rig inventory. Read by scripts/fleet_health.py and documented in docs/edge-test-rigs.md. This file is the single source of truth for which rigs exist, how to reach them, what hardware they are expected to expose, and which Compose overlays they need.",
+  "githubRepo": "Yavmarto/NeuroMorphicToolKit",
+  "defaults": {
+    "deployDir": "~/nmtk-deploy",
+    "containerEngine": "docker",
+    "sshTimeoutSeconds": 10
+  },
+  "compose": {
+    "base": [
+      "docker-compose.yml",
+      "docker-compose.dev.yml"
+    ],
+    "overlays": {
+      "akida-native": "docker-compose.akida-native.yml",
+      "prophesee": "docker-compose.prophesee.yml"
+    }
+  },
+  "rigs": [
+    {
+      "id": "dev",
+      "name": "dev dev/CI host + hardware rig",
+      "kind": "hardware-rig",
+      "target": "dev@203.0.113.90",
+      "address": "203.0.113.90",
+      "roles": [
+        "dev-backend",
+        "ci-runner-host",
+        "akida",
+        "prophesee",
+        "pynq"
+      ],
+      "provisionable": true,
+      "expectedOverlays": [
+        "akida-native"
+      ],
+      "optionalOverlays": [
+        "prophesee"
+      ],
+      "expectedServices": [
+        "suite_api",
+        "launcher-control",
+        "jupyter-server",
+        "neurobench-runner-worker",
+        "neurocnl-physics-worker",
+        "snn-mlir-compiler",
+        "lava-backend"
+      ],
+      "expectedStoppedServices": [
+        "neurochip-hw-worker"
+      ],
+      "optionalServices": [
+        "neurosense-hw-worker"
+      ],
+      "expectedHardware": [
+        {
+          "id": "akida-akd1000",
+          "kind": "pci",
+          "pciVendor": "0x1e7c",
+          "pciDevice": "0xbca1",
+          "required": true,
+          "description": "BrainChip AKD1000 PCIe accelerator"
+        },
+        {
+          "id": "akida-service",
+          "kind": "systemd",
+          "unit": "neurochip.service",
+          "required": true,
+          "description": "Native Akida runtime service that owns port 8002"
+        },
+        {
+          "id": "prophesee-evk",
+          "kind": "usb",
+          "usbVendor": "1d43",
+          "required": false,
+          "description": "Prophesee EVK event camera on USB3 (disconnected as of 2026-09-17, CEL-299)"
+        },
+        {
+          "id": "pynq-z2",
+          "kind": "tcp",
+          "host": "pynq.local",
+          "port": 8000,
+          "required": false,
+          "description": "PYNQ Z2 board stream endpoint (ws://<host>:8000/stream)"
+        }
+      ],
+      "notes": "Always-on box. Port 8002 belongs to the native neurochip.service; never evict it (see AGENTS.md). The containerized neurochip-hw-worker must stay stopped here, which is what docker-compose.akida-native.yml enforces."
+    },
+    {
+      "id": "hp-prodesk",
+      "name": "hp-prodesk secondary test rig",
+      "kind": "hardware-rig",
+      "target": "203.0.113.51",
+      "address": "203.0.113.51",
+      "roles": [
+        "test-rig"
+      ],
+      "provisionable": true,
+      "expectedOverlays": [],
+      "optionalOverlays": [
+        "prophesee"
+      ],
+      "expectedServices": [],
+      "expectedStoppedServices": [],
+      "optionalServices": [],
+      "expectedHardware": [],
+      "notes": "Reachability-only entry. The SSH user, expected services, and attached hardware are not yet recorded; add them here once confirmed. Empty expectedServices means the report lists every running container and flags any unhealthy one, rather than asserting a fixed set."
+    },
+    {
+      "id": "runner-win-wsl2",
+      "name": "Windows + WSL2 self-hosted CI runner",
+      "kind": "ci-runner",
+      "target": null,
+      "address": "203.0.113.91",
+      "labels": [
+        "nmtk-win",
+        "nmtk-linux"
+      ],
+      "roles": [
+        "ci-runner"
+      ],
+      "notes": "Sleeps when idle and wakes on demand via scripts/ci/runner-wake.sh; see docs/ci-runners.md. Runner status is read from the GitHub Actions runners API by label, so no SSH target is needed."
+    },
+    {
+      "id": "runner-macos",
+      "name": "macOS self-hosted CI runner",
+      "kind": "ci-runner",
+      "target": null,
+      "address": null,
+      "labels": [
+        "nmtk-mac"
+      ],
+      "roles": [
+        "ci-runner"
+      ],
+      "notes": "Host/IP not recorded. Set RELEASE_RUNNER_MACOS to the nmtk-mac label and register the runner per docs/ci-runners.md. Status is read from the GitHub Actions runners API by label."
+    }
+  ]
+}

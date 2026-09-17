@@ -1,0 +1,10 @@
+{
+    "board": "{{ board_id | default('localhost') }}",
+    "partition": "{{ partition_name | default('neurochip_partition') }}",
+    "run_time_steps": {{ num_steps | default(1000) }},
+    "network_name": "{{ network_name | default('SNN Network') }}",
+    "num_cores": {{ num_cores | default(4) }},
+    "weight_bit_width": {{ bit_width | default(8) }},
+    "probe_spikes": true,
+    "probe_voltage": false
+}

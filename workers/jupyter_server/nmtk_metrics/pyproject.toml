@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nmtk-metrics"
+version = "0.1.0"
+description = "Jupyter Server extension exposing Prometheus /metrics for the NMTK worker."
+requires-python = ">=3.10"
+license = { text = "AGPL-3.0-or-later" }
+dependencies = [
+    "jupyter_server>=2.0,<3.0",
+    "prometheus-client>=0.19.0",
+]
+
+[tool.setuptools]
+packages = ["nmtk_metrics"]
+package-dir = { "nmtk_metrics" = "." }

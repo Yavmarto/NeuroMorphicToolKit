@@ -1,0 +1,24 @@
+{
+    "id": "mackey_glass",
+    "name": "Mackey-Glass Chaotic Prediction",
+    "description": "Chaotic time-series prediction on the Mackey-Glass dataset. Evaluates the ability of a recurrent spiking or ANN model to forecast a delayed differential equation signal. Primary metric is R² coefficient of determination. Reference task from NeuroBench v1.0.",
+    "task_type": "regression",
+    "executor": "neurobench",
+    "input_spec": {
+        "type": "timeseries",
+        "synthetic_config": null,
+        "recording_session_id": null,
+        "data_path": null
+    },
+    "assertions": [],
+    "scoring": {
+        "primary_metric": "r2",
+        "secondary_metrics": ["mse", "smape"],
+        "higher_is_better": true,
+        "pass_threshold": 0.8
+    },
+    "default_params": {
+        "batch_size": 32
+    },
+    "builtin": true
+}

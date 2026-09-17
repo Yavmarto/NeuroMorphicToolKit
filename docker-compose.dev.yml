@@ -1,0 +1,30 @@
+services:
+  suite_api:
+    volumes:
+      - .:/repo
+    environment:
+      - DEBUG=1
+    command: ["uvicorn", "suite_api.main:app", "--host", "0.0.0.0", "--port", "9000", "--reload"]
+
+  neurosense-hw-worker:
+    command: ["uvicorn", "workers.neurosense_hw.main:app", "--host", "0.0.0.0", "--port", "8004", "--reload"]
+
+  neurobench-runner-worker:
+    command: ["uvicorn", "workers.neurobench_runner.main:app", "--host", "0.0.0.0", "--port", "8003", "--reload"]
+
+  neurochip-hw-worker:
+    command: ["uvicorn", "workers.neurochip_hw.main:app", "--host", "0.0.0.0", "--port", "8002", "--reload"]
+
+  neurocnl-physics-worker:
+    command: ["uvicorn", "workers.neurocnl_physics.main:app", "--host", "0.0.0.0", "--port", "8006", "--reload"]
+
+  launcher-control:
+    volumes:
+      # Live-reload: edits to launcher_control/ take effect on container restart.
+      - ./nmtk/launcher_control:/app/nmtk/launcher_control
+      - ./scripts/launcher_control_service.py:/app/scripts/launcher_control_service.py
+      - ./nmtk/neuro_toolkit/assets:/app/nmtk/neuro_toolkit/assets
+      # App-account credential store (minted by install.sh --app-username/--app-password).
+      - ./credentials/app/users.json:/app/credentials/users.json
+    environment:
+      - NMTK_APP_USERS_FILE=/app/credentials/users.json

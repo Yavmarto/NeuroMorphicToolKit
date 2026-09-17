@@ -1,0 +1,9 @@
+{
+  "council": {
+    "enabled": true,
+    "general": {
+      "enabled": true,
+      "maxSourcesPerMember": 5
+    }
+  }
+}

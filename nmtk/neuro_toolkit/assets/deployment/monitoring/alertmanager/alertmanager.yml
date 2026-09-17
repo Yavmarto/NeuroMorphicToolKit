@@ -1,0 +1,63 @@
+# NMTK Alertmanager routing.
+#
+# The Slack incoming-webhook URL is a secret and is never stored here. The
+# runtime reads it from a file that entrypoint.sh writes from the
+# SLACK_WEBHOOK_URL environment variable. See README.md in this directory.
+#
+# Severity routing:
+#   severity="critical"  -> nmtk-critical  (Slack, red, repeat every 1h)
+#   everything else      -> nmtk-warning   (Slack, yellow, repeat every 4h)
+# A firing critical alert also inhibits the same alert on the same instance at
+# warning severity, so one incident produces one notification thread.
+
+global:
+  resolve_timeout: 5m
+
+route:
+  receiver: 'nmtk-warning'
+  group_by: ['alertname', 'instance']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+  routes:
+    - receiver: 'nmtk-critical'
+      matchers:
+        - severity="critical"
+      group_wait: 10s
+      group_interval: 5m
+      repeat_interval: 1h
+      continue: false
+
+inhibit_rules:
+  - source_matchers:
+      - severity="critical"
+    target_matchers:
+      - severity="warning"
+    equal: ['alertname', 'instance']
+
+receivers:
+  - name: 'nmtk-critical'
+    slack_configs:
+      - api_url_file: '/etc/alertmanager/secrets/slack_webhook_url'
+        channel: '#nmtk-alerts'
+        send_resolved: true
+        username: 'NMTK Alertmanager'
+        icon_emoji: ':rotating_light:'
+        color: '{{ if eq .Status "firing" }}danger{{ else }}good{{ end }}'
+        title: '[CRITICAL] {{ .CommonLabels.alertname }}'
+        text: |-
+          {{ range .Alerts }}*{{ .Labels.alertname }}* on `{{ .Labels.instance }}` - {{ .Annotations.summary }} ({{ .Annotations.description }})
+          {{ end }}
+
+  - name: 'nmtk-warning'
+    slack_configs:
+      - api_url_file: '/etc/alertmanager/secrets/slack_webhook_url'
+        channel: '#nmtk-alerts'
+        send_resolved: true
+        username: 'NMTK Alertmanager'
+        icon_emoji: ':warning:'
+        color: 'warning'
+        title: '[WARNING] {{ .CommonLabels.alertname }}'
+        text: |-
+          {{ range .Alerts }}*{{ .Labels.alertname }}* on `{{ .Labels.instance }}` - {{ .Annotations.summary }} ({{ .Annotations.description }})
+          {{ end }}

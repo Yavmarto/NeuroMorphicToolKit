@@ -1,0 +1,114 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "neurosense"
+version = "0.6.0"
+description = "Biosignal Acquisition & Spike Encoding Toolkit"
+license = { text = "AGPL-3.0-or-later" }
+classifiers = [
+    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+]
+authors = [
+    { name = "Neuro-space", email = "info@neuro-space.com" }
+]
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "pydantic",
+    "brainflow",
+    "scipy",
+    "h5py",
+    "nir",
+    "python-multipart",
+    "slowapi",
+    "nmtk-contracts @ file:../nmtk_contracts"
+]
+requires-python = ">=3.11"
+
+[tool.setuptools.packages.find]
+include = ["neurosense*"]
+
+[project.optional-dependencies]
+pynq = ["pynq>=2.7"]
+dev = [
+    "pytest",
+    "httpx",
+    "ruff",
+    "mypy",
+    "syrupy>=4.0",
+    "pre-commit",
+    "black",
+    "isort",
+    "hypothesis"
+]
+prophesee = [
+    "metavision-sdk"
+]
+
+[tool.black]
+line-length = 100
+target-version = ['py311']
+
+[tool.isort]
+profile = "black"
+line_length = 100
+known_first_party = ["app"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "A", "C4", "RET", "SIM", "ARG", "PTH", "ERA", "PL"]
+ignore = [
+    "PLR2004", # Magic value used in comparison
+    "PLC0415", # import should be at the top-level of a file
+    "PLR0913", # Too many arguments in function definition
+    "ARG001",  # Unused function argument
+    "ARG002",  # Unused method argument
+    "ARG004",  # Unused static method argument
+    "B904",    # Within an `except` clause, raise exceptions with `raise ... from err`
+    "B905",    # `zip()` without an explicit `strict=` parameter
+    "B008",    # Do not perform function call in argument defaults
+    "PTH123",  # `open()` should be replaced by `Path.open()`
+    "RET504",  # Unnecessary assignment before `return` statement
+    "SIM105",  # Use `contextlib.suppress` instead of `try`-`except`-`pass`
+    "E501",    # Line too long,
+    "D101",
+    "D103",
+    "ANN101",
+    "ANN401",
+    "E402",
+    "F841",
+    "D417",
+    "D205",
+    "D102",
+    "D415",
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["neurosense.app"]
+
+[tool.mypy]
+disable_error_code = ["type-arg", "no-any-return", "arg-type", "attr-defined", "assignment", "index", "operator", "call-arg", "dict-item", "list-item", "name-defined", "no-untyped-call", "no-untyped-def", "var-annotated", "import-untyped"]
+warn_unused_ignores = false
+disallow_untyped_decorators = false
+python_version = "3.11"
+strict = true
+ignore_missing_imports = true
+warn_unused_configs = true
+exclude = [
+    "neurosense/tests/",
+    "verify_troubleshooting.py",
+    "integration_test.py",
+    "(^|/)(build|dist)(/|$)",
+    "(^|/)(\\.venv|venv)(/|$)",
+    "\\.egg-info($|/)",
+]
+plugins = ["pydantic.mypy"]
+
+[tool.pytest.ini_options]
+testpaths = ["neurosense/tests"]
+pythonpath = ["."]

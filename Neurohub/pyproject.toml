@@ -1,0 +1,106 @@
+[project]
+name = "neurohub"
+version = "0.7.0"
+description = "NeuroHub - Suite Dashboard & Cross-App Orchestration Layer"
+requires-python = ">=3.11"
+license = { text = "AGPL-3.0-or-later" }
+classifiers = [
+    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+]
+dependencies = [
+    "fastapi>=0.110.0",
+    "uvicorn>=0.28.0",
+    "pydantic>=2.6.0",
+    "sqlalchemy>=2.0.0",
+    "httpx>=0.27.0",
+    "slowapi>=0.1.9",
+    "email-validator>=2.1.0",
+    "python-jose[cryptography]>=3.3.0",
+    "bcrypt>=4.0.1,<5",
+    "python-multipart>=0.0.9",
+    "alembic>=1.13.1",
+    "boto3>=1.34.0",
+    "meilisearch>=0.31.0",
+    "redis>=5.0.0",
+    "nmtk-contracts @ file:../nmtk_contracts",
+]
+
+[project.optional-dependencies]
+# Install with: pip install "neurohub[postgres]" to enable PostgreSQL support.
+postgres = ["psycopg2-binary>=2.9.9"]
+dev = [
+    "pre-commit>=3.6.0",
+    "black>=24.2.0",
+    "isort>=5.13.0",
+    "ruff>=0.3.0",
+    "mypy>=1.9.0",
+    "hypothesis>=6.0.0",
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "syrupy>=4.0",
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["neurohub*"]
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+[tool.isort]
+profile = "black"
+line_length = 100
+known_first_party = ["neurohub"]
+src_paths = ["."]
+
+[tool.mypy]
+strict = true
+python_version = "3.11"
+ignore_missing_imports = true
+explicit_package_bases = true
+mypy_path = "."
+exclude = [
+    "(^|/)(build|dist)(/|$)",
+    "(^|/)(\\.venv|venv)(/|$)",
+    "\\.egg-info($|/)",
+]
+plugins = ["sqlalchemy.ext.mypy.plugin"]
+
+[[tool.mypy.overrides]]
+module = ["neurohub.tests.*"]
+disable_error_code = ["arg-type", "assignment", "attr-defined", "call-arg", "misc", "no-untyped-call", "no-untyped-def"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "D",   # pydocstyle
+    "UP",  # pyupgrade
+]
+ignore = [
+    "D100", # Missing docstring in public module (we will add these, but let's not be too spammy if we miss some init files)
+    "D104", # Missing docstring in public package
+    "B008", # Do not perform function call `Depends` in argument defaults
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.pytest.ini_options]
+addopts = "-p no:nengo"
+asyncio_mode = "auto"
+markers = [
+    "contract: non-blocking contract tests that use mocks to verify suite app interactions",
+]

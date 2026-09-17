@@ -1,0 +1,112 @@
+[tool.poetry]
+name = "neurobench_wrapper"
+version = "0.6.0"
+description = "Testing and benchmarking workbench for evaluating SNN performance"
+authors = ["NeuroSpace <admin@neuro-space.com>"]
+license = "AGPL-3.0-or-later"
+classifiers = [
+    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+]
+packages = [{include = "app"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = ">=0.109.0"
+uvicorn = ">=0.27.0"
+pydantic = "^2.0.0"
+nmtk_contracts = ">=0.1.0"
+neurocnl = {path = "../../neurocnl", develop = false}
+nengo = "^4.1.0"
+numpy = "^2.4.3"
+scipy = "^1.15.1"
+matplotlib = "^3.10.8"
+pydantic-settings = ">=2.0.0"
+slowapi = "^0.1.9"
+pandas = "^3.0.1"
+jinja2 = "^3.1.6"
+httpx = ">=0.27.0"
+sqlalchemy = ">=2.0,<3.0"
+# Upstream NeuroBench execution is optional for the base service and worker image.
+neurobench = {version = ">=1.0.0", optional = true}
+torch = {version = ">=2.0.0", optional = true}
+
+# Optional heavy / platform-specific deps — not required for the server to start.
+# Install with: pip install "neurobench[simulation]" or "neurobench[reports]"
+mujoco = {version = "^3.6.0", optional = true}
+weasyprint = {version = "^68.1", optional = true}
+pdfkit = {version = "^1.0.0", optional = true}
+py-spinnaker2 = {version = "*", optional = true, python = ">=4.0"}
+sinabs = {version = ">=2.0.0", optional = true}
+rockpool = {version = ">=2.8.0", optional = true}
+pynq = {version = "*", optional = true}
+
+[tool.poetry.extras]
+executor = ["neurobench", "torch"]
+simulation = ["mujoco"]
+reports = ["weasyprint", "pdfkit"]
+spinnaker2 = ["py-spinnaker2"]
+synsense = ["sinabs", "rockpool"]
+pynq = ["pynq"]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.group.dev.dependencies]
+mypy = ">=1.19.1,<2.0.0"
+ruff = ">=0.15.6,<0.16.0"
+pytest = ">=8.0,<9"
+pytest-cov = ">=7.0.0,<8.0.0"
+hypothesis = ">=6.151.9,<7.0.0"
+syrupy = ">=4.0"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "D",    # pydocstyle
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "ANN",  # flake8-annotations
+]
+ignore = [
+    "D100",   # Missing docstring in public module
+    "D104",   # Missing docstring in public package
+    "ANN101",
+    "ANN401",
+    "E501",
+    "E402",
+    "F841",
+    "D101",
+    "D103",
+    "D417",
+    "D205",
+    "D102",
+    "D415",
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["D103", "ANN001", "ANN201", "ANN202"]
+
+[tool.pytest.ini_options]
+markers = [
+    "contract_only: tests that are mock-heavy and validate data contracts only",
+]
+
+[tool.mypy]
+python_version = "3.12"
+plugins = ["pydantic.mypy"]
+strict = true
+ignore_missing_imports = true
+warn_unused_ignores = false
+disallow_untyped_decorators = false
+exclude = ["^\\.venv/"]

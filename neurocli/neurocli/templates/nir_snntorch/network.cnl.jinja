@@ -1,0 +1,14 @@
+Define a network named {{ project_name }}.
+
+Define an input port named pixels with shape (2,).
+Define a linear transformation named input_projection with weight matrix shape (2, 2) and weight matrix values (1.0, 0.0, 0.0, 1.0).
+Define a LIF neuron named hidden with time constant 0.02, resistance 1.0, leak voltage 0.0, and firing threshold 1.0.
+Define a linear transformation named classifier with weight matrix shape (2, 2) and weight matrix values (0.0, 0.0, 0.0, 0.0).
+Define a LIF neuron named out with time constant 0.02, resistance 1.0, leak voltage 0.0, and firing threshold 1.0.
+Define an output port named labels with shape (2,).
+
+pixels connects to input_projection.
+input_projection connects to hidden.
+hidden connects to classifier.
+classifier connects to out.
+out connects to labels.

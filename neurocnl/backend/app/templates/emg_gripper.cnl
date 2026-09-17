@@ -1,0 +1,31 @@
+# EMG-Controlled Adaptive Gripper
+# SNN reads forearm EMG, classifies grip intent, and drives a gripper with spiking commands.
+
+Define a network named emg_gripper with timestep 0.0012.
+# Network with 1 input, 3 LIF neurons, 3 linear transforms, 1 output.
+# flow: input → sensor → interneuron → actuator → output
+#        sensor ─────────────────────→ actuator
+
+# Layers:
+Define an input port named input with shape (1,).
+Define a LIF neuron named sensor with time constant 0.01, resistance 1.0, leak voltage 0.0, and firing threshold 0.8.
+Define a linear transformation named w_sensor_interneuron with weight matrix shape (60, 1) annotated with metadata weight_init equal to "xavier" annotated with metadata seed equal to 42.
+Define a LIF neuron named interneuron with time constant 0.02, resistance 1.0, leak voltage 0.0, and firing threshold 0.55.
+Define a linear transformation named w_interneuron_actuator with weight matrix shape (1, 60) annotated with metadata weight_init equal to "xavier" annotated with metadata seed equal to 43.
+Define a linear transformation named w_sensor_actuator with weight matrix shape (1, 1) annotated with metadata weight_init equal to "xavier" annotated with metadata seed equal to 44.
+Define a LIF neuron named actuator with time constant 0.02, resistance 1.0, leak voltage 0.0, and firing threshold 0.6.
+Define an output port named output with shape (1,).
+
+# Connections:
+input connects to sensor.
+sensor connects to w_sensor_interneuron.
+w_sensor_interneuron connects to interneuron.
+interneuron connects to w_interneuron_actuator.
+w_interneuron_actuator connects to actuator.
+sensor connects to w_sensor_actuator.
+w_sensor_actuator connects to actuator.
+actuator connects to output.
+
+# Note: STDP on sensor→interneuron pathway is dropped — not representable in NIR.
+# Future extension: add STDP plasticity as metadata on w_sensor_interneuron.
+# Note: synaptic weight bounds (0.1–3.0) are dropped — metadata only.

@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=NMTK Launcher
+Comment=Neuromorphic Computing ToolKit IDE Launcher
+Exec=neuro_toolkit
+Icon=nmtk
+Categories=Science;Education;Development;
+Terminal=false

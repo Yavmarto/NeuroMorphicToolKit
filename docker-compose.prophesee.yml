@@ -1,0 +1,26 @@
+# Overlay for Prophesee EVK validation on a test rig with USB3 passthrough.
+#
+# Builds neurosense-hw-worker from Dockerfile.prophesee (OpenEB / metavision_core)
+# and mounts the host USB bus so a connected EVK is visible inside the worker.
+#
+# Apply with:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml \
+#     -f docker-compose.prophesee.yml up -d --build neurosense-hw-worker
+#
+# Wired automatically by `make dev-update ARGS='--prophesee'`.
+
+services:
+  neurosense-hw-worker:
+    build:
+      context: .
+      dockerfile: workers/neurosense_hw/Dockerfile.prophesee
+    user: "0:0"
+    devices:
+      - /dev/bus/usb:/dev/bus/usb
+    environment:
+      - PYTHONUNBUFFERED=1
+      - NEUROSENSE_RECORDINGS_DIR=/app/recordings
+      - PYTHONNOUSERSITE=1
+      - LD_LIBRARY_PATH=/opt/openeb/lib
+      - HDF5_PLUGIN_PATH=/opt/openeb/lib/hdf5/plugin
+      - MV_HAL_PLUGIN_PATH=/opt/openeb/lib/metavision/hal/plugins

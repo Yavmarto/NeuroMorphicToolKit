@@ -1,0 +1,29 @@
+# Prosthetic Sleep Consolidation
+# Offline replay network for consolidation after waking grasp episodes.
+# Sensor replay and supervisory interneuron both drive actuator consolidation.
+
+Define a network named prosthetic_sleep with timestep 0.0026.
+# Network with 1 input, 3 LIF neurons, 2 linear transforms, 1 output.
+# flow: input → sensor → actuator → output
+#        interneuron ──────────→ actuator
+
+# Layers:
+Define an input port named input with shape (90,).
+Define a LIF neuron named sensor with time constant 0.03, resistance 1.0, leak voltage 0.0, and firing threshold 0.35.
+Define a linear transformation named w_sensor_actuator with weight matrix shape (90, 90) annotated with metadata weight_init equal to "xavier" annotated with metadata seed equal to 42.
+Define a LIF neuron named interneuron with time constant 0.02, resistance 1.0, leak voltage 0.0, and firing threshold 0.25.
+Define a linear transformation named w_interneuron_actuator with weight matrix shape (90, 60) annotated with metadata weight_init equal to "xavier" annotated with metadata seed equal to 43.
+Define a LIF neuron named actuator with time constant 0.04, resistance 1.0, leak voltage 0.0, and firing threshold 0.65.
+Define an output port named output with shape (90,).
+
+# Connections:
+input connects to sensor.
+sensor connects to w_sensor_actuator.
+w_sensor_actuator connects to actuator.
+interneuron connects to w_interneuron_actuator.
+w_interneuron_actuator connects to actuator.
+actuator connects to output.
+
+# Note: STDP on sensor→actuator pathway is dropped — not representable in NIR.
+# Future extension: add PES/STDP plasticity as metadata on w_sensor_actuator.
+# Note: interneuron has no input port — it acts as an internal replay oscillator.

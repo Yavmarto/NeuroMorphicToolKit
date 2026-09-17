@@ -1,0 +1,25 @@
+{
+  "id": "eog_gaze",
+  "name": "EOG for Gaze Tracking",
+  "signal_type": "eog",
+  "description": "Captures horizontal eye movements using electrooculography for gaze-based control interfaces. Uses DC-coupled acquisition (no highpass filter) to preserve the slow corneoretinal potential that shifts with eye position. Delta modulation encoding at 5 uV threshold converts continuous gaze position into spike events representing eye movement direction and velocity.",
+  "electrode_placement": "## Horizontal EOG\n\n1. **Clean skin** with alcohol wipe at the outer corners of both eyes\n2. **Channel 0 (hEOG+):** Place electrode on the outer canthus (corner) of the right eye\n3. **Channel 1 (hEOG-):** Place electrode on the outer canthus (corner) of the left eye\n4. **Reference:** Place on the center of the forehead (Fpz)\n5. **Ground:** Place on the mastoid bone behind the ear\n\n**Verification:** Look left and right repeatedly. You should see a clear dipolar signal: positive deflection when looking right, negative when looking left. Signal amplitude should be 50-200 uV for a full lateral saccade.",
+  "electrode_diagram": "electrode_diagrams/horizontal_eog.svg",
+  "channel_mapping": {
+    "0": "hEOG_right",
+    "1": "hEOG_left"
+  },
+  "filter_config": {
+    "bandpass_low_hz": null,
+    "bandpass_high_hz": 35.0,
+    "notch_hz": 50.0,
+    "artifact_rejection": false
+  },
+  "encoding_config": {
+    "method": "delta",
+    "rate_max_hz": null,
+    "temporal_phase_bins": null,
+    "delta_threshold": 5.0
+  },
+  "recommended_device": "ganglion"
+}

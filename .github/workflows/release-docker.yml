@@ -1,0 +1,145 @@
+name: Release Docker Images
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  # A backend release carries the Akida package manifest that every paired
+  # host installs from. If that set cannot resolve, the Akida update breaks
+  # for every user and no in-app action recovers it — the only fix is another
+  # release. Cheaper to block the tag than to ship it.
+  verify-akida-manifest:
+    uses: ./.github/workflows/verify-akida-manifest.yml
+    secrets: inherit
+
+  push-docker:
+    needs: verify-akida-manifest
+    # Override with the RELEASE_RUNNER_DOCKER repository variable to build on
+    # your own hardware; the hosted default works but needs the disk-reclaim
+    # step below for the torch-based images.
+    runs-on: ${{ vars.RELEASE_RUNNER_DOCKER || 'ubuntu-latest' }}
+    strategy:
+      matrix:
+        include:
+          - image: neurocnl
+            file: neurocnl/backend/Dockerfile
+          - image: neurochip
+            file: Neurochip/Dockerfile
+          - image: neurobench
+            file: Neurobench/Dockerfile
+          - image: neurosense
+            file: Neurosense/Dockerfile
+          - image: neurohub
+            file: Neurohub/Dockerfile
+          - image: suite-api
+            file: suite_api/Dockerfile
+          - image: neurosense-hw-worker
+            file: workers/neurosense_hw/Dockerfile
+          - image: neurobench-runner-worker
+            file: workers/neurobench_runner/Dockerfile
+          - image: neurochip-hw-worker
+            file: workers/neurochip_hw/Dockerfile
+          - image: neurocnl-physics-worker
+            file: workers/neurocnl_physics/Dockerfile
+          - image: lava-backend
+            file: Dockerfile.lava
+          - image: launcher-control
+            file: Dockerfile.control
+          - image: jupyter-server
+            file: workers/jupyter_server/Dockerfile
+          # Build-only in the base compose file and a runtime dependency of
+          # suite_api / neurobench-runner-worker. Must be published so a
+          # source-free `docker compose ... pull` on a clean server resolves
+          # it (see docker-compose.prod.yml override).
+          - image: snn-mlir-compiler
+            file: workers/snn_mlir_compiler/Dockerfile
+    steps:
+      # A hosted runner starts with ~14 GB free, and the torch-based images
+      # (neurocnl, workers) do not fit. These preinstalled toolchains are
+      # unused here and free roughly 25 GB. Skipped on self-hosted runners,
+      # where the paths do not exist and the disk is not the constraint.
+      - name: Reclaim disk space
+        if: runner.environment == 'github-hosted'
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+            /usr/local/share/boost "$AGENT_TOOLSDIRECTORY" || true
+          df -h /
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          # GITHUB_TOKEN cannot read sibling private repositories. This
+          # repository secret is a least-privilege token with read access to
+          # the NMTK submodules and is only used during checkout.
+          token: ${{ secrets.NMTK_SUBMODULE_TOKEN || github.token }}
+
+      - name: Log in to Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # QEMU lets a runner of any architecture emit linux/amd64 images for
+      # the amd64 local-network servers these are deployed to.
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/${{ matrix.image }}
+          # `latest` is required so the compose files (which pin :latest) can
+          # pull; the semver/sha tags stay for reproducible pinning.
+          tags: |
+            type=raw,value=latest
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,format=short
+
+      - name: Build (load only, no push yet)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ${{ matrix.file }}
+          platforms: linux/amd64
+          push: false
+          load: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+             NMTK_VERSION=${{ steps.meta.outputs.version }}
+             ${{ matrix.image == 'neurocnl-physics-worker' && 'INSTALL_PHYSICS=1' || '' }}
+
+      # Scan the built image before it is published; a CRITICAL/HIGH finding
+      # blocks the push instead of shipping a vulnerable image.
+      - name: Trivy image scan
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ghcr.io/${{ github.repository }}/${{ matrix.image }}:latest
+          trivyignores: '.trivyignore'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+
+      - name: Push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ${{ matrix.file }}
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+             NMTK_VERSION=${{ steps.meta.outputs.version }}
+             ${{ matrix.image == 'neurocnl-physics-worker' && 'INSTALL_PHYSICS=1' || '' }}

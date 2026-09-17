@@ -1,0 +1,490 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+log_step() { printf "[install-akida-host] %s\n" "$1"; }
+sudo_cmd() {
+  if [ -n "${NMTK_AKIDA_SUDO_PASSWORD:-}" ]; then
+    printf "%s\n" "$NMTK_AKIDA_SUDO_PASSWORD" | sudo -S -p "" "$@"
+  else
+    sudo -n "$@"
+  fi
+}
+sudo_available() {
+  if [ -n "${NMTK_AKIDA_SUDO_PASSWORD:-}" ]; then
+    printf "%s\n" "$NMTK_AKIDA_SUDO_PASSWORD" | sudo -S -p "" true >/dev/null 2>&1
+  else
+    sudo -n true >/dev/null 2>&1
+  fi
+}
+write_sudo_file() {
+  target_path="$1"
+  mode="$2"
+  owner="$3"
+  tmp_file="$(mktemp)"
+  cat > "$tmp_file"
+  if [ -n "$owner" ]; then
+    owner_user="${owner%%:*}"
+    owner_group="${owner##*:}"
+    sudo_cmd install -D -m "$mode" -o "$owner_user" -g "$owner_group" "$tmp_file" "$target_path"
+  else
+    sudo_cmd install -D -m "$mode" "$tmp_file" "$target_path"
+  fi
+  rm -f "$tmp_file"
+}
+
+BUNDLE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# The steps below drop privileges with sudo -u, which keeps the
+# current directory. Python refuses to start when it cannot read
+# that directory, so move somewhere every account can reach. This
+# must come after BUNDLE_DIR is resolved to an absolute path.
+cd /
+INSTALL_ROOT="${INSTALL_ROOT:-@@INSTALL_ROOT@@}"
+SERVICE_USER="${SERVICE_USER:-@@SERVICE_USER@@}"
+VENV_PATH="${VENV_PATH:-@@VENV_PATH@@}"
+RUNTIME_SERVICE_NAME="${RUNTIME_SERVICE_NAME:-@@RUNTIME_SERVICE_NAME@@}"
+CONTROL_SERVICE_NAME="${CONTROL_SERVICE_NAME:-@@CONTROL_SERVICE_NAME@@}"
+RUNTIME_PORT="${RUNTIME_PORT:-@@RUNTIME_PORT@@}"
+CONTROL_PORT="${CONTROL_PORT:-@@CONTROL_PORT@@}"
+TOKEN_PATH="${TOKEN_PATH:-@@TOKEN_PATH@@}"
+INSTALL_STATUS_PATH="${INSTALL_STATUS_PATH:-@@INSTALL_STATUS_PATH@@}"
+ENV_DIR="${INSTALL_ROOT}/env"
+BIN_DIR="${INSTALL_ROOT}/bin"
+CREDENTIAL_DIR="$(dirname "$TOKEN_PATH")"
+WHEEL_NAME="${WHEEL_NAME:-@@WHEEL_NAME@@}"
+ARTIFACT_VERSION="${ARTIFACT_VERSION:-@@ARTIFACT_VERSION@@}"
+ARTIFACT_SHA256="${ARTIFACT_SHA256:-@@ARTIFACT_SHA256@@}"
+PYTHON_RANGE_LABEL="@@RANGE_LABEL@@"
+STANDALONE_PYTHON_VERSION="@@STANDALONE_VERSION@@"
+STANDALONE_PYTHON_URL="@@STANDALONE_URL@@"
+STANDALONE_PYTHON_SHA256="@@STANDALONE_SHA256@@"
+STANDALONE_PYTHON_ARCH="@@STANDALONE_ARCH@@"
+MANAGED_PYTHON_ROOT="${INSTALL_ROOT}/python"
+MANAGED_PYTHON_BIN="${MANAGED_PYTHON_ROOT}/bin/python3"
+PIP_CACHE_DIR="${INSTALL_ROOT}/cache/pip"
+USE_SUDO=""
+AKIDA_PYTHON=""
+RUNTIME_LOG_PATH="${INSTALL_ROOT}/runtime.log"
+CONTROL_LOG_PATH="${INSTALL_ROOT}/control.log"
+RELEASE_ID="${ARTIFACT_VERSION}-${ARTIFACT_SHA256:0:12}"
+RELEASES_DIR="${INSTALL_ROOT}/releases"
+NEXT_VENV_PATH="${RELEASES_DIR}/${RELEASE_ID}-staged-$$"
+CURRENT_VENV_PATH="${INSTALL_ROOT}/current"
+PREVIOUS_VENV_TARGET=""
+ACTIVATION_PENDING="0"
+
+ORIGINAL_INSTALL_ROOT="$INSTALL_ROOT"
+ORIGINAL_VENV_BASENAME="$(basename "$VENV_PATH")"
+TOKEN_PATH_SUFFIX="credentials/api-token"
+if [[ "$TOKEN_PATH" == "$ORIGINAL_INSTALL_ROOT/"* ]]; then
+  TOKEN_PATH_SUFFIX="${TOKEN_PATH#"$ORIGINAL_INSTALL_ROOT"/}"
+fi
+INSTALL_STATUS_PATH_SUFFIX="install-status.json"
+if [[ "$INSTALL_STATUS_PATH" == "$ORIGINAL_INSTALL_ROOT/"* ]]; then
+  INSTALL_STATUS_PATH_SUFFIX="${INSTALL_STATUS_PATH#"$ORIGINAL_INSTALL_ROOT"/}"
+fi
+
+prepare_release_paths() {
+  RELEASES_DIR="${INSTALL_ROOT}/releases"
+  NEXT_VENV_PATH="${RELEASES_DIR}/${RELEASE_ID}-staged-$$"
+  CURRENT_VENV_PATH="${INSTALL_ROOT}/current"
+  if [ -L "$CURRENT_VENV_PATH" ]; then
+    PREVIOUS_VENV_TARGET="$(readlink -f "$CURRENT_VENV_PATH" || true)"
+  elif [ -x "$VENV_PATH/bin/python" ]; then
+    PREVIOUS_VENV_TARGET="$VENV_PATH"
+  fi
+}
+
+activate_release() {
+  link_path="${INSTALL_ROOT}/.current-${ARTIFACT_SHA256:0:12}"
+  if [ "$INSTALL_MODE" = "systemd" ]; then
+    sudo_cmd ln -sfn "$NEXT_VENV_PATH" "$link_path"
+    sudo_cmd mv -Tf "$link_path" "$CURRENT_VENV_PATH"
+  else
+    ln -sfn "$NEXT_VENV_PATH" "$link_path"
+    mv -Tf "$link_path" "$CURRENT_VENV_PATH"
+  fi
+  VENV_PATH="$CURRENT_VENV_PATH"
+}
+
+rollback_release() {
+  if [ -z "$PREVIOUS_VENV_TARGET" ]; then
+    printf "%s\n" "AKIDA_RUNTIME_ROLLED_BACK=0" >&2
+    return
+  fi
+  rollback_link="${INSTALL_ROOT}/.rollback-${ARTIFACT_SHA256:0:12}"
+  if [ "$INSTALL_MODE" = "systemd" ]; then
+    sudo_cmd ln -sfn "$PREVIOUS_VENV_TARGET" "$rollback_link"
+    sudo_cmd mv -Tf "$rollback_link" "$CURRENT_VENV_PATH"
+    sudo_cmd systemctl restart "$RUNTIME_SERVICE_NAME.service" "$CONTROL_SERVICE_NAME.service" || true
+  else
+    ln -sfn "$PREVIOUS_VENV_TARGET" "$rollback_link"
+    mv -Tf "$rollback_link" "$CURRENT_VENV_PATH"
+    VENV_PATH="$CURRENT_VENV_PATH"
+    "$BIN_DIR/launch-runtime.sh" || true
+    "$BIN_DIR/launch-control.sh" || true
+  fi
+  printf "%s\n" "AKIDA_RUNTIME_ROLLED_BACK=1" >&2
+}
+
+rollback_on_error() {
+  exit_status="$?"
+  trap - EXIT
+  if [ "$exit_status" -ne 0 ] && [ "$ACTIVATION_PENDING" = "1" ]; then
+    log_step "Neurochip activation failed; restoring the previous release"
+    rollback_release || true
+  fi
+  exit "$exit_status"
+}
+
+cleanup_old_releases() {
+  while IFS= read -r -d "" release_path; do
+    if [ "$release_path" = "$NEXT_VENV_PATH" ] || [ "$release_path" = "$PREVIOUS_VENV_TARGET" ]; then
+      continue
+    fi
+    if [ "$INSTALL_MODE" = "systemd" ]; then
+      sudo_cmd rm -rf "$release_path"
+    else
+      rm -rf "$release_path"
+    fi
+  done < <(find "$RELEASES_DIR" -mindepth 1 -maxdepth 1 -type d -print0)
+}
+
+fail_install() { printf "[install-akida-host] %s\n" "$1" >&2; exit 1; }
+run_priv() {
+  if [ -n "$USE_SUDO" ]; then
+    sudo_cmd "$@"
+  else
+    "$@"
+  fi
+}
+# True when $1 is an interpreter inside the SDK's supported range.
+# The interpreter answers about itself, so there is no version
+# parsing here to get wrong.
+python_in_range() {
+  command -v "$1" >/dev/null 2>&1 || return 1
+  "$1" -c @@VERSION_PROBE_QUOTED@@ >/dev/null 2>&1
+}
+# Downloads the pinned CPython build. Only ever reached when no
+# suitable interpreter already exists, so a host that works today
+# never touches the network here.
+install_managed_python() {
+  host_python="$(python3 -V 2>&1 || echo "none")"
+  if [ -z "$STANDALONE_PYTHON_URL" ]; then
+    fail_install "This host runs $host_python, but the Akida SDK needs Python $PYTHON_RANGE_LABEL, and no automatic download is configured. Install a Python $PYTHON_RANGE_LABEL on this machine and run setup again."
+  fi
+  host_arch="$(uname -m)"
+  if [ "$host_arch" != "$STANDALONE_PYTHON_ARCH" ]; then
+    fail_install "This host runs $host_python on $host_arch. The Akida SDK needs Python $PYTHON_RANGE_LABEL, and an automatic download is only available for $STANDALONE_PYTHON_ARCH. Install a Python $PYTHON_RANGE_LABEL on this machine and run setup again."
+  fi
+  log_step "Host Python ($host_python) is outside $PYTHON_RANGE_LABEL; installing a private Python $STANDALONE_PYTHON_VERSION for the Akida runtime"
+  py_tmp="$(mktemp -d)"
+  if ! curl -fsSL --max-time 600 "$STANDALONE_PYTHON_URL" -o "$py_tmp/python.tar.gz"; then
+    rm -rf "$py_tmp"
+    fail_install "Could not download Python $STANDALONE_PYTHON_VERSION. Check that this server can reach github.com, then run setup again."
+  fi
+  py_sha="$(sha256sum "$py_tmp/python.tar.gz" | cut -d" " -f1)"
+  if [ "$py_sha" != "$STANDALONE_PYTHON_SHA256" ]; then
+    rm -rf "$py_tmp"
+    fail_install "The downloaded Python archive did not match its expected checksum, so it was discarded. Run setup again; if this repeats, the download is being altered in transit."
+  fi
+  run_priv rm -rf "$MANAGED_PYTHON_ROOT"
+  run_priv tar -xzf "$py_tmp/python.tar.gz" -C "$INSTALL_ROOT"
+  rm -rf "$py_tmp"
+  if [ -n "$USE_SUDO" ]; then
+    sudo_cmd chown -R "$SERVICE_USER:$SERVICE_USER" "$MANAGED_PYTHON_ROOT"
+  fi
+  if ! python_in_range "$MANAGED_PYTHON_BIN"; then
+    fail_install "The downloaded Python $STANDALONE_PYTHON_VERSION could not run on this server. Install a Python $PYTHON_RANGE_LABEL on this machine and run setup again."
+  fi
+}
+# Order matters: anything already installed wins over a download, so
+# hosts that provision correctly today keep behaving exactly as before.
+select_python() {
+  if python_in_range python3; then
+    AKIDA_PYTHON="$(command -v python3)"
+    log_step "Using system python3 ($("$AKIDA_PYTHON" -V 2>&1))"
+    return
+  fi
+  for candidate in python3.12 python3.11 python3.10; do
+    if python_in_range "$candidate"; then
+      AKIDA_PYTHON="$(command -v "$candidate")"
+      log_step "Using $candidate ($("$AKIDA_PYTHON" -V 2>&1))"
+      return
+    fi
+  done
+  if python_in_range "$MANAGED_PYTHON_BIN"; then
+    AKIDA_PYTHON="$MANAGED_PYTHON_BIN"
+    log_step "Reusing the private Python at $MANAGED_PYTHON_BIN"
+    return
+  fi
+  install_managed_python
+  AKIDA_PYTHON="$MANAGED_PYTHON_BIN"
+}
+# pip always runs as the account that owns the virtualenv, and
+# always against the cache this installer controls.
+akida_pip() {
+  local pip_subcommand="$1"
+  shift
+  if [ -n "$USE_SUDO" ]; then
+    sudo_cmd -u "$SERVICE_USER" "$NEXT_VENV_PATH/bin/pip" "$pip_subcommand" --cache-dir "$PIP_CACHE_DIR" "$@"
+  else
+    "$NEXT_VENV_PATH/bin/pip" "$pip_subcommand" --cache-dir "$PIP_CACHE_DIR" "$@"
+  fi
+}@@PACKAGE_INSTALL_FUNCTION@@
+write_install_status() {
+  INSTALL_MODE="$1"
+  INSTALL_MESSAGE="$2"
+  INSTALL_AUTO_START_SUPPORTED="$3"
+  export INSTALL_MODE INSTALL_MESSAGE INSTALL_AUTO_START_SUPPORTED
+  export INSTALL_ROOT TOKEN_PATH INSTALL_STATUS_PATH SERVICE_USER VENV_PATH
+  export RUNTIME_API_URL CONTROL_API_URL HOST_OS PYTHON_VERSION
+  export RUNTIME_LOG_PATH CONTROL_LOG_PATH ARTIFACT_VERSION ARTIFACT_SHA256
+  STATUS_JSON="$(python3 - <<'PY'
+import json
+import os
+import sys
+from pathlib import Path
+payload = {
+  "installMode": os.environ["INSTALL_MODE"],
+  "state": "ready",
+  "message": os.environ["INSTALL_MESSAGE"],
+  "runtimeApiUrl": os.environ["RUNTIME_API_URL"],
+  "controlApiUrl": os.environ["CONTROL_API_URL"],
+  "hostOs": os.environ["HOST_OS"],
+  "pythonVersion": os.environ["PYTHON_VERSION"],
+  "serviceUser": os.environ["SERVICE_USER"],
+  "venvPath": os.environ["VENV_PATH"],
+  "installRoot": os.environ["INSTALL_ROOT"],
+  "tokenPath": os.environ["TOKEN_PATH"],
+  "installStatusPath": os.environ["INSTALL_STATUS_PATH"],
+  "runtimeLogPath": os.environ.get("RUNTIME_LOG_PATH", ""),
+  "controlLogPath": os.environ.get("CONTROL_LOG_PATH", ""),
+  "packageVersion": os.environ["ARTIFACT_VERSION"],
+  "artifactSha256": os.environ["ARTIFACT_SHA256"],
+  "rolledBack": False,
+  "autoStartSupported": os.environ["INSTALL_AUTO_START_SUPPORTED"].lower() == "true",
+}
+print(json.dumps(payload, indent=2, sort_keys=True))
+PY
+)"
+  if [ "$INSTALL_MODE" = "systemd" ]; then
+    printf "%s\n" "$STATUS_JSON" | write_sudo_file "$INSTALL_STATUS_PATH" 0644 "$SERVICE_USER:$SERVICE_USER"
+  else
+    mkdir -p "$(dirname "$INSTALL_STATUS_PATH")"
+    printf "%s\n" "$STATUS_JSON" > "$INSTALL_STATUS_PATH"
+  fi
+}
+
+write_user_space_launchers() {
+  cat <<EOF > "$BIN_DIR/launch-runtime.sh"
+#!/usr/bin/env bash
+set -euo pipefail
+set -a; . "$ENV_DIR/$RUNTIME_SERVICE_NAME.env"; set +a
+pkill -f "$VENV_PATH/bin/uvicorn neurochip.app.main:app --host 0.0.0.0 --port $RUNTIME_PORT" >/dev/null 2>&1 || true
+nohup "$VENV_PATH/bin/uvicorn" neurochip.app.main:app --host 0.0.0.0 --port "$RUNTIME_PORT" >> "$RUNTIME_LOG_PATH" 2>&1 < /dev/null &
+EOF
+  chmod 0755 "$BIN_DIR/launch-runtime.sh"
+  cat <<EOF > "$BIN_DIR/launch-control.sh"
+#!/usr/bin/env bash
+set -euo pipefail
+set -a; . "$ENV_DIR/$CONTROL_SERVICE_NAME.env"; set +a
+pkill -f "$BIN_DIR/akida_remote_control_service.py" >/dev/null 2>&1 || true
+nohup "$VENV_PATH/bin/python" "$BIN_DIR/akida_remote_control_service.py" >> "$CONTROL_LOG_PATH" 2>&1 < /dev/null &
+EOF
+  chmod 0755 "$BIN_DIR/launch-control.sh"
+}
+
+wait_for_http() {
+  python3 - "$1" "$2" <<'PY'
+import sys
+import time
+import urllib.error
+import urllib.request
+url = sys.argv[1]
+header_key = sys.argv[2]
+deadline = time.time() + 120.0
+headers = {'X-API-Key': header_key} if header_key else {}
+while time.time() < deadline:
+    request = urllib.request.Request(url, headers=headers)
+    try:
+        with urllib.request.urlopen(request, timeout=2.0) as response:
+            if response.status == 200:
+                sys.exit(0)
+    except (urllib.error.URLError, TimeoutError):
+        time.sleep(1.0)
+sys.exit(1)
+PY
+}
+
+INSTALL_MODE="systemd"
+if sudo_available; then
+  log_step "Privileged sudo available; performing systemd install"
+  log_step "Installing base packages"
+  sudo_cmd apt-get update
+  sudo_cmd apt-get install -y python3 python3-venv python3-pip python3-dev curl pciutils usbutils
+  log_step "Ensuring service user exists"
+  if ! id -u "$SERVICE_USER" >/dev/null 2>&1; then
+    sudo_cmd useradd --system --create-home --shell /usr/sbin/nologin "$SERVICE_USER"
+  fi
+  if getent group systemd-journal >/dev/null 2>&1; then
+    sudo_cmd usermod -aG systemd-journal "$SERVICE_USER" || true
+  fi
+  log_step "Preparing install directories"
+  sudo_cmd mkdir -p "$INSTALL_ROOT" "$ENV_DIR" "$BIN_DIR" "$CREDENTIAL_DIR" "$RELEASES_DIR" "$PIP_CACHE_DIR"
+  sudo_cmd chown -R "$SERVICE_USER:$SERVICE_USER" "$INSTALL_ROOT"
+  prepare_release_paths
+  USE_SUDO="1"
+  select_python
+  log_step "Creating versioned Python virtual environment"
+  sudo_cmd rm -rf "$NEXT_VENV_PATH"
+  sudo_cmd -u "$SERVICE_USER" "$AKIDA_PYTHON" -m venv "$NEXT_VENV_PATH"
+  log_step "Upgrading pip"
+  akida_pip install --upgrade pip setuptools wheel
+  log_step "Installing Neurochip wheel"
+  akida_pip install --force-reinstall "$BUNDLE_DIR/wheels/$WHEEL_NAME"@@INSTALL_PACKAGES_CALL@@
+  log_step "Validating the staged Neurochip runtime"
+  sudo_cmd -u "$SERVICE_USER" "$NEXT_VENV_PATH/bin/python" -c "from importlib import metadata; import neurochip.app.main; assert metadata.version('neurochip') == '$ARTIFACT_VERSION'"
+  log_step "Installing remote control service script"
+  sudo_cmd install -m 0755 "$BUNDLE_DIR/bin/akida_remote_control_service.py" "$BIN_DIR/akida_remote_control_service.py"
+  log_step "Generating shared API token"
+  if [ ! -s "$TOKEN_PATH" ]; then
+    TOKEN_VALUE="$(python3 - <<'PY'
+import secrets
+print(secrets.token_urlsafe(32))
+PY
+)"
+    token_tmp="$(mktemp)"
+    printf "%s
+" "$TOKEN_VALUE" > "$token_tmp"
+    sudo_cmd install -D -m 0600 -o "$SERVICE_USER" -g "$SERVICE_USER" "$token_tmp" "$TOKEN_PATH"
+    rm -f "$token_tmp"
+  fi
+  TOKEN_VALUE="$(sudo_cmd cat "$TOKEN_PATH")"
+  if [ -z "$TOKEN_VALUE" ]; then
+    printf "%s\n" "[install-akida-host] API token file was empty after write" >&2
+    exit 1
+  fi
+else
+  INSTALL_MODE="user-space"
+  CURRENT_USER="$(id -un)"
+  CURRENT_HOME="${HOME:-$(getent passwd "$CURRENT_USER" | cut -d: -f6)}"
+  if ! mkdir -p "$INSTALL_ROOT" >/dev/null 2>&1; then
+    INSTALL_ROOT="$CURRENT_HOME/.local/share/neurochip-akida-host"
+  fi
+  VENV_PATH="$INSTALL_ROOT/$ORIGINAL_VENV_BASENAME"
+  TOKEN_PATH="$INSTALL_ROOT/$TOKEN_PATH_SUFFIX"
+  INSTALL_STATUS_PATH="$INSTALL_ROOT/$INSTALL_STATUS_PATH_SUFFIX"
+  ENV_DIR="$INSTALL_ROOT/env"
+  BIN_DIR="$INSTALL_ROOT/bin"
+  MANAGED_PYTHON_ROOT="$INSTALL_ROOT/python"
+  MANAGED_PYTHON_BIN="$MANAGED_PYTHON_ROOT/bin/python3"
+  PIP_CACHE_DIR="$INSTALL_ROOT/cache/pip"
+  CREDENTIAL_DIR="$(dirname "$TOKEN_PATH")"
+  RUNTIME_LOG_PATH="$INSTALL_ROOT/runtime.log"
+  CONTROL_LOG_PATH="$INSTALL_ROOT/control.log"
+  SERVICE_USER="$CURRENT_USER"
+  log_step "Passwordless sudo unavailable; falling back to user-space install at $INSTALL_ROOT"
+  mkdir -p "$INSTALL_ROOT" "$ENV_DIR" "$BIN_DIR" "$CREDENTIAL_DIR" "$PIP_CACHE_DIR"
+  prepare_release_paths
+  mkdir -p "$RELEASES_DIR"
+  USE_SUDO=""
+  select_python
+  log_step "Creating versioned Python virtual environment"
+  rm -rf "$NEXT_VENV_PATH"
+  "$AKIDA_PYTHON" -m venv "$NEXT_VENV_PATH"
+  log_step "Upgrading pip"
+  akida_pip install --upgrade pip setuptools wheel
+  log_step "Installing Neurochip wheel"
+  akida_pip install --force-reinstall "$BUNDLE_DIR/wheels/$WHEEL_NAME"@@INSTALL_PACKAGES_CALL@@
+  log_step "Validating the staged Neurochip runtime"
+  "$NEXT_VENV_PATH/bin/python" -c "from importlib import metadata; import neurochip.app.main; assert metadata.version('neurochip') == '$ARTIFACT_VERSION'"
+  log_step "Installing remote control service script"
+  install -m 0755 "$BUNDLE_DIR/bin/akida_remote_control_service.py" "$BIN_DIR/akida_remote_control_service.py"
+  log_step "Generating shared API token"
+  if [ ! -s "$TOKEN_PATH" ]; then
+    TOKEN_VALUE="$(python3 - <<'PY'
+import secrets
+print(secrets.token_urlsafe(32))
+PY
+)"
+    printf "%s
+" "$TOKEN_VALUE" > "$TOKEN_PATH"
+    chmod 0600 "$TOKEN_PATH"
+  fi
+  TOKEN_VALUE="$(cat "$TOKEN_PATH")"
+fi
+log_step "Activating staged Neurochip runtime"
+ACTIVATION_PENDING="1"
+trap rollback_on_error EXIT
+activate_release
+HOST_ADDR="${HOST_ADDR:-$(hostname -f 2>/dev/null || hostname)}"
+RUNTIME_API_URL="http://${HOST_ADDR}:${RUNTIME_PORT}"
+CONTROL_API_URL="http://${HOST_ADDR}:${CONTROL_PORT}"
+PYTHON_VERSION="$("$VENV_PATH/bin/python" -c "import platform; print(platform.python_version())")"
+HOST_OS="$("$VENV_PATH/bin/python" -c "import platform; print(platform.system().lower())")"
+log_step "Writing service environment files"
+if [ "$INSTALL_MODE" = "systemd" ]; then
+  cat <<EOF | write_sudo_file "$ENV_DIR/$RUNTIME_SERVICE_NAME.env" 0640 "$SERVICE_USER:$SERVICE_USER"
+NEUROCHIP_AUTH_ENABLED=true
+NEUROCHIP_API_KEY=${TOKEN_VALUE}
+NEUROCHIP_AKIDA_MODEL_DIR=${INSTALL_ROOT}/data/akida-models
+EOF
+  cat <<EOF | write_sudo_file "$ENV_DIR/$CONTROL_SERVICE_NAME.env" 0640 "$SERVICE_USER:$SERVICE_USER"
+NEUROCHIP_REMOTE_CONTROL_HOST=0.0.0.0
+NEUROCHIP_REMOTE_CONTROL_PORT=${CONTROL_PORT}
+NEUROCHIP_REMOTE_CONTROL_API_KEY=${TOKEN_VALUE}
+LOCAL_NEUROCHIP_BASE_URL=http://127.0.0.1:${RUNTIME_PORT}
+NEUROCHIP_INSTALL_STATUS_PATH=${INSTALL_STATUS_PATH}
+EOF
+  log_step "Installing systemd units"
+  sudo_cmd install -m 0644 "$BUNDLE_DIR/systemd/$RUNTIME_SERVICE_NAME.service" "/etc/systemd/system/$RUNTIME_SERVICE_NAME.service"
+  sudo_cmd install -m 0644 "$BUNDLE_DIR/systemd/$CONTROL_SERVICE_NAME.service" "/etc/systemd/system/$CONTROL_SERVICE_NAME.service"
+  sudo_cmd systemctl daemon-reload
+  sudo_cmd systemctl enable "$RUNTIME_SERVICE_NAME.service" "$CONTROL_SERVICE_NAME.service"
+  sudo_cmd systemctl restart "$RUNTIME_SERVICE_NAME.service" "$CONTROL_SERVICE_NAME.service"
+else
+  cat <<EOF > "$ENV_DIR/$RUNTIME_SERVICE_NAME.env"
+NEUROCHIP_AUTH_ENABLED=true
+NEUROCHIP_API_KEY=${TOKEN_VALUE}
+NEUROCHIP_AKIDA_MODEL_DIR=${INSTALL_ROOT}/data/akida-models
+EOF
+  cat <<EOF > "$ENV_DIR/$CONTROL_SERVICE_NAME.env"
+NEUROCHIP_REMOTE_CONTROL_HOST=0.0.0.0
+NEUROCHIP_REMOTE_CONTROL_PORT=${CONTROL_PORT}
+NEUROCHIP_REMOTE_CONTROL_API_KEY=${TOKEN_VALUE}
+LOCAL_NEUROCHIP_BASE_URL=http://127.0.0.1:${RUNTIME_PORT}
+NEUROCHIP_INSTALL_STATUS_PATH=${INSTALL_STATUS_PATH}
+EOF
+  chmod 0600 "$ENV_DIR/$RUNTIME_SERVICE_NAME.env" "$ENV_DIR/$CONTROL_SERVICE_NAME.env"
+  log_step "Writing user-space launchers"
+  write_user_space_launchers
+  log_step "Launching user-space runtime and control services"
+  "$BIN_DIR/launch-runtime.sh"
+  "$BIN_DIR/launch-control.sh"
+fi
+log_step "Waiting for Neurochip runtime health"
+if ! wait_for_http "http://127.0.0.1:${RUNTIME_PORT}/health" "$TOKEN_VALUE"; then
+  log_step "New Neurochip runtime failed health verification"
+  exit 1
+fi
+log_step "Waiting for remote control health"
+if ! wait_for_http "http://127.0.0.1:${CONTROL_PORT}/health" ""; then
+  log_step "New Akida control service failed health verification"
+  exit 1
+fi
+if [ "$INSTALL_MODE" = "systemd" ]; then
+  write_install_status "systemd" "Akida host installation completed." "true"
+  INSTALL_STATUS_PAYLOAD="$(sudo_cmd cat "$INSTALL_STATUS_PATH")"
+else
+  write_install_status "user-space" "Akida host installed in user space; auto-start requires privileged setup." "false"
+  INSTALL_STATUS_PAYLOAD="$(cat "$INSTALL_STATUS_PATH")"
+fi
+if [ -z "$INSTALL_STATUS_PAYLOAD" ]; then
+  printf "%s\n" "[install-akida-host] Install status file was empty after write" >&2
+  exit 1
+fi
+cleanup_old_releases
+ACTIVATION_PENDING="0"
+trap - EXIT
+printf "INSTALL_STATUS_JSON=%s\n" "$INSTALL_STATUS_PAYLOAD"
+log_step "Install script completed successfully"

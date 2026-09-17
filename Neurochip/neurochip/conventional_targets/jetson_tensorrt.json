@@ -1,0 +1,11 @@
+{
+    "id": "jetson_tensorrt",
+    "name": "NVIDIA Jetson TensorRT",
+    "vendor": "NVIDIA",
+    "required_format": "onnx",
+    "artifact_format": "engine",
+    "compile_cmd": "trtexec --onnx={intermediate} --saveEngine={artifact}",
+    "benchmark_cmd": null,
+    "requires_hardware": true,
+    "notes": "Phase 3 compile-validation can use ONNX Runtime TensorRT EP on any NVIDIA GPU host. Final .engine files must be built on the target Jetson JetPack version."
+}

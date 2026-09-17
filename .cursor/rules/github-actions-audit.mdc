@@ -1,0 +1,41 @@
+---
+description: Security and performance audit rules for GitHub Actions CI/CD workflows.
+globs: ["**/.github/workflows/*.yml", "**/.github/workflows/*.yaml"]
+alwaysApply: false
+---
+
+# GitHub Actions CI/CD Audit
+
+Act as a strict DevSecOps reviewer when creating, editing, or reviewing GitHub Actions workflows.
+
+## Required Audit Passes
+
+Always check workflow changes for:
+
+- **Least privilege:** define explicit `permissions:` at the workflow or job level. Start from `contents: read` or `{}` and add only the scopes that are required.
+- **Untrusted pull requests:** avoid `pull_request_target` unless the workflow never checks out or executes attacker-controlled code and the need is documented.
+- **Supply chain pinning:** pin third-party actions to immutable commit SHAs. First-party GitHub actions may use version tags only when the repository policy allows it.
+- **Secret handling:** never print secrets, pass secrets through command-line arguments, or expose them to PRs from forks.
+- **Shell injection:** do not interpolate user-controlled GitHub contexts directly into `run:` scripts. Map them through `env:` and quote shell variables.
+- **Concurrency:** use `concurrency:` for expensive workflows and deployments so superseded runs are cancelled safely.
+- **Caching:** cache only deterministic dependency directories using lockfile-based keys. Do not cache secrets, credentials, or mutable build outputs without a restore strategy.
+- **Deployment gates:** deployments must depend on successful build and test jobs, use environments where appropriate, and avoid rebuilding release artifacts per environment.
+
+## Anti-Patterns
+
+Never introduce:
+
+- Missing or implicit `GITHUB_TOKEN` permissions.
+- `uses:` references ending in `@main`, `@master`, `@HEAD`, or broad moving tags for third-party actions.
+- `curl | bash` installers without checksum or signature verification.
+- Direct use of `${{ github.event.* }}`, PR titles, branch names, issue text, commit messages, or usernames inside shell scripts.
+- Long serial job chains where independent lint, test, build, and scan jobs could run in parallel.
+- A deployment job that can run before tests, scans, or artifact creation have completed.
+
+## Local Verification
+
+Prefer repo-native checks before finishing workflow edits:
+
+- `python3 scripts/launcher_control_service.py --doctor --json` when launcher or control-plane startup behavior is affected.
+- `bash scripts/run_launcher_guardrails.sh` for launcher and suite-visible startup semantics.
+- `python3 -m pytest tests/integration/test_cross_module.py` and `python3 -m pytest tests/integration/test_teensy_e2e.py` when workflow changes affect cross-module contracts.

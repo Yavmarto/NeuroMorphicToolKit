@@ -1,0 +1,74 @@
+# NeuroStudio Jupyter kernel environment.
+#
+# This file is the single source of truth for the "Python (NeuroStudio)" kernel
+# in BOTH deployment modes:
+#   • standalone — the launcher runs `pip install -r requirements.txt` into the
+#     module venv (installStrategy "pip" in modules.json).
+#   • docker     — workers/jupyter_server/Dockerfile installs it into the image.
+#
+# Dependencies are intentionally left UNPINNED (no `==`). The Jupyter stack
+# keeps major-version upper bounds only to guard against known-breaking majors.
+# Everything else floats so that:
+#   • each rebuild / fresh install picks up the latest mutually-compatible set,
+#   • a user can `pip install --upgrade <pkg>` in the kernel without colliding
+#     with a hard pin.
+# If a specific version ever needs to be held back, add a lower/upper bound here
+# (e.g. `numpy>=1.26,<3`) rather than an exact pin.
+
+# ── Jupyter server stack ──────────────────────────────────────────────────────
+jupyterlab>=4.0,<5.0
+jupyter_server>=2.0,<3.0
+ipykernel>=6.0
+
+# ── Scientific / data / plotting ──────────────────────────────────────────────
+numpy
+pandas
+matplotlib
+seaborn
+tqdm
+
+# ── Deep learning ─────────────────────────────────────────────────────────────
+# NOTE: in the Docker image, torch AND torchvision are installed FIRST from the
+# CPU-only wheel index (see Dockerfile) so the container stays CPU-only; these
+# lines then resolve as already-satisfied. In standalone mode they install the
+# build that matches the user's platform (GPU where available), which is the
+# desired behaviour — there both come from the same index, so they always agree.
+# Keep them installed from the SAME index as each other: torchvision links its
+# compiled _C.so against libtorch, and a CUDA/CPU split breaks every
+# `import torchvision` with "operator torchvision::nms does not exist".
+torch
+torchvision
+onnx>=1.17,<2
+onnxruntime>=1.20,<2
+pytorch-lightning
+jax
+
+# ── Neuromorphic / SNN frameworks ─────────────────────────────────────────────
+snntorch
+norse
+rockpool
+sinabs
+spyx
+nengo
+tonic
+
+# ── NIR interchange + bindings ────────────────────────────────────────────────
+nir>=1.0.5
+nirtorch
+sc-neurocore>=3.13.0,<4
+
+# ── Neuromorphic frameworks — always installed in base image ──────────────────
+# These must be present from the start so the setup step never shows them as
+# missing. Per-framework kernel venvs inherit them via --system-site-packages.
+brian2>=2.10.1; python_version >= "3.12"
+brian2; python_version < "3.12"
+PyNN>=0.12.0
+# Pinned, not floating, and pinned to the SAME version as
+# nmtk/neuro_toolkit/assets/modules.json's akidaRuntime.requiredPackages.
+# A .fbz is a version-gated flatbuffer: this image WRITES the bundle's model
+# and the paired Akida host REOPENS it, so a float here against a pin there
+# meant `akida.Model(path)` refused the bundle on the user's card with no
+# usable error. scripts/verify_akida_package_manifest.py asserts the two match.
+akida==2.19.2
+cnn2snn==2.19.2
+lava-nc>=0.9.0; python_version < "3.11"

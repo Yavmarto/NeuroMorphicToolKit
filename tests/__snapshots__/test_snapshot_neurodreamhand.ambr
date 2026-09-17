@@ -1,0 +1,54 @@
+# serializer version: 1
+# name: test_emg_encoder_high_amplitude_clamps_to_one_snapshot
+  dict({
+    'all_in_range': True,
+    'max_value': 0.6121,
+    'shape': list([
+      4,
+    ]),
+  })
+# ---
+# name: test_emg_encoder_output_shape_and_range_snapshot
+  dict({
+    'all_equal': True,
+    'shape': list([
+      8,
+    ]),
+    'value_rounded_4dp': 1.0,
+  })
+# ---
+# name: test_emg_encoder_zero_signal_snapshot
+  dict({
+    'shape': list([
+      4,
+    ]),
+    'value_rounded_4dp': 0.0,
+  })
+# ---
+# name: test_power_profiler_estimate_sparse_spikes_snapshot
+  dict({
+    'avg_power_uw': 0.02,
+    'duration_s': 0.5,
+    'energy_pj': 10000.0,
+    'total_sops': 1000,
+    'total_spikes': 20,
+  })
+# ---
+# name: test_power_profiler_estimate_uniform_spikes_snapshot
+  dict({
+    'avg_power_uw': 0.049999999999999996,
+    'duration_s': 1.0,
+    'energy_pj': 50000.0,
+    'total_sops': 5000,
+    'total_spikes': 50,
+  })
+# ---
+# name: test_power_profiler_inferred_duration_snapshot
+  dict({
+    'avg_power_uw': 23.0,
+    'duration_s': 0.004,
+    'energy_pj': 92000.0,
+    'total_sops': 4000,
+    'total_spikes': 20,
+  })
+# ---

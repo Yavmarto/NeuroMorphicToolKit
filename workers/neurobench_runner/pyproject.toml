@@ -1,0 +1,40 @@
+[project]
+name = "neurobench-runner-worker"
+version = "0.1.0"
+requires-python = ">=3.11"
+license = { text = "AGPL-3.0-or-later" }
+classifiers = [
+    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+]
+dependencies = [
+    "fastapi>=0.111",
+    "uvicorn[standard]>=0.29",
+    "pydantic>=2.7",
+    "pydantic-settings>=2.2",
+]
+
+[project.optional-dependencies]
+simulation = ["nengo>=3.2", "numpy>=1.24"]
+spinnaker2 = []
+pynq = ["pynq>=2.7"]
+dev = [
+    "pytest",
+    "httpx",
+    "ruff",
+    "mypy",
+]
+
+[tool.mypy]
+disable_error_code = ["type-arg", "no-any-return", "arg-type", "attr-defined", "assignment", "index", "operator", "call-arg", "dict-item", "list-item", "name-defined", "no-untyped-call", "no-untyped-def", "var-annotated", "import-untyped"]
+warn_unused_ignores = false
+disallow_untyped_decorators = false
+python_version = "3.11"
+strict = true
+ignore_missing_imports = true
+warn_unused_configs = true
+exclude = [
+    "(^|/)(build|dist)(/|$)",
+    "(^|/)(\\.venv|venv)(/|$)",
+    "\\.egg-info($|/)",
+]
+plugins = ["pydantic.mypy"]

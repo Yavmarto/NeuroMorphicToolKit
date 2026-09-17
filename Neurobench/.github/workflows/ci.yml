@@ -1,0 +1,248 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main, dev ]
+
+jobs:
+  backend-lint:
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - [self-hosted, macOS, ARM64]
+          - [self-hosted, Windows, X64]
+          - [self-hosted, Linux, X64]
+        python-version: ["3.11", "3.12"]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Add Git to PATH (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          if exist "C:\Program Files\Git\cmd\git.exe" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
+          if exist "C:\Program Files\Git\bin\git.exe" echo C:\Program Files\Git\bin>>%GITHUB_PATH%
+          if exist "C:\Program Files (x86)\Git\cmd\git.exe" echo C:\Program Files (x86)\Git\cmd>>%GITHUB_PATH%
+      - uses: actions/checkout@v4
+
+      - name: Configure tool cache
+        shell: bash
+        run: |
+          TOOL_CACHE="${RUNNER_TEMP}/_tool_cache"
+          mkdir -p "$TOOL_CACHE"
+          echo "AGENT_TOOLSDIRECTORY=$TOOL_CACHE" >> "$GITHUB_ENV"
+          echo "RUNNER_TOOL_CACHE=$TOOL_CACHE" >> "$GITHUB_ENV"
+      - name: Install Python via Homebrew (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install python@${{ matrix.python-version }} || true
+          echo "$(brew --prefix python@${{ matrix.python-version }})/bin" >> "$GITHUB_PATH"
+
+      - name: Set up Python ${{ matrix.python-version }}
+        if: runner.os != 'macOS'
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+        env:
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_tool_cache
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+          installer-parallel: true
+
+      - name: Load cached venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@v4
+        with:
+          path: neurobench/.venv
+          key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('neurobench/poetry.lock') }}
+
+      - name: Install dependencies
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        run: cd neurobench && poetry install --no-interaction --no-root
+
+      - name: Install project
+        run: cd neurobench && poetry install --no-interaction
+
+      - name: Run Ruff
+        run: cd neurobench && poetry run ruff check .
+
+      - name: Run MyPy
+        run: cd neurobench && poetry run mypy --strict .
+
+  backend-cdd-pbt:
+    name: CDD and PBT Verification
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - [self-hosted, macOS, ARM64]
+          - [self-hosted, Windows, X64]
+          - [self-hosted, Linux, X64]
+        python-version: ["3.11", "3.12"]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Add Git to PATH (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          if exist "C:\Program Files\Git\cmd\git.exe" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
+          if exist "C:\Program Files\Git\bin\git.exe" echo C:\Program Files\Git\bin>>%GITHUB_PATH%
+          if exist "C:\Program Files (x86)\Git\cmd\git.exe" echo C:\Program Files (x86)\Git\cmd>>%GITHUB_PATH%
+      - uses: actions/checkout@v4
+
+      - name: Configure tool cache
+        shell: bash
+        run: |
+          TOOL_CACHE="${RUNNER_TEMP}/_tool_cache"
+          mkdir -p "$TOOL_CACHE"
+          echo "AGENT_TOOLSDIRECTORY=$TOOL_CACHE" >> "$GITHUB_ENV"
+          echo "RUNNER_TOOL_CACHE=$TOOL_CACHE" >> "$GITHUB_ENV"
+      - name: Install Python via Homebrew (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install python@${{ matrix.python-version }} || true
+          echo "$(brew --prefix python@${{ matrix.python-version }})/bin" >> "$GITHUB_PATH"
+
+      - name: Set up Python ${{ matrix.python-version }}
+        if: runner.os != 'macOS'
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+        env:
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_tool_cache
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+          installer-parallel: true
+
+      - name: Load cached venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@v4
+        with:
+          path: neurobench/.venv
+          key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('neurobench/poetry.lock') }}
+
+      - name: Install dependencies
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        run: cd neurobench && poetry install --no-interaction --no-root
+
+      - name: Install project
+        run: cd neurobench && poetry install --no-interaction
+
+      - name: Run CDD Contract and PBT Verification Tests
+        run: cd neurobench && poetry run pytest tests/test_contracts.py tests/properties/
+
+  backend-tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - [self-hosted, macOS, ARM64]
+          - [self-hosted, Windows, X64]
+          - [self-hosted, Linux, X64]
+        python-version: ["3.11", "3.12"]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Add Git to PATH (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          if exist "C:\Program Files\Git\cmd\git.exe" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
+          if exist "C:\Program Files\Git\bin\git.exe" echo C:\Program Files\Git\bin>>%GITHUB_PATH%
+          if exist "C:\Program Files (x86)\Git\cmd\git.exe" echo C:\Program Files (x86)\Git\cmd>>%GITHUB_PATH%
+      - uses: actions/checkout@v4
+
+      - name: Configure tool cache
+        shell: bash
+        run: |
+          TOOL_CACHE="${RUNNER_TEMP}/_tool_cache"
+          mkdir -p "$TOOL_CACHE"
+          echo "AGENT_TOOLSDIRECTORY=$TOOL_CACHE" >> "$GITHUB_ENV"
+          echo "RUNNER_TOOL_CACHE=$TOOL_CACHE" >> "$GITHUB_ENV"
+      - name: Install Python via Homebrew (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install python@${{ matrix.python-version }} || true
+          echo "$(brew --prefix python@${{ matrix.python-version }})/bin" >> "$GITHUB_PATH"
+
+      - name: Set up Python ${{ matrix.python-version }}
+        if: runner.os != 'macOS'
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+        env:
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_tool_cache
+
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+          installer-parallel: true
+
+      - name: Load cached venv
+        id: cached-poetry-dependencies
+        uses: actions/cache@v4
+        with:
+          path: neurobench/.venv
+          key: venv-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('neurobench/poetry.lock') }}
+
+      - name: Install dependencies
+        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+        run: cd neurobench && poetry install --no-interaction --no-root
+
+      - name: Install project
+        run: cd neurobench && poetry install --no-interaction
+
+      - name: Run Pytest
+        run: cd neurobench && poetry run pytest --ignore=tests/test_contracts.py --ignore=tests/properties/ -m "not contract_only"
+
+      - name: Run Smoke Test
+        run: cd neurobench && poetry run pytest tests/test_smoke.py
+
+  frontend:
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - [self-hosted, macOS, ARM64]
+          - [self-hosted, Windows, X64]
+          - [self-hosted, Linux, X64]
+    runs-on: ${{ matrix.os }}
+    needs: [backend-cdd-pbt]
+    steps:
+      - name: Add Git to PATH (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          if exist "C:\Program Files\Git\cmd\git.exe" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
+          if exist "C:\Program Files\Git\bin\git.exe" echo C:\Program Files\Git\bin>>%GITHUB_PATH%
+          if exist "C:\Program Files (x86)\Git\cmd\git.exe" echo C:\Program Files (x86)\Git\cmd>>%GITHUB_PATH%
+      - uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: false
+
+      - name: Install dependencies
+        run: cd frontend && flutter pub get
+
+      - name: Run Flutter Analyze
+        run: cd frontend && flutter analyze
+
+      - name: Run Flutter Tests
+        run: cd frontend && flutter test

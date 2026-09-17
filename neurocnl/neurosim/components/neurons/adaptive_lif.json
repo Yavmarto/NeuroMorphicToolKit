@@ -1,0 +1,62 @@
+{
+  "id": "adaptive_lif",
+  "name": "Adaptive LIF Population",
+  "category": "Neurons",
+  "description": "A population of Adaptive Leaky Integrate-and-Fire neurons.",
+  "icon": "memory",
+  "parameters": [
+    {
+      "name": "n_neurons",
+      "label": "Number of Neurons",
+      "description": "Total number of neurons in the population.",
+      "type": "int",
+      "default": 100,
+      "min": 1,
+      "max": 10000,
+      "unit": null
+    },
+    {
+      "name": "tau_rc",
+      "label": "Membrane Time Constant",
+      "description": "Controls how quickly the membrane voltage decays back to resting state.",
+      "type": "float",
+      "default": 0.02,
+      "min": 0.001,
+      "max": 1.0,
+      "unit": "s"
+    },
+    {
+      "name": "tau_ref",
+      "label": "Refractory Period",
+      "description": "Time the neuron is unable to spike after an action potential.",
+      "type": "float",
+      "default": 0.002,
+      "min": 0.0,
+      "max": 0.05,
+      "unit": "s"
+    },
+    {
+      "name": "threshold",
+      "label": "Spike Threshold",
+      "description": "Membrane potential threshold used by canonical CNL export and hardware handoff flows.",
+      "type": "float",
+      "default": 1.0,
+      "min": 0.0,
+      "max": 10.0,
+      "unit": null
+    }
+  ],
+  "ports": [
+    {
+      "id": "in",
+      "direction": "input",
+      "label": "Input"
+    },
+    {
+      "id": "out",
+      "direction": "output",
+      "label": "Output"
+    }
+  ],
+  "cnl_template": "Define a LIF neuron named {name} with time constant {tau_rc} and firing threshold {threshold}."
+}

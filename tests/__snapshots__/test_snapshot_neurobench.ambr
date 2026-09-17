@@ -1,0 +1,182 @@
+# serializer version: 1
+# name: test_diff_engine_accuracy_regression_snapshot
+  dict({
+    'baseline_id': 'base-2',
+    'current_id': 'curr-2',
+    'has_regression': True,
+    'metrics': list([
+      dict({
+        'baseline_ci': tuple(
+          0.95,
+          0.95,
+        ),
+        'baseline_std': 0.0,
+        'baseline_value': 0.95,
+        'current_ci': tuple(
+          0.9,
+          0.9,
+        ),
+        'current_std': 0.0,
+        'current_value': 0.9,
+        'delta': -0.04999999999999993,
+        'delta_pct': -5.263157894736835,
+        'is_significant': None,
+        'name': 'accuracy',
+        'p_value_ttest': None,
+        'p_value_wilcoxon': None,
+        'status': 'regressed',
+        'threshold_violated': True,
+      }),
+      dict({
+        'baseline_ci': tuple(
+          10.0,
+          10.0,
+        ),
+        'baseline_std': 0.0,
+        'baseline_value': 10.0,
+        'current_ci': tuple(
+          10.0,
+          10.0,
+        ),
+        'current_std': 0.0,
+        'current_value': 10.0,
+        'delta': 0.0,
+        'delta_pct': 0.0,
+        'is_significant': None,
+        'name': 'latency_ms',
+        'p_value_ttest': None,
+        'p_value_wilcoxon': None,
+        'status': 'unchanged',
+        'threshold_violated': False,
+      }),
+    ]),
+  })
+# ---
+# name: test_diff_engine_latency_improvement_snapshot
+  dict({
+    'baseline_id': 'base-3',
+    'current_id': 'curr-3',
+    'has_regression': False,
+    'metrics': list([
+      dict({
+        'baseline_ci': tuple(
+          0.9,
+          0.9,
+        ),
+        'baseline_std': 0.0,
+        'baseline_value': 0.9,
+        'current_ci': tuple(
+          0.9,
+          0.9,
+        ),
+        'current_std': 0.0,
+        'current_value': 0.9,
+        'delta': 0.0,
+        'delta_pct': 0.0,
+        'is_significant': None,
+        'name': 'accuracy',
+        'p_value_ttest': None,
+        'p_value_wilcoxon': None,
+        'status': 'unchanged',
+        'threshold_violated': False,
+      }),
+      dict({
+        'baseline_ci': tuple(
+          20.0,
+          20.0,
+        ),
+        'baseline_std': 0.0,
+        'baseline_value': 20.0,
+        'current_ci': tuple(
+          16.0,
+          16.0,
+        ),
+        'current_std': 0.0,
+        'current_value': 16.0,
+        'delta': -4.0,
+        'delta_pct': -20.0,
+        'is_significant': None,
+        'name': 'latency_ms',
+        'p_value_ttest': None,
+        'p_value_wilcoxon': None,
+        'status': 'improved',
+        'threshold_violated': False,
+      }),
+    ]),
+  })
+# ---
+# name: test_diff_engine_no_regression_snapshot
+  dict({
+    'baseline_id': 'base-1',
+    'current_id': 'curr-1',
+    'has_regression': False,
+    'metrics': list([
+      dict({
+        'baseline_ci': tuple(
+          0.92,
+          0.92,
+        ),
+        'baseline_std': 0.0,
+        'baseline_value': 0.92,
+        'current_ci': tuple(
+          0.92,
+          0.92,
+        ),
+        'current_std': 0.0,
+        'current_value': 0.92,
+        'delta': 0.0,
+        'delta_pct': 0.0,
+        'is_significant': None,
+        'name': 'accuracy',
+        'p_value_ttest': None,
+        'p_value_wilcoxon': None,
+        'status': 'unchanged',
+        'threshold_violated': False,
+      }),
+      dict({
+        'baseline_ci': tuple(
+          12.5,
+          12.5,
+        ),
+        'baseline_std': 0.0,
+        'baseline_value': 12.5,
+        'current_ci': tuple(
+          12.5,
+          12.5,
+        ),
+        'current_std': 0.0,
+        'current_value': 12.5,
+        'delta': 0.0,
+        'delta_pct': 0.0,
+        'is_significant': None,
+        'name': 'latency_ms',
+        'p_value_ttest': None,
+        'p_value_wilcoxon': None,
+        'status': 'unchanged',
+        'threshold_violated': False,
+      }),
+    ]),
+  })
+# ---
+# name: test_result_store_roundtrip_snapshot
+  dict({
+    'benchmark_id': 'bench-lif-drop',
+    'encoding_method': 'rate',
+    'id': 'roundtrip-1',
+    'metrics': dict({
+      'accuracy': 0.88,
+      'latency_ms': 14.0,
+    }),
+    'network_spec_hash': 'abc123def456',
+    'params': dict({
+      'duration': 1.0,
+      'n_neurons': 50,
+    }),
+    'quantization_bits': 8,
+    'seed': 0,
+    'spike_data': None,
+    'target_id': 'teensy41',
+    'timestamp': '2024-01-15T12:00:00',
+    'wall_time_seconds': 0.25,
+  })
+# ---

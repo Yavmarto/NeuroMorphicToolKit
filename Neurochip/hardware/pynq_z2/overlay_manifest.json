@@ -1,0 +1,62 @@
+{
+  "overlay_id": "snn_overlay_v2",
+  "overlay_version": "2.0.0",
+  "target_part": "xc7z020clg400-1",
+  "supported_neuron_models": [
+    "LIF"
+  ],
+  "supported_weight_bit_widths": [
+    8
+  ],
+  "max_neurons": 4096,
+  "max_neurons_per_layer": 1024,
+  "max_synapses": 262144,
+  "max_populations": 4,
+  "max_layers": 4,
+  "dma_ip_name": "axi_dma_0",
+  "snn_ip_name": "snn_engine_0",
+  "register_map": {
+    "base_address": 1073741824,
+    "resolved_from_hwh": true,
+    "control_reg_offset": 0,
+    "global_interrupt_enable_offset": 4,
+    "interrupt_enable_offset": 8,
+    "interrupt_status_offset": 12,
+    "weights_ptr_offset": 16,
+    "layer_config_ptr_offset": 28,
+    "layer_count_offset": 40,
+    "weight_count_offset": 48,
+    "timestep_count_offset": 56,
+    "dma_channel": "axi_dma_0",
+    "timestep_us": 1000
+  },
+  "weight_layout": {
+    "format": "int8_dense_row_major_ddr",
+    "storage": "dma_ddr",
+    "element_bytes": 1,
+    "max_entries": 262144,
+    "matrix_order": "post_by_pre"
+  },
+  "layer_config_layout": {
+    "format": "uint32_words",
+    "storage": "dma_ddr",
+    "words_per_layer": 8,
+    "max_layers": 4,
+    "fields": {
+      "input_size": 0,
+      "output_size": 1,
+      "weight_offset": 2,
+      "threshold": 3,
+      "leak_shift": 4,
+      "refractory": 5
+    }
+  },
+  "stream_protocol": {
+    "input_words_per_timestep": "layer_config[0].input_size",
+    "output_words_per_timestep": "layer_config[layer_count - 1].output_size",
+    "input_encoding": "nonzero_is_spike",
+    "output_encoding": "one_word_per_neuron_value_1_is_spike",
+    "tlast": "final_word_of_run_only"
+  },
+  "timestep_us": 1000
+}

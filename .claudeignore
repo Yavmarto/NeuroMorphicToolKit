@@ -1,0 +1,70 @@
+# .claudeignore
+# Designed to prevent sensitive data, proprietary models/datasets, and noise from being uploaded to AI agents with data retention.
+
+# 1. Secrets & Credentials (PREVENT LEAKS)
+.env
+.env.*
+*.pem
+*.key
+*.cert
+*.crt
+*secret*.json
+*credential*.json
+service-account*.json
+*.jks
+*.keystore
+secrets/
+credentials/
+auth/
+
+# 2. Logs, Dumps, & Local States (PREVENT PII OR INTERNAL TRACE LEAKS)
+*.log
+logs/
+workflow-errors/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+core.*
+*.dmp
+*.crash
+
+# 3. Proprietary Data & ML Models (PREVENT IP/DATA LEAKS)
+data/
+datasets/
+models/
+*.pt
+*.pth
+*.h5
+*.hdf5
+*.onnx
+*.tflite
+*.pkl
+*.sqlite
+*.db
+*.csv
+*.tsv
+
+# 4. Caches & Build Artifacts (REDUCE NOISE & TOKEN USAGE)
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+coverage/
+htmlcov/
+node_modules/
+build/
+dist/
+out/
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+*.class
+
+# 5. OS & IDE Noise
+.DS_Store
+Thumbs.db
+.idea/
+*.swp
+*.swo

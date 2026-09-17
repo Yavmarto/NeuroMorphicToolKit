@@ -1,0 +1,11 @@
+{
+    "id": "qualcomm_qnn",
+    "name": "Qualcomm QNN / QAIRT",
+    "vendor": "Qualcomm",
+    "required_format": "onnx",
+    "artifact_format": "ctxbin",
+    "compile_cmd": "qnn-onnx-converter -i {intermediate} -o {artifact_dir}",
+    "benchmark_cmd": "qnn-net-run --model {artifact} --backend libQnnCpu.so",
+    "requires_hardware": false,
+    "notes": "CPU backend enables compiler-only graph validation without Snapdragon hardware. HTP/DSP benchmarks need a dev board or Android device."
+}

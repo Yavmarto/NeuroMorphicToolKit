@@ -1,0 +1,21 @@
+{
+    "id": "pynq_z2",
+    "name": "PYNQ-Z2",
+    "manufacturer": "TUL",
+    "description": "Zynq-7000 ARM/FPGA SoC development board running the fixed overlay-v1 SNN runtime.",
+    "core_count": 2,
+    "overlay_id": "snn_overlay_v1",
+    "overlay_version": "1.0.1",
+    "neuron_capacity": 256,
+    "synapse_capacity": 15360,
+    "max_populations": 2,
+    "supported_neuron_models": ["LIF"],
+    "weight_bit_widths": [8],
+    "on_chip_memory_kb": 512,
+    "io_pins": 40,
+    "clock_speed_mhz": 650.0,
+    "power_envelope_mw": 3000.0,
+    "pj_per_spike_op": 50.0,
+    "access": "commercial",
+    "notes": "ARM Cortex-A9 processing system with Artix-7 programmable logic. Overlay-v1 supports fixed LIF feedforward inference with manifest-defined MMIO and DMA wiring."
+}

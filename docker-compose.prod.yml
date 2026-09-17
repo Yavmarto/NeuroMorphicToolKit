@@ -1,0 +1,169 @@
+services:
+  suite_api:
+    image: ghcr.io/yavmarto/neuromorphictoolkit/suite-api:${NMTK_IMAGE_TAG:-latest}
+    restart: always
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /run
+      # The canonical notebook lives in Jupyter's volume. Suite API keeps an
+      # execution mirror here so kernel requests do not need a Contents API
+      # round-trip; the image user must be able to create workspace folders.
+      - /home/app/notebooks:mode=1777
+    volumes:
+      # Jobs, workspaces, dataset metadata, and uploaded pipeline files must
+      # survive container recreation. The image owns this directory as `app`,
+      # so a fresh named volume inherits the correct ownership.
+      - suite_api_data:/home/app/data
+    healthcheck:
+      # The shallow Suite endpoint can answer while NeuroCNL's SQLite stores
+      # are unusable. Refuse the healthy state unless the service user can
+      # write its configured data directory as well.
+      test: ["CMD", "python", "-c", "import os, urllib.request; data_dir = os.environ['NEUROCNL_DATA_DIR']; assert os.path.isdir(data_dir) and os.access(data_dir, os.W_OK); urllib.request.urlopen('http://127.0.0.1:9000/api/suite/health')"]
+    environment:
+      - PYTHONOPTIMIZE=1
+      - PYTHONUNBUFFERED=1
+      - NEUROCNL_FIREBASE_BUCKET=${NEUROCNL_FIREBASE_BUCKET:-nmtk-41e11.firebasestorage.app}
+      - NEUROSIM_PROJECT_DB=/home/app/data/neurosim/projects.db
+      - NEUROCHIP_DEPLOYMENT_DB=/home/app/data/neurochip/deployments.db
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    networks:
+      - backend-net
+
+  neurosense-hw-worker:
+    profiles: ["neurosense"]
+    image: ghcr.io/yavmarto/neuromorphictoolkit/neurosense-hw-worker:${NMTK_IMAGE_TAG:-latest}
+    restart: always
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /run
+    volumes: !reset
+      - neurosense-recordings:/app/recordings
+    environment:
+      - PYTHONOPTIMIZE=1
+      - PYTHONUNBUFFERED=1
+      - NEUROSENSE_RECORDINGS_DIR=/app/recordings
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  neurobench-runner-worker:
+    image: ghcr.io/yavmarto/neuromorphictoolkit/neurobench-runner-worker:${NMTK_IMAGE_TAG:-latest}
+    restart: always
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /run
+    volumes: !reset
+      - neurobench-data:/app/data
+    environment:
+      - PYTHONOPTIMIZE=1
+      - PYTHONUNBUFFERED=1
+      - NEUROCNL_DATA_DIR=/app/data
+      - NEUROBENCH_DATA_DIR=/app/data
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  neurochip-hw-worker:
+    image: ghcr.io/yavmarto/neuromorphictoolkit/neurochip-hw-worker:${NMTK_IMAGE_TAG:-latest}
+    restart: always
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /run
+    volumes: !reset
+      - neurochip-data:/app/data
+    environment:
+      - PYTHONOPTIMIZE=1
+      - PYTHONUNBUFFERED=1
+      - NEUROCHIP_LAVA_BACKEND_URL=http://lava-backend:8012
+      - NMTK_DATA_DIR=/app/data
+      - NEUROCHIP_AKIDA_MODEL_DIR=/app/data/akida-models
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  neurocnl-physics-worker:
+    image: ghcr.io/yavmarto/neuromorphictoolkit/neurocnl-physics-worker:${NMTK_IMAGE_TAG:-latest}
+    restart: always
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /run
+    volumes: !reset []
+    environment:
+      - PYTHONOPTIMIZE=1
+      - PYTHONUNBUFFERED=1
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  lava-backend:
+    image: ghcr.io/yavmarto/neuromorphictoolkit/lava-backend:${NMTK_IMAGE_TAG:-latest}
+    restart: always
+    environment:
+      - PYTHONOPTIMIZE=1
+      - PYTHONUNBUFFERED=1
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  launcher-control:
+    image: ghcr.io/yavmarto/neuromorphictoolkit/launcher-control:${NMTK_IMAGE_TAG:-latest}
+    restart: always
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /run
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  jupyter-server:
+    image: ghcr.io/yavmarto/neuromorphictoolkit/jupyter-server:${NMTK_IMAGE_TAG:-latest}
+    restart: always
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /run
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  # snn-mlir-compiler is build-only in the base compose file and a runtime
+  # dependency of suite_api / neurobench-runner-worker. Without this image
+  # override a source-free `docker compose ... up` on a server with no repo
+  # would try to build it from context "." and fail. Published via the same
+  # release workflow as the other first-party services.
+  snn-mlir-compiler:
+    image: ghcr.io/yavmarto/neuromorphictoolkit/snn-mlir-compiler:${NMTK_IMAGE_TAG:-latest}
+    restart: always
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /run
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+networks:
+  backend-net: {}
+
+volumes:
+  suite_api_data:
+  neurobench-data:
+  neurochip-data:
+  neurosense-recordings:

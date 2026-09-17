@@ -1,0 +1,39 @@
+site_name: neurocnl Documentation
+site_description: Documentation for the neurocnl controlled natural language library.
+site_author: neurocnl contributors
+site_url: https://neurocnl.github.io/neurocnl/
+
+theme:
+  name: material
+  palette:
+    primary: indigo
+    accent: indigo
+  features:
+    - navigation.sections
+    - navigation.expand
+    - content.code.copy
+
+nav:
+  - Home: index.md
+  - User Guide: user_guide.md
+  - Developer Guide: developer_guide.md
+  - API Reference:
+      - Core Pipeline: api/pipeline.md
+      - CNL Parser: api/cnl.md
+      - Network Generation: api/generation.md
+      - Exporters: api/export.md
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [.]
+
+markdown_extensions:
+  - admonition
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences

@@ -1,0 +1,39 @@
+# Dopamine STP Decision Circuit
+# Evidence population drives two competing choice populations with mutual inhibition.
+
+Define a network named dopamine_stp_decision with timestep 0.0022.
+# Network with 1 input, 3 LIF neurons, 4 linear transforms, 1 output.
+# flow: input → evidence → choice_A → output
+#        evidence → choice_B
+#        (mutual inhibition: choice_A ⇄ choice_B)
+
+# Layers:
+Define an input port named input with shape (12,).
+Define a LIF neuron named evidence with time constant 0.02, resistance 1.0, leak voltage 0.0, and firing threshold 1.0.
+Define a linear transformation named w_evidence_choice_A with weight matrix shape (12, 12) annotated with metadata weight_init equal to "xavier" annotated with metadata seed equal to 42.
+Define a linear transformation named w_evidence_choice_B with weight matrix shape (12, 12) annotated with metadata weight_init equal to "xavier" annotated with metadata seed equal to 43.
+Define a LIF neuron named choice_A with time constant 0.025, resistance 1.0, leak voltage 0.0, and firing threshold 0.9.
+Define a linear transformation named w_choice_A_choice_B with weight matrix shape (12, 12).
+# inhibitory connection (weights will be negative) — zero-initialised intentionally
+Define a LIF neuron named choice_B with time constant 0.025, resistance 1.0, leak voltage 0.0, and firing threshold 0.9.
+Define a linear transformation named w_choice_B_choice_A with weight matrix shape (12, 12).
+# inhibitory connection (weights will be negative) — zero-initialised intentionally
+Define an output port named output with shape (12,).
+
+# Connections:
+input connects to evidence.
+evidence connects to w_evidence_choice_A.
+w_evidence_choice_A connects to choice_A.
+evidence connects to w_evidence_choice_B.
+w_evidence_choice_B connects to choice_B.
+choice_A connects to output.
+
+# recurrent: choice_A ↺ choice_B
+choice_A connects to w_choice_A_choice_B.
+w_choice_A_choice_B connects to choice_B.
+choice_B connects to w_choice_B_choice_A.
+w_choice_B_choice_A connects to choice_A.
+
+# Note: STP (facilitation on evidence→choice_A, depression on evidence→choice_B),
+# homeostasis (18 Hz), and dopamine neuromodulation (×1.4) are dropped — not representable in NIR.
+# Future extension: encode as metadata on weight and population nodes.

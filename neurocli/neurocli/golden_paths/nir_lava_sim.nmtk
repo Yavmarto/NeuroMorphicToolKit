@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "workspace": {
+    "files": [
+      {
+        "id": "f1",
+        "name": "main.cnl",
+        "content": "Define a network named demo with timestep 0.001.\nDefine an input port named input with shape (2,).\nDefine a LIF neuron named hidden with time constant 0.02, resistance 1.0, leak voltage 0.0, and firing threshold 0.8.\nDefine a linear transformation named w with weight matrix shape (2, 2).\nDefine an output port named output with shape (2,).\ninput connects to hidden.\nhidden connects to w.\nw connects to output.\n"
+      }
+    ],
+    "activeFileId": "f1",
+    "workspaceName": "golden-nir-lava-sim",
+    "selectedPlatforms": ["lava_sim"],
+    "selectedDataset": null
+  }
+}

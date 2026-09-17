@@ -1,0 +1,61 @@
+/**
+ * NeuroChip Auto-Generated Teensy Firmware
+ * Network: {{ network_name | default("SNN Network") }}
+ * Target: Teensy 4.1
+ * Generated: {{ timestamp }}
+ * Quantization: {{ bit_width }}-bit weights
+ */
+
+#include "network_params.h"
+#include "lif_engine.h"
+
+#define SERIAL_BAUD 115200
+#define DT_MS {{ dt_ms | default(1) }}
+
+unsigned long last_step_time = 0;
+
+void setup() {
+    Serial.begin(SERIAL_BAUD);
+    while (!Serial && millis() < 3000) {} // Wait up to 3s for serial
+
+    Serial.println("NeuroChip SNN Firmware");
+    Serial.print("Neurons: "); Serial.println(NUM_NEURONS);
+    Serial.print("Synapses: "); Serial.println(NUM_SYNAPSES);
+    Serial.print("Bit-width: "); Serial.println(WEIGHT_BIT_WIDTH);
+
+    initialize_network();
+    Serial.println("Network initialized. Running...");
+}
+
+void loop() {
+    unsigned long now = millis();
+    if (now - last_step_time >= DT_MS) {
+        last_step_time = now;
+
+        {% if input_pins %}
+        // Read sensor inputs
+        {% for pin in input_pins %}
+        input_currents[{{ loop.index0 }}] = analogRead({{ pin }}) / 1023.0f;
+        {% endfor %}
+        {% endif %}
+
+        step_network(input_currents);
+
+        {% if output_pins %}
+        // Write actuator outputs
+        {% for pin in output_pins %}
+        analogWrite({{ pin }}, (int)(output_spikes[{{ loop.index0 }}] * 255));
+        {% endfor %}
+        {% endif %}
+
+        // Report spikes via serial (optional debug)
+        {% if debug_serial %}
+        for (int i = 0; i < NUM_NEURONS; i++) {
+            if (spiked[i]) {
+                Serial.print("S:"); Serial.print(i);
+                Serial.print(":"); Serial.println(now);
+            }
+        }
+        {% endif %}
+    }
+}

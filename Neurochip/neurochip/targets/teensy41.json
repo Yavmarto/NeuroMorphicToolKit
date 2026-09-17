@@ -1,0 +1,17 @@
+{
+    "id": "teensy41",
+    "name": "Teensy 4.1",
+    "manufacturer": "PJRC",
+    "description": "Powerful ARM Cortex-M7 microcontroller, suitable for embedded SNN deployment with modest neuron counts.",
+    "core_count": 1,
+    "neuron_capacity": 4096,
+    "supported_neuron_models": ["LIF"],
+    "weight_bit_widths": [8, 16, 32],
+    "on_chip_memory_kb": 1024,
+    "io_pins": 55,
+    "clock_speed_mhz": 600.0,
+    "power_envelope_mw": 100.0,
+    "pj_per_spike_op": 500.0,
+    "access": "open",
+    "notes": "Readily available, $26.85 cost. Requires PlatformIO or Arduino IDE."
+}

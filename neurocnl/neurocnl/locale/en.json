@@ -1,0 +1,11 @@
+{
+  "spike_raster_title": "Spike Raster Plot",
+  "membrane_traces_title": "Membrane Voltage Traces",
+  "network_topology_title": "Network Topology",
+  "weight_evolution_title": "Weight Evolution",
+  "time_label": "Time (s)",
+  "neuron_label": "Neuron",
+  "voltage_label": "Membrane Voltage",
+  "weight_label": "Weight",
+  "no_populations": "No populations"
+}

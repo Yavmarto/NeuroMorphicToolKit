@@ -1,0 +1,30 @@
+# Multi-Scale Coincidence Detector
+# Detects timing relationships between two input streams.
+# Both sensory channels converge on a shared trigger population.
+
+Define a network named coincidence_detector with timestep 0.0016.
+# Network with 2 inputs, 3 LIF neurons, 2 linear transforms, 1 output.
+# flow: input_a → sensory_A → trigger → output
+#        input_b → sensory_B ↗
+
+# Layers:
+Define an input port named input_a with shape (10,).
+Define an input port named input_b with shape (10,).
+Define a LIF neuron named sensory_A with time constant 0.01, resistance 1.0, leak voltage 0.0, and firing threshold 1.0.
+Define a LIF neuron named sensory_B with time constant 0.01, resistance 1.0, leak voltage 0.0, and firing threshold 1.0.
+Define a linear transformation named w_sensory_A_trigger with weight matrix shape (10, 10) annotated with metadata weight_init equal to "xavier" annotated with metadata seed equal to 42.
+Define a linear transformation named w_sensory_B_trigger with weight matrix shape (10, 10) annotated with metadata weight_init equal to "xavier" annotated with metadata seed equal to 43.
+Define a LIF neuron named trigger with time constant 0.02, resistance 1.0, leak voltage 0.0, and firing threshold 0.8.
+Define an output port named output with shape (10,).
+
+# Connections:
+input_a connects to sensory_A.
+input_b connects to sensory_B.
+sensory_A connects to w_sensory_A_trigger.
+w_sensory_A_trigger connects to trigger.
+sensory_B connects to w_sensory_B_trigger.
+w_sensory_B_trigger connects to trigger.
+trigger connects to output.
+
+# Note: AMPA/NMDA receptor dynamics are dropped — not representable in NIR.
+# Future extension: encode receptor time constants as metadata on weight nodes.

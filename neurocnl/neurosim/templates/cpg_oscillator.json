@@ -1,0 +1,65 @@
+{
+  "id": "cpg_oscillator",
+  "name": "CPG Oscillator",
+  "description": "A central pattern generator built from two reciprocally connected LIF neurons.",
+  "thumbnail": "cpg_thumbnail.png",
+  "use_case": "Rhythmic pattern generation, gait control",
+  "version": "1.0",
+  "cnl_spec": "Define a network named cpg_oscillator.\nDefine a LIF neuron named neuron_a with time constant 0.02, resistance 1.0, leak voltage 0.0, and firing threshold 1.0.\nDefine a LIF neuron named neuron_b with time constant 0.02, resistance 1.0, leak voltage 0.0, and firing threshold 1.0.\nConnect neuron_a to neuron_b.\nConnect neuron_b to neuron_a.",
+  "graph": {
+    "nodes": [
+      {
+        "id": "neuron_a",
+        "component_id": "lif_population",
+        "parameters": {
+          "name": "neuron_a",
+          "n_neurons": 100,
+          "tau_rc": 0.02,
+          "tau_ref": 0.002,
+          "threshold": 1.0
+        },
+        "position": [200.0, 200.0]
+      },
+      {
+        "id": "neuron_b",
+        "component_id": "lif_population",
+        "parameters": {
+          "name": "neuron_b",
+          "n_neurons": 100,
+          "tau_rc": 0.02,
+          "tau_ref": 0.002,
+          "threshold": 1.0
+        },
+        "position": [400.0, 200.0]
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge_ab",
+        "source_node_id": "neuron_a",
+        "source_port": "out",
+        "target_node_id": "neuron_b",
+        "target_port": "in",
+        "parameters": {
+          "weight": -2.0,
+          "delay": 0.001
+        }
+      },
+      {
+        "id": "edge_ba",
+        "source_node_id": "neuron_b",
+        "source_port": "out",
+        "target_node_id": "neuron_a",
+        "target_port": "in",
+        "parameters": {
+          "weight": -2.0,
+          "delay": 0.001
+        }
+      }
+    ],
+    "metadata": {
+      "zoom": 1.0,
+      "pan": [0.0, 0.0]
+    }
+  }
+}

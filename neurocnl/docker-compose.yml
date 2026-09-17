@@ -1,0 +1,27 @@
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - NEUROCNL_DATA_DIR=/data
+      - NEUROCNL_FIREBASE_BUCKET=${NEUROCNL_FIREBASE_BUCKET:-}
+    volumes:
+      - neurocnl_data:/data
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    restart: unless-stopped
+
+volumes:
+  neurocnl_data:

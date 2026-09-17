@@ -1,0 +1,44 @@
+{
+  "focusedModuleId": "neurocnl",
+  "sessions": [
+    {
+      "deepLink": null,
+      "moduleId": "neurocnl",
+      "readinessState": "ready",
+      "restoreState": {},
+      "surfaceMode": "native"
+    },
+    {
+      "deepLink": null,
+      "moduleId": "Neurobench",
+      "readinessState": "opening",
+      "restoreState": {},
+      "surfaceMode": "native"
+    },
+    {
+      "deepLink": null,
+      "moduleId": "Neurosense",
+      "readinessState": "opening",
+      "restoreState": {},
+      "surfaceMode": "native"
+    },
+    {
+      "deepLink": null,
+      "moduleId": "Neurohub",
+      "readinessState": "opening",
+      "restoreState": {},
+      "surfaceMode": "native"
+    },
+    {
+      "deepLink": null,
+      "moduleId": "jupyter",
+<<<<<<< Updated upstream
+      "readinessState": "opening",
+=======
+      "readinessState": "warming_up",
+>>>>>>> Stashed changes
+      "restoreState": {},
+      "surfaceMode": "embedded"
+    }
+  ]
+}

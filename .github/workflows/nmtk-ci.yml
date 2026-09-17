@@ -1,0 +1,132 @@
+name: NMTK Launcher CI
+
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      - 'nmtk/neuro_toolkit/**'
+      - '.github/workflows/nmtk-ci.yml'
+  pull_request:
+    branches: [main, dev]
+    paths:
+      - 'nmtk/neuro_toolkit/**'
+      - '.github/workflows/nmtk-ci.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: nmtk-linux
+    strategy:
+      fail-fast: false
+      matrix:
+        flutter_channel: [stable, beta]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: ${{ matrix.flutter_channel }}
+          cache: true
+
+      - name: Install dependencies (neuro_toolkit)
+        run: |
+          cd nmtk/neuro_toolkit
+          flutter pub get
+
+      - name: Format check
+        run: |
+          dart format --output=none --set-exit-if-changed nmtk/neuro_toolkit
+
+      - name: Analyze (neuro_toolkit)
+        run: |
+          cd nmtk/neuro_toolkit
+          flutter analyze
+
+      # Launcher E2E: do not re-add test/launcher_e2e_test.dart — it was deleted
+      # with ProcessManager in 30276bdf (SSH bootstrap + launcher-control API).
+      # Unit/widget coverage stays here; app-level launcher E2E is
+      # integration_test/ (integration-test-apple job below).
+      - name: Run tests (neuro_toolkit)
+        run: |
+          cd nmtk/neuro_toolkit
+          flutter test --coverage
+
+  build-linux:
+    needs: test
+    runs-on: nmtk-linux
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libblkid-dev liblzma-dev libgcrypt20-dev libsecret-1-dev libsystemd-dev libwebkit2gtk-4.1-dev llvm-18-dev lld-18 clang cmake ninja-build pkg-config
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+      - name: Build Linux
+        run: |
+          cd nmtk/neuro_toolkit
+          flutter pub get
+          flutter build linux
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nmtk-launcher-linux
+          path: nmtk/neuro_toolkit/build/linux/x64/release/bundle/
+
+  build-macos:
+    needs: test
+    runs-on: nmtk-mac
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+      - name: Build macOS
+        run: |
+          cd nmtk/neuro_toolkit
+          flutter pub get
+          flutter build macos --no-tree-shake-icons
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nmtk-launcher-macos
+          path: nmtk/neuro_toolkit/build/macos/Build/Products/Release/
+
+  integration-test-apple:
+    needs: build-macos
+    runs-on: nmtk-mac
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+      - name: Install dependencies
+        run: |
+          cd nmtk/neuro_toolkit
+          flutter pub get
+      # Successor to the removed test/launcher_e2e_test.dart step (CEL-313/CEL-328).
+      # See nmtk/neuro_toolkit/integration_test/README.md and docs/ci-runners.md.
+      - name: Run Integration Tests (macOS)
+        run: |
+          cd nmtk/neuro_toolkit
+          flutter test integration_test -d macos
+      - name: Start iOS Simulator
+        run: |
+          xcrun simctl boot "iPhone 15" || true
+      - name: Run Integration Tests (iOS)
+        run: |
+          cd nmtk/neuro_toolkit
+          flutter test integration_test -d "iPhone 15"

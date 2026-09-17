@@ -1,0 +1,41 @@
+# Neuromorphic Audio Wake-Word Detection — CNL Spec
+# Demo 4: A small SNN detects a wake word using spike-encoded audio features.
+# Uses temporal coincidence detection with axonal delays (cochlear-inspired).
+
+The network MUST operate WITH timestep of 1 ms
+
+The network MUST contain an excitatory sensory population of 1 neurons
+The network MUST contain an excitatory interneuron population of 45 neurons
+The network MUST contain an excitatory motor population of 1 neurons
+
+# Sensory population fires on audio onset features
+The sensory population MUST fire ONLY IF membrane potential exceeds 0.6
+
+# Interneuron integrates onset timing before final detection
+The interneuron population MUST fire ONLY IF membrane potential exceeds 0.7
+
+# Motor population fires when temporal coincidence is detected
+The motor population MUST emit a spike ONLY IF membrane potential exceeds 0.9
+
+# Refractory periods matched to audio feature timescales
+The sensory population MUST NOT fire DURING the refractory period of 0.001 seconds
+The motor population MUST NOT fire DURING the refractory period of 0.005 seconds
+
+# Time constants: fast for onset detection, slower for integration
+The sensory population membrane potential MUST decay WITH time constant of 0.005 seconds
+The motor population membrane potential MUST decay WITH time constant of 0.02 seconds
+
+The sensory population MUST project to interneuron population
+The interneuron population MUST project to motor population
+The sensory population MUST project to motor population
+
+The connection from sensory population to interneuron population MUST have WITH synaptic weight of 1.0
+The connection from interneuron population to motor population MUST have WITH synaptic weight of 1.6
+The connection from sensory population to motor population MUST have WITH synaptic weight of 0.4
+
+# Axonal delays for temporal coincidence detection (polychronization)
+A synapse MUST have a transmission delay of 5ms
+
+# STDP for learning temporal patterns
+The connection from sensory population to interneuron population MUST strengthen IF pre fires before post WITHIN 15 ms
+A synapse MUST NOT have weights exceeding 2.5

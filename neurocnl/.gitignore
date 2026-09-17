@@ -1,0 +1,49 @@
+# Virtual environment
+neurocnl-env/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.egg
+
+# IDE
+.vscode/
+.idea/
+
+# MkDocs
+site/
+
+# Generated output
+simulation_report.json
+examples/output/
+
+# Pytest
+.pytest_cache/
+.hypothesis/
+.coverage
+htmlcov/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Flutter
+frontend/.dart_tool/
+frontend/.packages
+frontend/.flutter-plugins
+frontend/.flutter-plugins-dependencies
+frontend/build/
+frontend/.metadata
+nmtk_ui_core/.dart_tool/
+venv
+jobs.db
+*.db
+*.log
+.coverage
+.worktrees/
+.venv
+.superpowers/

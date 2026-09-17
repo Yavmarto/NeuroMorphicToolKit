@@ -1,0 +1,149 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "neurocnl"
+version = "0.6.0"
+description = "NeuroStudio — CNL compiler and visual SNN design suite."
+readme = "README.md"
+license = "AGPL-3.0-or-later"
+requires-python = ">=3.11"
+authors = [
+    { name = "Yoshi Martodihardjo" },
+]
+keywords = ["neuromorphic", "spiking-neural-networks", "nengo", "cnl", "formal-specification", "loihi"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    "nengo>=3.2.0",
+    "numpy>=1.24.0",
+    "fastapi>=0.109.0",
+    "uvicorn[standard]>=0.27.0",
+    "pydantic>=2.5.0",
+    "nmtk-contracts>=0.1.0",
+    "sse-starlette>=1.8.0",
+    "slowapi>=0.1.9",
+    "nir>=1.0.0",
+    "structlog>=24.1.0",
+    "prometheus-client>=0.19.0",
+    "aiosqlite>=0.20.0",
+    "sqlalchemy[asyncio]>=2.0.0",
+    "h5py>=3.10.0",
+    "httpx>=0.27.0",
+    "watchdog>=3.0",
+    "sc-neurocore>=0.1.0",
+    "snntorch>=0.9.0",
+    "torch>=1.8.0",
+]
+
+[project.optional-dependencies]
+loihi = ["nengo-loihi>=1.0.0"]
+viz = ["matplotlib>=3.5.0"]
+neuroml = ["lxml>=4.9.0"]
+spinnaker = ["pyNN>=0.12.0"]
+spinnaker2 = ["py-spinnaker2 @ git+https://gitlab.com/spinnaker2/py-spinnaker2.git"]
+lava = ["lava-nc>=0.9.0"]
+synsense = ["sinabs>=2.0.0", "torch>=1.8.0", "rockpool>=2.8.0"]
+export = ["lxml>=4.9.0"]
+rockpool = ["rockpool>=2.8.0"]
+norse = ["norse>=0.9.0", "torch>=1.8.0"]
+training = ["torch>=1.8.0", "snntorch>=0.9.0"]
+datasets = ["httpx>=0.27.0", "h5py>=3.10.0"]
+studio = [
+    "brian2>=2.10.1",
+    "pyNN>=0.12.0",
+    "akida>=2.19.1",
+    "snn-mlir",
+]
+brian2 = ["brian2>=2.10.1"]
+dev = [
+    # pytest-nengo bundled with Nengo is not compatible with pytest 9 yet.
+    "pytest>=8.0.0,<9",
+    "pytest-cov",
+    "syrupy>=4.0",
+    "vcrpy",
+    "ruff",
+    "mypy",
+    "pre-commit",
+    "black",
+    "isort",
+    "hypothesis",
+    "mkdocs",
+    "mkdocs-material",
+    "mkdocstrings[python]",
+]
+
+[project.scripts]
+neurocnl = "neurocnl.simulation.run_simulation:main"
+
+[project.urls]
+Repository = "https://github.com/Yavmarto/neurocnl"
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.pytest.ini_options]
+testpaths = ["neurocnl", "backend/tests", "neurosim/tests"]
+markers = [
+    "e2e: end-to-end pipeline tests through the full backend",
+    "regression: demo spec regression tests",
+]
+
+[tool.coverage.run]
+source = ["neurocnl"]
+omit = [
+    "**/test_*.py",
+    "neurocnl/simulation/run_simulation.py",  # CLI entry-point, not unit-testable
+]
+
+[tool.coverage.report]
+# Pre-beta floor: 70%.
+# Hardware extras (sinabs, rockpool, spinnaker) reduce absolute coverage when their
+# optional deps are absent; core pipeline paths (cnl, ir, generation) must compensate.
+fail_under = 70
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "UP", "B", "C4", "SIM", "T201"]
+# Removed from ignore: F821 (undefined name — real bugs), F841 (unused variables — dead assignments).
+# F841 is re-allowed in test files only via per-file-ignores below.
+ignore = ["E501", "T201", "E402", "B904", "B007", "SIM108", "SIM105", "SIM102", "E741", "C416", "SIM118", "C408"]
+
+[tool.ruff.lint.per-file-ignores]
+# F841: unused variables are common in test fixtures/pytest.raises() captures.
+# T201: print() is acceptable in test helpers.
+"**/test_*.py" = ["F841", "T201"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = false
+warn_unused_ignores = true
+ignore_missing_imports = true
+# Only optional hardware/backend deps (akida, pynq, lava, nengo, brian2, pynn,
+# rockpool, sinabs, sc-neurocore, pyserial, mujoco, teensy toolchains, ...)
+# ship without stubs, so import-untyped and calls into them stay suppressed.
+disable_error_code = ["import-untyped", "no-untyped-call"]
+plugins = ["pydantic.mypy"]
+
+[tool.semantic_release]
+version_toml = ["pyproject.toml:project.version"]
+version_variables = ["neurocnl/__init__.py:__version__"]
+branch = "dev"
+commit_message = "chore(release): v{version}"
+build_command = "pip install build && python -m build"

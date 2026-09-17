@@ -1,0 +1,11 @@
+__pycache__/
+.DS_Store
+*.sqlite
+.coverage
+.pytest_cache/
+.hypothesis/
+dist/
+build/
+*.egg-info/
+neurobench/venv
+neurobench/data/

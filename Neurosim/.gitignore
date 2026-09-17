@@ -1,0 +1,22 @@
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+__pycache__/
+*.pyc
+.coverage
+htmlcov/
+.hypothesis/
+.pytest_cache/
+.mypy_cache/
+*.egg-info/
+.ipynb_checkpoints/
+*.log
+
+.DS_Store
+
+# Databases
+*.db
+venv
+.venv

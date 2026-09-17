@@ -1,0 +1,33 @@
+{
+    "id": "auto_radar",
+    "name": "Automotive Radar Gesture Recognition",
+    "description": "11-class gesture recognition on automotive radar data (range-Doppler maps). Sparse SNN processes radar returns for in-cabin gesture sensing. Primary metric is top-1 accuracy. Reference task from NeuroBench v1.0.",
+    "task_type": "classification",
+    "executor": "cnl",
+    "input_spec": {
+        "type": "synthetic",
+        "synthetic_config": {
+            "n_classes": 11,
+            "n_samples": 3601,
+            "range_bins": 64,
+            "doppler_bins": 64,
+            "n_time_steps": 50
+        },
+        "recording_session_id": null,
+        "data_path": null
+    },
+    "assertions": [],
+    "scoring": {
+        "primary_metric": "accuracy",
+        "secondary_metrics": ["latency_ms", "power_mw"],
+        "higher_is_better": true,
+        "pass_threshold": 0.75
+    },
+    "default_params": {
+        "n_steps": 50,
+        "batch_size": 32,
+        "threshold": 0.5,
+        "beta": 0.9
+    },
+    "builtin": true
+}

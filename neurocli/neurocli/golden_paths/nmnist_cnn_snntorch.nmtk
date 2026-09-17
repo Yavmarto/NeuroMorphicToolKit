@@ -1,0 +1,149 @@
+{
+  "version": 1,
+  "workspace": {
+    "files": [
+      {
+        "id": "f1",
+        "name": "nmnist_cnn.cnl",
+        "content": "Define a network named nmnist_cnn with timestep 0.001.\nDefine an input port named input with shape (2, 34, 34).\nDefine a 2D convolution layer named conv1 with weight kernel shape (16, 2, 5, 5), bias vector shape (16,), stride (2, 2), padding (1, 1), dilation (1, 1), groups 1, and input height and width (34, 34).\nDefine an IF neuron named if1 with resistance shape (16,) and firing threshold shape (16,).\nDefine a 2D convolution layer named conv2 with weight kernel shape (16, 16, 3, 3), bias vector shape (16,), stride (1, 1), padding (1, 1), dilation (1, 1), groups 1, and input height and width (16, 16).\nDefine an IF neuron named if2 with resistance shape (16,) and firing threshold shape (16,).\nDefine a 2D sum pooling layer named pool1 with kernel size (2, 2), stride (2, 2), and padding (0, 0).\nDefine a 2D convolution layer named conv3 with weight kernel shape (8, 16, 3, 3), bias vector shape (8,), stride (1, 1), padding (1, 1), dilation (1, 1), groups 1, and input height and width (8, 8).\nDefine an IF neuron named if3 with resistance shape (8,) and firing threshold shape (8,).\nDefine a 2D sum pooling layer named pool2 with kernel size (2, 2), stride (2, 2), and padding (0, 0).\nDefine a flatten layer named flat with start dimension 0 and end dimension -1.\nDefine an affine transformation named fc1 with weight matrix shape (256, 128) and bias vector shape (256,).\nDefine an IF neuron named if4 with resistance shape (256,) and firing threshold shape (256,).\nDefine an affine transformation named fc2 with weight matrix shape (10, 256) and bias vector shape (10,).\nDefine an IF neuron named if5 with resistance shape (10,) and firing threshold shape (10,).\nDefine an output port named output with shape (10,).\ninput connects to conv1.\nconv1 connects to if1.\nif1 connects to conv2.\nconv2 connects to if2.\nif2 connects to pool1.\npool1 connects to conv3.\nconv3 connects to if3.\nif3 connects to pool2.\npool2 connects to flat.\nflat connects to fc1.\nfc1 connects to if4.\nif4 connects to fc2.\nfc2 connects to if5.\nif5 connects to output.\n"
+      }
+    ],
+    "activeFileId": "f1",
+    "workspaceName": "cel263-nmnist-cnn",
+    "selectedPlatforms": ["snntorch_sim"],
+    "selectedDataset": "NMNIST"
+  },
+  "canvas": {
+    "pipeline": {
+      "epochs": 20,
+      "learningRate": 0.001,
+      "optimizer": "Adam",
+      "batchSize": 64
+    },
+    "pipelinePhases": {
+      "train": {
+        "nodes": [
+          {
+            "id": "train_loader",
+            "type": "dataLoader",
+            "x": 40,
+            "y": 100,
+            "parameters": {
+              "format": "tonic_nmnist",
+              "batch_size": 64,
+              "shuffle": true,
+              "time_window_ms": 1
+            }
+          },
+          {
+            "id": "state_reset",
+            "type": "stateReset",
+            "x": 280,
+            "y": 100,
+            "parameters": {}
+          },
+          {
+            "id": "forward",
+            "type": "forwardPass",
+            "x": 520,
+            "y": 100,
+            "parameters": {}
+          },
+          {
+            "id": "loss",
+            "type": "ceCountLoss",
+            "x": 760,
+            "y": 100,
+            "parameters": {}
+          },
+          {
+            "id": "backward",
+            "type": "surrogateBackward",
+            "x": 1000,
+            "y": 100,
+            "parameters": {"function": "fast_sigmoid", "slope": 25}
+          },
+          {
+            "id": "optim",
+            "type": "adamOptimiser",
+            "x": 1240,
+            "y": 100,
+            "parameters": {"lr": 0.001}
+          },
+          {
+            "id": "val_loader",
+            "type": "testLoader",
+            "x": 1240,
+            "y": 280,
+            "parameters": {
+              "format": "tonic_nmnist",
+              "batch_size": 64,
+              "shuffle": false,
+              "time_window_ms": 1
+            }
+          },
+          {
+            "id": "validation",
+            "type": "validationLoop",
+            "x": 1480,
+            "y": 100,
+            "parameters": {
+              "every_n_epochs": 1,
+              "save_best_checkpoint": true,
+              "checkpoint_metric": "val_accuracy",
+              "checkpoint_mode": "max"
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "val_data",
+            "sourceNodeId": "val_loader",
+            "sourcePort": "data",
+            "targetNodeId": "validation",
+            "targetPort": "val_data"
+          }
+        ]
+      },
+      "eval": {
+        "nodes": [
+          {
+            "id": "test_loader",
+            "type": "testLoader",
+            "x": 40,
+            "y": 100,
+            "parameters": {
+              "format": "tonic_nmnist",
+              "batch_size": 64,
+              "shuffle": false,
+              "time_window_ms": 1,
+              "load_best_checkpoint": true
+            }
+          },
+          {
+            "id": "eval_reset",
+            "type": "stateReset",
+            "x": 280,
+            "y": 100,
+            "parameters": {}
+          },
+          {
+            "id": "eval_forward",
+            "type": "forwardPass",
+            "x": 520,
+            "y": 100,
+            "parameters": {}
+          },
+          {
+            "id": "accuracy",
+            "type": "accuracyMetric",
+            "x": 760,
+            "y": 100,
+            "parameters": {}
+          }
+        ],
+        "edges": []
+      }
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "module_name": "neurosim",
+  "version": "0.1.0",
+  "agents": "neurosim/AGENTS.md",
+  "guardrails": "neurosim/GUARDRAILS.md",
+  "contracts": "neurosim/contracts/design_contracts.py",
+  "tests": [
+    "neurosim/tests/services/",
+    "neurosim/tests/routers/",
+    "neurosim/tests/properties/"
+  ]
+}

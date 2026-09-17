@@ -1,0 +1,722 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart' show rootBundle;
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:nmtk_module_contracts/nmtk_module_contracts.dart';
+
+import 'package:neuro_toolkit/features/server/connect/connect_notifier.dart';
+import 'package:neuro_toolkit/providers/riverpod_providers.dart';
+import 'package:neuro_toolkit/models/module.dart';
+import 'package:neuro_toolkit/services/control_api_service.dart';
+import 'package:neuro_toolkit/services/update_service.dart';
+import 'package:neuro_toolkit/workspace/native_surface_registry.dart';
+import 'package:neuro_toolkit/src/features/module/domain/module_state.dart';
+
+part 'module_notifier.g.dart';
+
+@Riverpod(keepAlive: true)
+class ModuleNotifier extends _$ModuleNotifier {
+  static const _maxConsecutivePollFailures = 3;
+
+  // AsyncNotifier.build can rerun when the selected control service changes.
+  // This must be assignable on every build, not a one-shot late final.
+  late UpdateService _updateService;
+  Timer? _refreshTimer;
+  Uri? _activeServerUri;
+  int _serverGeneration = 0;
+  int? _pollInFlightGeneration;
+  int _consecutivePollFailures = 0;
+
+  // build() must never read `state`/`state.value` — Riverpod throws "Tried to
+  // read the state of an uninitialized provider" if a notifier's build()
+  // reads its own state while it's being (re)computed. Active tabs need to
+  // survive a rebuild (e.g. reconnecting to a server), so track them here
+  // instead and keep this in sync whenever activeModuleIds actually changes.
+  List<String> _activeModuleIds = const [];
+
+  @override
+  Future<ModuleState> build() async {
+    _updateService = ref.read(updateServiceProvider);
+    final bootstrapState = ref.watch(launcherBootstrapStateProvider);
+    // launcherBootstrapStateProvider is itself derived from
+    // connectNotifierProvider (via selectedControlApiServiceProvider), so
+    // this must always be watched too, not just when !canUseControlApi.
+    // Watching it conditionally created a diamond dependency with two paths
+    // of different shapes reaching this notifier, which toggled on/off
+    // across builds and caused Riverpod to rebuild this provider twice in
+    // the same frame ("Tried to rebuild moduleProvider multiple times in
+    // the same frame").
+    final connectState = ref.watch(connectNotifierProvider);
+    // Same reasoning: watch the nullable selectedControlApiServiceProvider
+    // unconditionally instead of the throwing controlApiServiceProvider
+    // conditionally, so this dependency's shape never toggles either.
+    final controlApi = ref.watch(selectedControlApiServiceProvider);
+    final serverUri = controlApi?.baseUri ?? bootstrapState.baseUri;
+
+    if (_activeServerUri != serverUri) {
+      _activeServerUri = serverUri;
+      _serverGeneration++;
+      _consecutivePollFailures = 0;
+    }
+    final generation = _serverGeneration;
+
+    if (!bootstrapState.canUseControlApi) {
+      if (connectState.phase == ConnectPhase.devOffline) {
+        return _loadBundledModules();
+      }
+      return const ModuleState();
+    }
+
+    try {
+      final state = await _reloadFromControlApi(
+        controlApi: controlApi!,
+        includeLauncherUpdate: true,
+      );
+      if (!_isCurrentServer(generation, controlApi.baseUri)) {
+        return state;
+      }
+      // _startSwitchableNavModules() calls launchModule(), which reads and
+      // writes this notifier's own `state`. Calling it here, still inside
+      // build(), would mutate `state` before build() has returned its first
+      // value — Riverpod detects that reentrant self-access and throws
+      // "Tried to read the state of an uninitialized provider" or "Tried to
+      // rebuild moduleProvider multiple times in the same frame" depending
+      // on timing (CEL-270). Deferring it to run after this build() call
+      // resolves lets it operate on an already-initialized provider.
+      final capturedGeneration = generation;
+      final capturedBaseUri = controlApi.baseUri;
+      final modulesToLaunch = state.modules;
+      unawaited(
+        Future<void>.delayed(Duration.zero, () async {
+          if (!_isCurrentServer(capturedGeneration, capturedBaseUri)) return;
+          await _startSwitchableNavModules(modulesToLaunch);
+        }),
+      );
+
+      // Setup polling timer
+      _startRefreshTimer();
+
+      // Setup listening to settings sync
+      ref.listen(settingsProvider, (previous, next) {
+        final prevLogLevel = previous?.value?.logLevel;
+        final nextLogLevel = next.value?.logLevel;
+        if (prevLogLevel != nextLogLevel && nextLogLevel != null) {
+          unawaited(_syncServerSettings(nextLogLevel.name));
+        }
+      });
+
+      return state;
+    } catch (e) {
+      // Re-throw to let AsyncValue catch it and expose `.error`
+      throw Exception(nmtkUserFacingError(e));
+    }
+  }
+
+  UpdateChannel get currentChannel => _updateService.channel;
+
+  Future<ModuleState> _loadBundledModules() async {
+    try {
+      String raw;
+      try {
+        raw = await rootBundle.loadString('assets/modules.json');
+      } catch (_) {
+        final file = File('assets/modules.json');
+        if (file.existsSync()) {
+          raw = await file.readAsString();
+        } else {
+          rethrow;
+        }
+      }
+      final list = jsonDecode(raw) as List<dynamic>;
+      final modules = list.cast<Map<String, dynamic>>().map((m) {
+        final module = Module.fromJson(m);
+        return module.copyWith(status: ModuleStatus.running);
+      }).toList();
+      return ModuleState(
+        modules: modules,
+        pythonAvailable: true,
+        mujocoAvailable: true,
+        activeModuleIds: _activeModuleIds,
+      );
+    } catch (e) {
+      debugPrint('Failed to load bundled modules in dev offline mode: $e');
+      return const ModuleState();
+    }
+  }
+
+  Future<ModuleState> _reloadFromControlApi({
+    required ControlApiService controlApi,
+    required bool includeLauncherUpdate,
+  }) async {
+    final settings = await controlApi.fetchSettings();
+    final fetchedModules = await controlApi.fetchModules(
+      refreshUpdates: includeLauncherUpdate,
+    );
+
+    LauncherUpdate? pendingUpdate;
+    if (includeLauncherUpdate) {
+      pendingUpdate = await _updateService.checkForLauncherUpdate();
+    }
+
+    return ModuleState(
+      modules: fetchedModules,
+      pythonAvailable: settings.pythonAvailable,
+      mujocoAvailable: settings.mujocoAvailable,
+      pendingLauncherUpdate: pendingUpdate,
+      activeModuleIds: _activeModuleIds,
+    );
+  }
+
+  Future<void> _startSwitchableNavModules(List<Module> currentModules) async {
+    final toLaunch = currentModules
+        .where(
+          (module) =>
+              module.isEnabled &&
+              module.showInLauncherNav &&
+              (module.hasFrontend ||
+                  NativeSurfaceRegistry.supportsModule(module.id)) &&
+              module.status == ModuleStatus.installed,
+        )
+        .map((module) => module.id)
+        .toList(growable: false);
+    if (toLaunch.isEmpty) {
+      return;
+    }
+    await Future.wait(toLaunch.map(launchModule));
+  }
+
+  void _startRefreshTimer() {
+    _refreshTimer?.cancel();
+    _refreshTimer = Timer.periodic(const Duration(seconds: 3), (_) {
+      if (state.isLoading || state.hasError) return;
+      unawaited(_pollCurrentServer());
+    });
+    ref.onDispose(() {
+      _refreshTimer?.cancel();
+    });
+  }
+
+  Future<void> _pollCurrentServer() {
+    final controlApi = ref.read(controlApiServiceProvider);
+    return _pollUpdates(generation: _serverGeneration, controlApi: controlApi);
+  }
+
+  Future<void> _pollUpdates({
+    required int generation,
+    required ControlApiService controlApi,
+  }) async {
+    if (_pollInFlightGeneration == generation) return;
+    _pollInFlightGeneration = generation;
+    try {
+      final settings = await controlApi.fetchSettings();
+      final fetchedModules = await controlApi.fetchModules(
+        refreshUpdates: false,
+      );
+      if (!_isCurrentServer(generation, controlApi.baseUri)) {
+        return;
+      }
+
+      final currentState = state.value;
+      if (currentState == null) return;
+
+      bool changed = false;
+      var nextState = currentState;
+
+      if (settings.pythonAvailable != nextState.pythonAvailable) {
+        nextState = nextState.copyWith(
+          pythonAvailable: settings.pythonAvailable,
+        );
+        changed = true;
+      }
+      if (settings.mujocoAvailable != nextState.mujocoAvailable) {
+        nextState = nextState.copyWith(
+          mujocoAvailable: settings.mujocoAvailable,
+        );
+        changed = true;
+      }
+
+      if (!listEquals(nextState.modules, fetchedModules)) {
+        nextState = nextState.copyWith(modules: fetchedModules);
+        changed = true;
+      }
+
+      final staleIds = nextState.activeModuleIds
+          .where((id) => !fetchedModules.any((module) => module.id == id))
+          .toList();
+      if (staleIds.isNotEmpty) {
+        final newActiveIds = List<String>.from(nextState.activeModuleIds)
+          ..removeWhere((id) => staleIds.contains(id));
+        nextState = nextState.copyWith(activeModuleIds: newActiveIds);
+        _activeModuleIds = newActiveIds;
+        changed = true;
+      }
+
+      if (changed) {
+        state = AsyncData(nextState);
+      }
+      _consecutivePollFailures = 0;
+    } catch (_) {
+      if (!_isCurrentServer(generation, controlApi.baseUri)) {
+        return;
+      }
+      _consecutivePollFailures++;
+      if (_consecutivePollFailures < _maxConsecutivePollFailures) return;
+
+      final currentState = state.value;
+      if (currentState == null) return;
+      final updatedModules = currentState.modules
+          .map((module) {
+            if (module.status != ModuleStatus.starting) return module;
+            return module.copyWith(
+              status: ModuleStatus.error,
+              healthStatus:
+                  'Connection to the backend was lost. Retry or change server.',
+            );
+          })
+          .toList(growable: false);
+      state = AsyncData(currentState.copyWith(modules: updatedModules));
+    } finally {
+      if (_pollInFlightGeneration == generation) {
+        _pollInFlightGeneration = null;
+      }
+    }
+  }
+
+  bool _isCurrentServer(int generation, Uri baseUri) {
+    return generation == _serverGeneration && baseUri == _activeServerUri;
+  }
+
+  Future<void> _syncServerSettings(String logLevelName) async {
+    final bootstrapState = ref.read(launcherBootstrapStateProvider);
+    if (!bootstrapState.canUseControlApi) return;
+
+    try {
+      final controlApi = ref.read(controlApiServiceProvider);
+      await controlApi.updateSettings(logLevel: logLevelName);
+    } catch (e) {
+      debugPrint('Failed to sync launcher settings to control API: $e');
+    }
+  }
+
+  Future<void> recheckPython() async {
+    state = const AsyncLoading();
+    final bootstrapState = ref.read(launcherBootstrapStateProvider);
+    if (!bootstrapState.canUseControlApi) {
+      state = AsyncError(
+        bootstrapState.message ??
+            'Preflight failed: launcher control API is unavailable.',
+        StackTrace.current,
+      );
+      return;
+    }
+    try {
+      final controlApi = ref.read(controlApiServiceProvider);
+      final newState = await _reloadFromControlApi(
+        controlApi: controlApi,
+        includeLauncherUpdate: false,
+      );
+      state = AsyncData(newState);
+    } catch (e, st) {
+      state = AsyncError(nmtkUserFacingError(e), st);
+    }
+  }
+
+  Future<void> updateModuleSettings(
+    String moduleId, {
+    bool? isEnabled,
+    int? customPort,
+    bool? startOnLaunch,
+  }) async {
+    final currentState = state.value;
+    if (currentState == null) return;
+
+    final index = currentState.modules.indexWhere(
+      (module) => module.id == moduleId,
+    );
+    if (index == -1) return;
+
+    final updatedModules = List<Module>.from(currentState.modules);
+    updatedModules[index] = updatedModules[index].copyWith(
+      isEnabled: isEnabled,
+      customPort: customPort,
+      startOnLaunch: startOnLaunch,
+    );
+    state = AsyncData(currentState.copyWith(modules: updatedModules));
+
+    final settingsToSave = <String, dynamic>{};
+    if (isEnabled != null) settingsToSave['isEnabled'] = isEnabled;
+    if (customPort != null) settingsToSave['customPort'] = customPort;
+    if (startOnLaunch != null) settingsToSave['startOnLaunch'] = startOnLaunch;
+
+    await ref
+        .read(settingsProvider.notifier)
+        .updateModuleSettings(moduleId, settingsToSave);
+
+    if (isEnabled == false) {
+      await stopModule(moduleId);
+    }
+
+    try {
+      final controlApi = ref.read(controlApiServiceProvider);
+      final updatedModule = await controlApi.updateModuleSettings(
+        moduleId,
+        isEnabled: isEnabled,
+        customPort: customPort,
+        startOnLaunch: startOnLaunch,
+      );
+
+      final latestState = state.value;
+      if (latestState != null) {
+        final newModules = List<Module>.from(latestState.modules);
+        final newIndex = newModules.indexWhere((m) => m.id == moduleId);
+        if (newIndex != -1) {
+          newModules[newIndex] = updatedModule;
+          state = AsyncData(latestState.copyWith(modules: newModules));
+        }
+      }
+    } catch (e) {
+      debugPrint('Failed to update remote module settings: $e');
+    }
+  }
+
+  Future<void> installModule(String moduleId) async {
+    final currentState = state.value;
+    if (currentState == null) return;
+
+    final index = currentState.modules.indexWhere((m) => m.id == moduleId);
+    if (index == -1) return;
+
+    final updatedModules = List<Module>.from(currentState.modules);
+    updatedModules[index] = updatedModules[index].copyWith(
+      status: ModuleStatus.installing,
+      installProgress: 0.0,
+      healthStatus: null,
+    );
+    state = AsyncData(currentState.copyWith(modules: updatedModules));
+
+    try {
+      final controlApi = ref.read(controlApiServiceProvider);
+      final updatedModule = await controlApi.installModule(moduleId);
+
+      final latestState = state.value;
+      if (latestState != null) {
+        final newModules = List<Module>.from(latestState.modules);
+        final newIndex = newModules.indexWhere((m) => m.id == moduleId);
+        if (newIndex != -1) {
+          newModules[newIndex] = updatedModule;
+          state = AsyncData(latestState.copyWith(modules: newModules));
+        }
+      }
+      unawaited(_pollCurrentServer()); // Background reload
+    } catch (e) {
+      _setErrorState(moduleId, nmtkUserFacingError(e));
+      debugPrint('Installation failed for $moduleId: $e');
+    }
+  }
+
+  Future<void> repairModule(String moduleId) async {
+    final currentState = state.value;
+    if (currentState == null) return;
+
+    final index = currentState.modules.indexWhere((m) => m.id == moduleId);
+    if (index == -1) return;
+
+    final updatedModules = List<Module>.from(currentState.modules);
+    updatedModules[index] = updatedModules[index].copyWith(
+      status: ModuleStatus.installing,
+      installProgress: 0.0,
+      healthStatus: null,
+    );
+    state = AsyncData(currentState.copyWith(modules: updatedModules));
+
+    try {
+      final controlApi = ref.read(controlApiServiceProvider);
+      final updatedModule = await controlApi.repairModule(moduleId);
+
+      final latestState = state.value;
+      if (latestState != null) {
+        final newModules = List<Module>.from(latestState.modules);
+        final newIndex = newModules.indexWhere((m) => m.id == moduleId);
+        if (newIndex != -1) {
+          newModules[newIndex] = updatedModule;
+          state = AsyncData(latestState.copyWith(modules: newModules));
+        }
+      }
+      unawaited(_pollCurrentServer());
+    } catch (e) {
+      _setErrorState(moduleId, nmtkUserFacingError(e));
+      debugPrint('Repair failed for $moduleId: $e');
+    }
+  }
+
+  Future<void> launchModule(String moduleId) async {
+    final currentState = state.value;
+    if (currentState == null) return;
+
+    final index = currentState.modules.indexWhere((m) => m.id == moduleId);
+    if (index == -1) return;
+
+    final updatedActiveIds = List<String>.from(currentState.activeModuleIds);
+    if (!updatedActiveIds.contains(moduleId)) {
+      updatedActiveIds.add(moduleId);
+    }
+    _activeModuleIds = updatedActiveIds;
+
+    final updatedModules = List<Module>.from(currentState.modules);
+    updatedModules[index] = updatedModules[index].copyWith(
+      status: ModuleStatus.starting,
+      healthStatus: null,
+    );
+
+    state = AsyncData(
+      currentState.copyWith(
+        modules: updatedModules,
+        activeModuleIds: updatedActiveIds,
+      ),
+    );
+
+    final bootstrapState = ref.read(launcherBootstrapStateProvider);
+    if (!bootstrapState.canUseControlApi) {
+      final latestState = state.value;
+      if (latestState != null) {
+        final newModules = List<Module>.from(latestState.modules);
+        final newIndex = newModules.indexWhere((m) => m.id == moduleId);
+        if (newIndex != -1) {
+          newModules[newIndex] = newModules[newIndex].copyWith(
+            status: ModuleStatus.running,
+          );
+          state = AsyncData(latestState.copyWith(modules: newModules));
+        }
+      }
+      return;
+    }
+
+    try {
+      final controlApi = ref.read(controlApiServiceProvider);
+      final updatedModule = await controlApi.startModule(moduleId);
+
+      final latestState = state.value;
+      if (latestState != null) {
+        final newModules = List<Module>.from(latestState.modules);
+        final newIndex = newModules.indexWhere((m) => m.id == moduleId);
+        if (newIndex != -1) {
+          newModules[newIndex] = updatedModule;
+          state = AsyncData(latestState.copyWith(modules: newModules));
+        }
+      }
+      unawaited(_pollCurrentServer());
+    } catch (e) {
+      _setErrorState(moduleId, nmtkUserFacingError(e));
+      debugPrint('Launch failed for $moduleId: $e');
+    }
+  }
+
+  Future<void> stopModule(String moduleId) async {
+    final currentState = state.value;
+    if (currentState == null) return;
+
+    final index = currentState.modules.indexWhere((m) => m.id == moduleId);
+    if (index == -1) return;
+
+    final updatedModules = List<Module>.from(currentState.modules);
+    updatedModules[index] = updatedModules[index].copyWith(
+      status: ModuleStatus.stopping,
+    );
+
+    final updatedActiveIds = List<String>.from(currentState.activeModuleIds)
+      ..remove(moduleId);
+    _activeModuleIds = updatedActiveIds;
+
+    state = AsyncData(
+      currentState.copyWith(
+        modules: updatedModules,
+        activeModuleIds: updatedActiveIds,
+      ),
+    );
+
+    final bootstrapState = ref.read(launcherBootstrapStateProvider);
+    if (!bootstrapState.canUseControlApi) {
+      final latestState = state.value;
+      if (latestState != null) {
+        final newModules = List<Module>.from(latestState.modules);
+        final newIndex = newModules.indexWhere((m) => m.id == moduleId);
+        if (newIndex != -1) {
+          newModules[newIndex] = newModules[newIndex].copyWith(
+            status: ModuleStatus.installed,
+          );
+          state = AsyncData(latestState.copyWith(modules: newModules));
+        }
+      }
+      return;
+    }
+
+    try {
+      final controlApi = ref.read(controlApiServiceProvider);
+      final updatedModule = await controlApi.stopModule(moduleId);
+
+      final latestState = state.value;
+      if (latestState != null) {
+        final newModules = List<Module>.from(latestState.modules);
+        final newIndex = newModules.indexWhere((m) => m.id == moduleId);
+        if (newIndex != -1) {
+          newModules[newIndex] = updatedModule;
+          state = AsyncData(latestState.copyWith(modules: newModules));
+        }
+      }
+      unawaited(_pollCurrentServer());
+    } catch (e) {
+      _setErrorState(moduleId, nmtkUserFacingError(e));
+      debugPrint('Stop failed for $moduleId: $e');
+    }
+  }
+
+  Future<void> updateModule(String moduleId) async {
+    final currentState = state.value;
+    if (currentState == null) return;
+
+    final index = currentState.modules.indexWhere((m) => m.id == moduleId);
+    if (index == -1) return;
+
+    final module = currentState.modules[index];
+    if (module.versionPinned ||
+        !UpdateService.isNewerVersion(module.version, module.remoteVersion)) {
+      return;
+    }
+
+    final updatedModules = List<Module>.from(currentState.modules);
+    updatedModules[index] = updatedModules[index].copyWith(
+      status: ModuleStatus.updating,
+      installProgress: 0.0,
+      healthStatus: null,
+    );
+    state = AsyncData(currentState.copyWith(modules: updatedModules));
+
+    try {
+      final controlApi = ref.read(controlApiServiceProvider);
+      final updatedModule = await controlApi.updateModule(moduleId);
+
+      final latestState = state.value;
+      if (latestState != null) {
+        final newModules = List<Module>.from(latestState.modules);
+        final newIndex = newModules.indexWhere((m) => m.id == moduleId);
+        if (newIndex != -1) {
+          newModules[newIndex] = updatedModule;
+          state = AsyncData(latestState.copyWith(modules: newModules));
+        }
+      }
+      unawaited(_pollCurrentServer());
+    } catch (e) {
+      _setErrorState(moduleId, nmtkUserFacingError(e));
+      debugPrint('Update failed for $moduleId: $e');
+    }
+  }
+
+  Future<void> uninstallModule(String moduleId) async {
+    final currentState = state.value;
+    if (currentState == null) return;
+
+    final index = currentState.modules.indexWhere((m) => m.id == moduleId);
+    if (index == -1) return;
+
+    final updatedModules = List<Module>.from(currentState.modules);
+    updatedModules[index] = updatedModules[index].copyWith(
+      status: ModuleStatus.notInstalled,
+      installProgress: 0.0,
+      healthStatus: null,
+    );
+
+    final updatedActiveIds = List<String>.from(currentState.activeModuleIds)
+      ..remove(moduleId);
+    _activeModuleIds = updatedActiveIds;
+
+    state = AsyncData(
+      currentState.copyWith(
+        modules: updatedModules,
+        activeModuleIds: updatedActiveIds,
+      ),
+    );
+
+    try {
+      final controlApi = ref.read(controlApiServiceProvider);
+      await controlApi.uninstallModule(moduleId);
+      unawaited(_pollCurrentServer());
+    } catch (e) {
+      debugPrint('Uninstall failed for $moduleId: $e');
+    }
+  }
+
+  void closeTab(String moduleId) {
+    final currentState = state.value;
+    if (currentState == null) return;
+
+    final updatedActiveIds = List<String>.from(currentState.activeModuleIds)
+      ..remove(moduleId);
+    _activeModuleIds = updatedActiveIds;
+    state = AsyncData(currentState.copyWith(activeModuleIds: updatedActiveIds));
+  }
+
+  void dismissLauncherUpdate() {
+    final currentState = state.value;
+    if (currentState == null) return;
+
+    state = AsyncData(currentState.copyWith(pendingLauncherUpdate: null));
+  }
+
+  void setUpdateChannel(UpdateChannel channel) {
+    _updateService.channel = channel;
+    // We don't trigger state rebuild directly, let the poll fetch updates
+  }
+
+  Future<void> setVersionPinned(String moduleId, bool pinned) async {
+    try {
+      final controlApi = ref.read(controlApiServiceProvider);
+      final updatedModule = await controlApi.updateModuleSettings(
+        moduleId,
+        versionPinned: pinned,
+      );
+
+      final latestState = state.value;
+      if (latestState != null) {
+        final newModules = List<Module>.from(latestState.modules);
+        final newIndex = newModules.indexWhere((m) => m.id == moduleId);
+        if (newIndex != -1) {
+          newModules[newIndex] = updatedModule;
+          state = AsyncData(latestState.copyWith(modules: newModules));
+        }
+      }
+    } catch (e) {
+      debugPrint('Failed to update version pinning for $moduleId: $e');
+    }
+  }
+
+  Future<void> checkForUpdates() async {
+    try {
+      final controlApi = ref.read(controlApiServiceProvider);
+      final newState = await _reloadFromControlApi(
+        controlApi: controlApi,
+        includeLauncherUpdate: true,
+      );
+      state = AsyncData(newState);
+    } catch (e) {
+      debugPrint('Update check failed: $e');
+    }
+  }
+
+  void _setErrorState(String moduleId, String errorMsg) {
+    final currentState = state.value;
+    if (currentState == null) return;
+
+    final index = currentState.modules.indexWhere((m) => m.id == moduleId);
+    if (index == -1) return;
+
+    final updatedModules = List<Module>.from(currentState.modules);
+    updatedModules[index] = updatedModules[index].copyWith(
+      status: ModuleStatus.error,
+      healthStatus: errorMsg,
+    );
+    state = AsyncData(currentState.copyWith(modules: updatedModules));
+  }
+}

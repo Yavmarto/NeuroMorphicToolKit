@@ -1,0 +1,124 @@
+# NeuroMorphicToolKit Coding Style Guide
+
+This guide only covers cross-repo defaults that are not already enforced by the nearest module config. The authority order is: nearest `AGENTS.md`, then module config files such as `pyproject.toml`, `pubspec.yaml`, `analysis_options.yaml`, and `.pre-commit-config.yaml`, then this document.
+
+## End-User Convenience — Top Priority
+
+End-user convenience is the highest product priority. When a design decision involves a trade-off between developer convenience and end-user convenience, end-user convenience wins. Defaults must work out of the box; users must never need to know internal port numbers, service hostnames, or deployment internals. See `AGENTS.md` for the full principle.
+
+## Audited module map
+
+- `neurocnl`: Python + Dart. See `neurocnl/pyproject.toml`, `neurocnl/.pre-commit-config.yaml`. Its Flutter frontend now lives in `nmtk/neuro_toolkit/lib/features/neurocnl/`.
+- `Neurochip`: Python + Dart. See `Neurochip/pyproject.toml`, `Neurochip/frontend/pubspec.yaml`, `Neurochip/frontend/analysis_options.yaml`.
+- `Neurobench`: Python + Dart. See `Neurobench/neurobench/pyproject.toml`. Its Flutter frontend now lives in `nmtk/neuro_toolkit/lib/features/neurobench/`.
+- `Neuro-Dream-Hand`: Python. See `Neuro-Dream-Hand/pyproject.toml`.
+- `Neurosense`: Python + Dart. See `Neurosense/pyproject.toml`, `Neurosense/frontend/pubspec.yaml`, `Neurosense/frontend/analysis_options.yaml`, `Neurosense/.pre-commit-config.yaml`.
+- `Neurohub`: Python + Dart. See `Neurohub/pyproject.toml`, `Neurohub/frontend/pubspec.yaml`, `Neurohub/frontend/analysis_options.yaml`, `Neurohub/.pre-commit-config.yaml`.
+- `nmtk`: Dart + Python helpers. See `nmtk/neuro_toolkit/pubspec.yaml`, `nmtk/neuro_toolkit/analysis_options.yaml`. Shared design-system code (formerly the separate `nmtk_ui_core` package) now lives at `nmtk/neuro_toolkit/lib/ui_core/`.
+- `neurocli`: Markdown-only planning at present; if implementation starts, it must share launcher manifest semantics from `nmtk/neuro_toolkit/assets/modules.json`.
+
+## Cross-repo defaults
+
+- Treat each top-level module as an owned boundary. Do not change a contract, manifest, export payload, or public route shape in one module without reading the consumer or producer module and updating both test surfaces.
+- Keep module metadata synchronized across `nmtk/neuro_toolkit/assets/modules.json`, launcher Dart models, root compose files, and CI or helper scripts. Never change only one copy of a module id, port, install path, or uvicorn target.
+- Keep optional runtimes optional. Do not move MuJoCo, BrainFlow, PYNQ, Akida, Lava, SpiNNaker, or report-generation dependencies into unconditional startup paths.
+- Root `tests/` exist for suite contracts and launcher-control behavior. New unit or feature tests belong in the owning module unless the behavior is intentionally cross-module.
+- Root `scripts/` are orchestration wrappers. Product logic belongs in the owning module package, not in an ad-hoc root script.
+- Accepted ADRs are append-only decision records. Add a new ADR to supersede an old decision instead of rewriting the old file in place.
+- `docs/archive/**` is historical record. Do not rewrite old audits to match current state; add a new dated document instead.
+
+## Flutter UI design system
+
+### Zeta Design System Migration
+
+The suite strictly uses the `zeta_flutter` design system. Mixing different design paradigms or using raw Material widgets is prohibited.
+
+- **Eradicate Material Widgets**: Use Zeta equivalents instead of standard Material components. For example:
+  - `ZetaButton` instead of `ElevatedButton`, `TextButton`, or `OutlinedButton`.
+  - `ZetaCard` instead of `Card`.
+  - `ZetaCheckbox` instead of `Checkbox`.
+- **Purge Hardcoded Colors**: Do not use hardcoded colors like `Colors.red`, `Colors.grey`, or `HexColor`. Always use Zeta's semantic color system via `Zeta.of(context).colors`.
+  - **Exception**: The canvas (`network_canvas.dart`) and palette styling (`nir_node_styles.dart`) are explicitly permitted to use `Theme.of(context).colorScheme` and custom colors instead of `Zeta.of(context).colors` to maintain optimal visual distinction and the intended aesthetic design.
+- **Purge Hardcoded Typography**: Do not use manual `TextStyle` definitions (e.g., `TextStyle(fontSize: 14, fontWeight: FontWeight.bold)`). Use `ZetaTextStyles` exclusively (e.g., `ZetaTextStyles.bodyMedium`, `ZetaTextStyles.titleLarge`).
+- **Layout and Spacing**: Avoid deeply nested `Container` and `Padding` widgets used as layout hacks. Rely on clean `Column`, `Row`, and `SizedBox` for spacing. Ensure all spacing follows an 8px grid system.
+- **No Visual Gimmicks**: Do not apply custom `BoxShadow`, `ClipRRect` blurs, or custom `BorderRadius` to standard containers. If a container needs styling, use a `ZetaCard` or a basic `Container` mapped to Zeta theme colors.
+
+### Border radius
+
+All Flutter widgets must use one of the five sanctioned radius values from `NmtkShellTokens` and `NmtkDesignTokens`. Do not use any other radius value.
+
+| Token | Value | Use where |
+|-------|-------|-----------|
+| `NmtkShellTokens.radiusSm` | 12 px | Inline chips, tags, input fields, text fields |
+| `NmtkShellTokens.radiusMd` | 16 px | Buttons, small cards, search fields |
+| `NmtkShellTokens.radiusLg` | 22 px | Section cards, summary tiles, large containers |
+| `NmtkShellTokens.chipRadius` (999) | 999 px | Pill-shaped status badges, info chips |
+| `NmtkDesignTokens.dialogShape` | 28 px | Dialogs only — matches Material 3 default |
+
+Non-token radius values currently in production (8, 10, 14, 18) must be eliminated on sight and replaced with the nearest token from this table. `radiusMd` (16) replaces 18; `radiusSm` (12) replaces 8, 10, and 14.
+
+### Shell mode
+
+Each module must pass its assigned `NmtkShellMode` to `NmtkDesktopScaffold` (or `NmtkTopAppBar` when running embedded in the launcher WebView). The correct mode for each module is documented in the module's own `AGENTS.md`. The three modes and their accent palette intent:
+
+| Mode | Accent | Intended for |
+|------|--------|-------------|
+| `NmtkShellMode.command` | Navy / default | Launcher, NeuroHub, NeuroBench |
+| `NmtkShellMode.studio` | Violet | neurocnl (CNL Studio + NeuroStudio canvas) |
+| `NmtkShellMode.instrument` | Cyan | NeuroSense, NeuroChip |
+
+Never leave the mode at the default when the module should be in a non-command mode — the three-mode design exists specifically to give each module a distinct visual identity in the shared shell.
+
+### Rendered contrast verification
+
+Using the theme API (`Zeta.of(context).colors`) is not proof of readable contrast. Any themed icon/button change must have its contrast measured on the actual rendered output in both dark and light themes before sign-off. The floating canvas toolbar passed a static theme-API audit but rendered at ~1:1 contrast in dark mode and 2.9:1 in light mode (fixed in commit 931136f8).
+
+### Back/cancel affordance in step/setup flows
+
+Every screen in a step/setup flow must have a working back or cancel affordance in all states (initial, loading, failure, success). Do not rely on an OS back gesture — none exists on desktop/web. `server_setup_screen.dart` shipped without this and had to be retrofitted.
+
+### Stepper/step-pill overflow
+
+Any stepper or step-pill bar must remain usable at all step counts and at the minimum supported screen width: wrap it in a horizontal `SingleChildScrollView` or `Wrap` (see `pipeline_stepper.dart`, `snn_workflow_stepper.dart`, `snn_mobile_workflow_stepper.dart`). New stepper widgets must include a test with a high step count.
+
+### Status colour semantics
+
+Suite-wide status signals (pipeline states, health badges, run buttons, toasts) must always use the `NmtkShellTokens` semantic palette:
+
+| Semantic | Token | Hex |
+|----------|-------|-----|
+| Healthy / success | `NmtkShellTokens.healthyColor` | `0xFF22C55E` |
+| Error | `NmtkShellTokens.errorColor` | `0xFFEF4444` |
+| Warning / degraded | `NmtkShellTokens.warningColor` / `.degradedColor` | `0xFFF59E0B` |
+| Running | `NmtkShellTokens.runningColor` | `0xFF38BDF8` |
+| Live / recording | `NmtkShellTokens.liveColor` | `0xFFE11D48` |
+
+`NmtkNeurocnlTokens.success / .error / .warning` are **CNL syntax-diagnostic colours only**. Do not use them for any UI status outside the CNL editor's syntax highlighting and diagnostics layer.
+
+## Flutter Anti-Patterns (do not do these)
+
+- **No state mutation in `build()`**: Never assign to a `State` field inside `build()` without
+  calling `setState()`. Use `ref.listen` (Riverpod), `didChangeDependencies`, or `initState` to
+  react to external changes and call `setState` from there. Mutating state in `build()` produces
+  frames that render stale data and breaks Flutter's dirty-tracking contract.
+- **No duplicated status checks**: When a concept like "module is ready" is used in multiple
+  places, extract it as a named static helper — do not repeat the same `status == A || status == B`
+  expression at multiple call sites. One helper, used consistently, means only one place to update.
+- **No hardcoded domain text in shared widgets**: `nmtk_ui_core` widgets must accept customisable
+  labels and tooltips for any user-visible strings that are domain-specific. Provide a sensible
+  default string and make it overridable. Example: `disabledTooltip` on `NmtkPipelineStepper`.
+
+## Validation defaults
+
+- Run the owning module's local checks and apply autofixers (e.g., `ruff check --fix .` and `ruff format .` for Python, `dart fix --apply` and `dart format .` for Dart) from its own config first before finalizing any code.
+- Also run `python3 -m pytest tests/integration/test_cross_module.py` and `python3 -m pytest tests/integration/test_teensy_e2e.py` when a suite-visible contract or integration boundary changes.
+
+## Launcher and runtime integrity
+
+- `AGENTS.md` defines the required workflow steps. This style guide defines the quality bar the resulting change must satisfy. For launcher and runtime work, both documents apply together.
+- Environment integrity is a code-quality concern, not just an operational concern. Startup paths must fail early, actionably, and deterministically when required dependencies or manifests are invalid.
+- Keep launcher runtime semantics typed and synchronized across the manifest, Dart models, launcher state, helper scripts, and verification surfaces. If a launcher field changes in one surface, update the other consumers in the same change.
+- Optional runtimes must remain optional at import and startup time. Missing MuJoCo, BrainFlow, PYNQ, Akida, Lava, SpiNNaker, or report-generation dependencies must degrade capability reporting rather than crash the base service unless the manifest explicitly marks them required.
+- Operator-facing launcher diagnostics should use structured logging and machine-readable reporting rather than ad-hoc `print()` output where the code path is part of the supported orchestration surface.
+- Launcher and control-plane changes should include a readiness check, currently `python3 scripts/launcher_control_service.py --doctor --json`, plus launcher test coverage for new install, startup, preflight, or manifest behavior.
+- Suite-visible launcher changes still require the root integration checks in addition to owning tests; launcher-only changes without contract impact can stop at launcher-local verification, but they must say that explicitly in the change summary.

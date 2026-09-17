@@ -1,0 +1,125 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: neurohub-db
+    environment:
+      - POSTGRES_DB=neurohub
+      - POSTGRES_USER=neurohub
+      - POSTGRES_PASSWORD=neurohub
+    volumes:
+      - neurohub_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U neurohub -d neurohub"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # S3-compatible object storage for registry artefact blobs.
+  minio:
+    image: minio/minio:latest
+    container_name: neurohub-minio
+    command: server /data --console-address ":9001"
+    environment:
+      - MINIO_ROOT_USER=${OBJECT_STORAGE_ACCESS_KEY:-minioadmin}
+      - MINIO_ROOT_PASSWORD=${OBJECT_STORAGE_SECRET_KEY:-minioadmin}
+    volumes:
+      - neurohub_minio:/data
+    ports:
+      - "9101:9001"  # MinIO console (host:container)
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # Full-text search index for registry artefacts.
+  meilisearch:
+    image: getmeili/meilisearch:v1.7
+    container_name: neurohub-meilisearch
+    environment:
+      - MEILI_MASTER_KEY=${SEARCH_INDEX_KEY:-masterKey}
+      - MEILI_NO_ANALYTICS=true
+    volumes:
+      - neurohub_meili:/meili_data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7700/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # Rate-limit counter / refresh-token store.
+  redis:
+    image: redis:7-alpine
+    container_name: neurohub-redis
+    volumes:
+      - neurohub_redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  neurohub:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: neurohub-backend
+    ports:
+      # Default host port aligns with the Neurohub port in modules.json (9000).
+      - "${NEUROHUB_PORT:-9000}:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - NEUROHUB_DB_URL=postgresql://neurohub:neurohub@db:5432/neurohub
+      - NEUROHUB_AUTH_ENABLED=true
+      - UVICORN_WORKERS=${UVICORN_WORKERS:-1}
+      - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
+      - JWT_EXPIRY_HOURS=${JWT_EXPIRY_HOURS:-24}
+      - NEUROHUB_SECRET_KEY=${JWT_SECRET:-change-me-in-production}
+      # Object storage (MinIO / S3)
+      - OBJECT_STORAGE_URL=http://minio:9000
+      - OBJECT_STORAGE_BUCKET=${OBJECT_STORAGE_BUCKET:-neurohub-registry}
+      - OBJECT_STORAGE_ACCESS_KEY=${OBJECT_STORAGE_ACCESS_KEY:-minioadmin}
+      - OBJECT_STORAGE_SECRET_KEY=${OBJECT_STORAGE_SECRET_KEY:-minioadmin}
+      # Search index (MeiliSearch)
+      - SEARCH_INDEX_URL=http://meilisearch:7700
+      - SEARCH_INDEX_KEY=${SEARCH_INDEX_KEY:-masterKey}
+      # Rate-limit / cache store (Redis)
+      - CACHE_URL=redis://redis:6379/0
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-*}
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    depends_on:
+      db:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      meilisearch:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: neurohub-frontend
+    ports:
+      - "8080:8080"
+    depends_on:
+      - neurohub
+
+volumes:
+  neurohub_db:
+  neurohub_minio:
+  neurohub_meili:
+  neurohub_redis:

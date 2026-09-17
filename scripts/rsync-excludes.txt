@@ -1,0 +1,124 @@
+# rsync filter rules for pushing the backend source to a deploy host.
+#
+# ALLOWLIST, not a denylist. The `- *` at the bottom drops everything that no
+# `+` rule above it named, so a new top-level dir, doc, or dev script does NOT
+# reach the host until it is listed here on purpose.
+#
+# Single definition, consumed via `--exclude-from` by both the Makefile
+# (docker-ex-deploy, dev-sync) and scripts/dev_update.sh. rsync honours `+ ` and
+# `- ` prefixes inside an --exclude-from file, so the flag stays as it is.
+#
+# FIRST MATCH WINS. The junk block must therefore stay ABOVE the `+` block —
+# otherwise `+ /neurocnl/***` would happily ship __pycache__ and .venv too.
+#
+# Every `+` entry below is traced to a Dockerfile COPY, a compose bind mount, or
+# a path the backend reads at runtime. Removing one breaks a build or a startup.
+
+# --- junk, including inside the included trees ------------------------------
+# Unanchored (no leading /) on purpose: every submodule carries its own docs/,
+# issues-archive/, .github/ and agent dirs, and none of it is read by a backend.
+# No trailing slash: in a submodule `.git` is a FILE (`gitdir: …`), not a directory,
+# so `.git/` would miss Neurochip/.git, Neurohub/.git, Neurosense/.git, neurocnl/.git.
+- .git
+# Every dot-directory at any depth. The terminal `- *` only guards the repo root, so
+# without this, agent and cache dirs nested inside an included tree still ship (that is
+# how neurocnl/neurocnl/training/.opencode/ leaked). Covers .venv, .cache, .mypy_cache,
+# .pytest_cache, .ruff_cache, .hypothesis, .benchmarks, .dart_tool, .github, .claude,
+# .superpowers, .opencode, .idea, .nmtk, .kiro, .qodo — and whatever comes next.
+# `+ /.dockerignore` is a file, so this cannot touch it.
+- .*/
+- /.env
+- __pycache__/
+- *.py[co]
+- *.egg-info/
+- venv/
+- node_modules/
+- build/
+- */frontend/
+- tests/
+- docs/
+- issues/
+- issues-archive/
+- issues-next/
+- reports/
+# Runtime data the HOST owns, not us. Both of these resolve relative to the
+# container CWD /repo, so the live copies are created on the host; the versions
+# in this repo are stale local dev leftovers. Syncing them used to make
+# `rsync --delete` wipe real host state.
+- recordings/
+- shared_assets/
+- *.db
+- *.sqlite
+- *.log
+- *.dill
+- *.dill.track.dill
+- .DS_Store
+
+# --- what the deploy host actually needs ------------------------------------
+# All six compose files: deploy-prod wants prod.yml on the same host, and
+# launcher-control looks for prod/remote by name. ~20KB total.
++ /docker-compose*.yml
++ /Dockerfile*
+# Read from the build context root on every remote build.
++ /.dockerignore
+
+# suite_api/Dockerfile:54, plus docker-compose.dev.yml:4 mounts `.:/repo` over it.
++ /suite_api/***
+# Seven worker images; also bind-mounted read-only as `.:/repo:ro`.
++ /workers/***
+# docker/neurosense-pip-requirements.txt — suite_api/Dockerfile:38,
+# workers/neurosense_hw/Dockerfile:10.
++ /docker/***
+
+# Backend submodules. pip-installed into the images AND resolved by path from
+# /repo at runtime, so both the build and the mount need them.
+# suite_api/Dockerfile copies this shared runtime contract before NeuroCNL.
++ /nmtk_sdk/***
+# suite_api/Dockerfile:65; studio_agent imports tools.nmtk_mcp_server at runtime.
++ /tools/
++ /tools/nmtk_mcp_server/***
+# suite_api/Dockerfile:34,50; workers/neurocnl_physics/Dockerfile:26.
++ /neurocnl/***
+# suite_api/Dockerfile:44; Dockerfile.lava; workers/neurochip_hw/Dockerfile:16.
++ /Neurochip/***
+# Shared contracts package. Neurochip's pyproject declares it as a
+# ../nmtk_contracts path dependency and Dockerfile.lava,
+# workers/neurochip_hw/Dockerfile, and Dockerfile.control all COPY it into
+# their build contexts — without a rule here those COPYs fail on the host.
++ /nmtk_contracts/***
+# suite_api/Dockerfile:34; alembic.ini is read from /repo/Neurohub on every
+# suite_api startup (suite_api/domains/neurohub/lifespan.py:25-27).
++ /Neurohub/***
+# suite_api/Dockerfile:41; workers/neurosense_hw/Dockerfile:16.
++ /Neurosense/***
+# Only the inner package — suite_api/Dockerfile:49,
+# workers/neurobench_runner/Dockerfile:29. The parent needs its own rule or
+# rsync never descends into it.
++ /Neurobench/
++ /Neurobench/neurobench/***
+
+# launcher-control: Dockerfile.control:17,18,22 and docker-compose.dev.yml:24-26.
++ /nmtk/
++ /nmtk/launcher_control/***
++ /nmtk/neuro_toolkit/
++ /nmtk/neuro_toolkit/assets/***
++ /scripts/
+# Bind-mounted as a single FILE (docker-compose.dev.yml:25). If it is missing,
+# Docker creates a directory at that path and launcher-control crash-loops.
++ /scripts/launcher_control_service.py
+
+# --- everything else stays home --------------------------------------------
+# Makefile, AGENTS.md and the other root docs, pyproject.toml, tests/, tools/,
+# neurodocs/, .github/, nmtk_module_contracts/, the
+# Flutter app itself (nmtk_ui_core now lives inside it), Neurosim/ (neurosim ships inside neurocnl/),
+# Neuro-Dream-Hand/, rust/, neurocli/,
+# monitoring/ (the copy the app deploys lives under nmtk/neuro_toolkit/assets/),
+# skills/, paper/, reports/, output/, recordings/, every .<tool>/ dir, and all of
+# scripts/ bar the one file above. nmtk_contracts is NOT in this list — it is
+# synced on purpose (see the + rule above).
+#
+# Note what NOT syncing also buys: unlisted paths are protected from
+# `rsync --delete`, so host-owned state survives. shared_assets/ used to be
+# synced, which meant every sync wiped the uploads created on the host by
+# Neurohub/neurohub/app/routers/sharing.py:168.
+- *

@@ -1,0 +1,211 @@
+[project]
+name = "neurosim"
+version = "0.6.0"
+description = "Visual Network Design & Simulation Workbench for spiking neural networks"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "AGPL-3.0-or-later" }
+classifiers = [
+    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+]
+authors = [
+    { name = "NeuroSim Team" },
+]
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "pydantic",
+    "nengo",
+    "numpy",
+    "neurocnl",
+    "slowapi",
+    "watchdog",
+    "nir"
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pytest-asyncio>=0.23",
+    "anyio[trio]>=4.0",
+    "httpx",
+    "hypothesis",
+    "syrupy>=4.0",
+    "sse-starlette>=1.8.0",
+    "prometheus-client>=0.19.0",
+    "structlog>=24.1.0",
+    "aiosqlite>=0.20.0",
+]
+dev = [
+    "ruff",
+    "mypy",
+]
+spinnaker2 = []  # py-spinnaker2 must be installed manually; it is not resolvable via uv/PyPI.
+
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["neurosim*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "B",    # flake8-bugbear
+    "I",    # isort
+    "D",    # pydocstyle
+    "N",    # pep8-naming
+    "UP",   # pyupgrade
+    "ANN",  # flake8-annotations
+    "S",    # flake8-bandit
+    "BLE",  # flake8-blind-except
+    "FBT",  # flake8-boolean-trap
+    "A",    # flake8-builtins
+    "COM",  # flake8-commas
+    "C4",   # flake8-comprehensions
+    "DTZ",  # flake8-datetimez
+    "T10",  # flake8-debugger
+    "EM",   # flake8-errmsg
+    "EXE",  # flake8-executable
+    "ISC",  # flake8-implicit-str-concat
+    "ICN",  # flake8-import-conventions
+    "G",    # flake8-logging-format
+    "INP",  # flake8-no-pep420
+    "PIE",  # flake8-pie
+    "T20",  # flake8-print
+    "PYI",  # flake8-pyi
+    "PT",   # flake8-pytest-style
+    "Q",    # flake8-quotes
+    "RSE",  # flake8-raise
+    "RET",  # flake8-return
+    "SLF",  # flake8-self
+    "SIM",  # flake8-simplify
+    "TID",  # flake8-tidy-imports
+    "TCH",  # flake8-type-checking
+    "INT",  # flake8-gettext
+    "ARG",  # flake8-unused-arguments
+    "PTH",  # flake8-use-pathlib
+    "ERA",  # flake8-eradicate
+    "PD",   # pandas-vet
+    "PGH",  # pygrep-hooks
+    "PL",   # pylint
+    "TRY",  # tryceratops
+    "FLY",  # flynt
+    "NPY",  # numpy-specific rules
+    "RUF",  # ruff-specific rules
+]
+ignore = [
+    "D100",
+    "D101",
+    "D102",
+    "D103",
+    "D104",
+    "D105",
+    "D106",
+    "D107",
+    "ANN401",
+    "TID252",
+    "S110",
+    "BLE001",
+    "PTH123",
+    "TRY003",
+    "EM101",
+    "EM102",
+    "T201",
+    "B904",
+    "SIM108",
+    "PLW2901",
+    "A002",
+    "E501",
+    "DTZ003",
+    "PLR0912",
+    "SIM102",
+    "ANN101",
+    "E402",
+    "F841",
+    "D417",
+    "D205",
+    "D415",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "ANN201", "ANN001", "D103", "PLR2004", "E501", "INP001", "COM812"]
+"app/main.py" = ["ARG001"]
+"app/routers/components.py" = ["ARG001"]
+"app/routers/export.py" = ["A002", "E501", "ARG001"]
+"app/routers/generation.py" = ["ARG001"]
+"app/routers/preview.py" = ["ARG001"]
+"app/routers/projects.py" = ["ARG001"]
+"app/routers/sweep.py" = ["ARG001"]
+"app/routers/templates.py" = ["A002", "ARG001"]
+"app/routers/validation.py" = ["PLR0912", "E501", "SIM102", "ARG001"]
+"tests/routers/test_components.py" = ["SLF001"]
+"app/services/sweep_runner.py" = ["E501"]
+"neurosim/app/main.py" = ["ARG001", "E402"]
+"neurosim/app/limiter.py" = ["E402"]
+"neurosim/app/routers/components.py" = ["ARG001"]
+"neurosim/app/routers/export.py" = ["A002", "E501", "ARG001"]
+"neurosim/app/routers/generation.py" = ["ARG001"]
+"neurosim/app/routers/preview.py" = ["ARG001"]
+"neurosim/app/routers/projects.py" = ["ARG001"]
+"neurosim/app/routers/spinnaker2.py" = ["ARG001", "FBT001", "D417"]
+"neurosim/app/routers/sweep.py" = ["ARG001"]
+"neurosim/app/routers/templates.py" = ["A002", "ARG001"]
+"neurosim/app/routers/validation.py" = ["PLR0912", "E501", "SIM102", "ARG001"]
+"neurosim/app/services/canonical_editor_projection.py" = ["PLR2004"]
+"neurosim/app/services/cnl_to_graph.py" = ["PLR0913", "PLR0915"]
+"neurosim/app/services/job_store.py" = ["PLR0913"]
+"neurosim/app/services/neurocnl_bridge.py" = ["PLR0911"]
+"neurosim/app/services/project_store.py" = ["SLF001"]
+"neurosim/app/services/sweep_runner.py" = ["E501"]
+"neurosim/tests/**" = ["S101", "ANN201", "ANN001", "D103", "PLR2004", "E501", "INP001", "COM812", "ARG001", "D205"]
+"neurosim/tests/routers/test_components.py" = ["SLF001"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.isort]
+profile = "black"
+line_length = 100
+
+[tool.mypy]
+disable_error_code = ["type-arg", "no-any-return", "arg-type", "attr-defined", "assignment", "index", "operator", "call-arg", "dict-item", "list-item", "name-defined", "no-untyped-call", "no-untyped-def", "var-annotated", "import-untyped"]
+warn_unused_ignores = false
+disallow_untyped_decorators = false
+python_version = "3.11"
+strict = true
+warn_unreachable = true
+pretty = true
+show_column_numbers = true
+show_error_codes = true
+ignore_missing_imports = true
+explicit_package_bases = true
+exclude = [
+    "^tests/",
+    "^neurosim/tests/",
+    "^build/",
+    "^dist/",
+    "^venv/",
+    "^\\.venv/",
+    "^frontend/",
+    "^docs/",
+    ".*\\.egg-info/",
+    "^__pycache__/",
+    "^\\.mypy_cache/",
+    "^\\.pytest_cache/",
+    "^\\.tox/",
+    "^\\.nox/",
+]
+plugins = ["pydantic.mypy"]
+
+[tool.pytest.ini_options]
+testpaths = ["neurosim/tests"]
+asyncio_mode = "auto"
+addopts = "-p no:nengo"
+pythonpath = ["..", "."]

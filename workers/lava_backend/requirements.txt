@@ -1,0 +1,17 @@
+# Lava runtime for the dedicated lava-backend worker image (Dockerfile.lava).
+#
+# lava-nc (latest 0.10.0) requires Python >=3.10,<3.11, so this runtime is
+# intentionally pinned to Python 3.10 and kept OUT of Neurochip's >=3.11
+# pyproject — the `lava` poetry extra is unsatisfiable there. This file is
+# the single source of truth for what the isolated Lava worker installs.
+#
+# The worker imports neurochip's lava router + backend, which pull in the
+# pydantic contracts (fastapi/uvicorn/pydantic) and lava-nc/numpy. The
+# neurochip source tree is COPY'd into the image and placed on PYTHONPATH;
+# nmtk_contracts (a path dependency of Neurochip that requires >=3.11) is
+# likewise COPY'd and resolved via PYTHONPATH rather than pip-installed.
+fastapi>=0.111
+uvicorn[standard]>=0.29
+pydantic>=2
+numpy>=1.24.4,<2.0.0
+lava-nc

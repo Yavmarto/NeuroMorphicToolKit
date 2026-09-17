@@ -1,0 +1,24 @@
+{
+    "id": "primate_reaching",
+    "name": "Primate Motor Prediction",
+    "description": "Non-human primate motor decoding task. Predicts hand reaching trajectories from multi-electrode neural recordings. Evaluates neuromorphic models as brain-computer interface decoders. Primary metric is R² score. Reference task from NeuroBench v1.0.",
+    "task_type": "regression",
+    "executor": "neurobench",
+    "input_spec": {
+        "type": "neural_recording",
+        "synthetic_config": null,
+        "recording_session_id": null,
+        "data_path": null
+    },
+    "assertions": [],
+    "scoring": {
+        "primary_metric": "r2",
+        "secondary_metrics": ["mse"],
+        "higher_is_better": true,
+        "pass_threshold": 0.5
+    },
+    "default_params": {
+        "batch_size": 256
+    },
+    "builtin": true
+}

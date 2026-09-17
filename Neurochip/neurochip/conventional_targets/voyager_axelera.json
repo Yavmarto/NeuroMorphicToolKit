@@ -1,0 +1,11 @@
+{
+    "id": "voyager_axelera",
+    "name": "Axelera Voyager Metis AIPU",
+    "vendor": "Axelera AI",
+    "required_format": "onnx",
+    "artifact_format": "axm",
+    "compile_cmd": "bash scripts/voyager_compile_spike.sh ./voyager-compile-out",
+    "benchmark_cmd": "bash scripts/voyager_aipu_spike.sh ./voyager-compile-out",
+    "requires_hardware": true,
+    "notes": "Compiler-only path (CEL-237) works in Ubuntu 22.04 Docker without Metis. AIPU benchmark (CEL-238) needs native Linux plus Metis board and metis-dkms."
+}

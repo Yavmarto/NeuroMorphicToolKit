@@ -1,0 +1,15 @@
+# Minimal requirements for running training_registry tests in isolation.
+# These are the ONLY packages needed — nothing from the full neurocnl stack.
+#
+# Install:
+#   pip install -r requirements-training-test.txt
+#
+# Run tests (isolation mode — skips package __init__.py):
+#   cd /path/to/neurocnl
+#   python -m pytest neurocnl/tests/test_training_registry.py -v --override-ini="confcutdir=neurocnl/tests"
+#
+# If that still fails due to conftest triggering __init__.py, use direct import:
+#   PYTHONPATH=neurocnl python -c "from neurocnl.training_registry import TrainingResult; print('OK')"
+#   python -m pytest neurocnl/tests/test_training_registry.py -v -p no:conftest
+
+pytest>=7.0.0

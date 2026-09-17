@@ -1,0 +1,17 @@
+# Custom Parameter Example — CNL Spec
+
+The network MUST operate WITH timestep of 1 ms
+
+The network MUST contain an excitatory sensory population of 1 neurons
+The network MUST contain an excitatory motor population of 1 neurons
+
+The sensory population MUST fire ONLY IF membrane potential exceeds 0.7
+The sensory population MUST NOT fire DURING the refractory period of 0.002 seconds
+The sensory population membrane potential MUST decay WITH time constant of 0.02 seconds
+
+The motor population MUST emit a spike ONLY IF membrane potential exceeds 0.9
+The motor population MUST NOT fire DURING the refractory period of 0.003 seconds
+The motor population membrane potential MUST decay WITH time constant of 0.03 seconds
+
+The sensory population MUST project to motor population
+The connection from sensory population to motor population MUST have WITH synaptic weight of 0.5

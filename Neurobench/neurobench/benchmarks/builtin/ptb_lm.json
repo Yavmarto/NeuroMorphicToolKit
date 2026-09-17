@@ -1,0 +1,32 @@
+{
+    "id": "ptb_lm",
+    "name": "PTB Language Modelling (Spiking LSTM)",
+    "description": "Character-level language modelling on Penn Treebank using a spiking LSTM variant. Tests temporal sequence processing in SNNs; lower spike rates translate to lower energy. Primary metric is accuracy (token-level). Reference task from NeuroBench v1.0.",
+    "task_type": "language_modelling",
+    "executor": "cnl",
+    "input_spec": {
+        "type": "synthetic",
+        "synthetic_config": {
+            "vocab_size": 10000,
+            "sequence_length": 70,
+            "n_samples": 3370,
+            "embedding_dim": 64
+        },
+        "recording_session_id": null,
+        "data_path": null
+    },
+    "assertions": [],
+    "scoring": {
+        "primary_metric": "accuracy",
+        "secondary_metrics": ["memory_kb", "energy_uj"],
+        "higher_is_better": true,
+        "pass_threshold": 0.60
+    },
+    "default_params": {
+        "n_steps": 70,
+        "batch_size": 20,
+        "threshold": 0.5,
+        "beta": 0.9
+    },
+    "builtin": true
+}

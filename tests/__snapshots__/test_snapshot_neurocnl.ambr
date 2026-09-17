@@ -1,0 +1,44 @@
+# serializer version: 1
+# name: test_energy_profile_mock_fallback_snapshot
+  dict({
+    'avg_power_uw': 0.25,
+    'per_ensemble_pj': dict({
+      'motor': 150.0,
+      'sensory': 100.0,
+    }),
+    'total_pj': 250.0,
+  })
+# ---
+# name: test_fault_injection_high_error_rate_snapshot
+  dict({
+    'baseline_accuracy': 0.97,
+    'degraded_accuracy': 0.43,
+    'error_rate': 0.8,
+    'failed_nodes': list([
+      'sensory neuron',
+      'motor neuron',
+    ]),
+    'resilience_score': 0.4433,
+  })
+# ---
+# name: test_fault_injection_low_error_rate_snapshot
+  dict({
+    'baseline_accuracy': 0.97,
+    'degraded_accuracy': 0.9025,
+    'error_rate': 0.1,
+    'failed_nodes': list([
+      'sensory neuron',
+    ]),
+    'resilience_score': 0.9304,
+  })
+# ---
+# name: test_fault_injection_zero_error_rate_snapshot
+  dict({
+    'baseline_accuracy': 0.97,
+    'degraded_accuracy': 0.97,
+    'error_rate': 0.0,
+    'failed_nodes': list([
+    ]),
+    'resilience_score': 1.0,
+  })
+# ---

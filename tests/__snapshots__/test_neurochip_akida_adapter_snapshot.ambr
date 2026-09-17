@@ -1,0 +1,29 @@
+# serializer version: 1
+# name: test_akida_runtime_status_snapshot_for_simulator_fallback
+  dict({
+    'device_info': 'AkidaSimulator',
+    'environment_checks': dict({
+      'akida_models_available': False,
+      'cnn2snn_available': True,
+      'host_supported': True,
+      'python_supported': True,
+      'recommended_runtime': 'local_sdk',
+      'tensorflow_available': True,
+    }),
+    'model_summary': dict({
+      'bit_width': 4,
+      'connection_count': 3,
+      'estimated_neurons': 192,
+      'population_count': 2,
+    }),
+    'runtime_target': 'software_fallback',
+    'sdk_available': False,
+    'sdk_issue_detail': 'akida-models is not installed; BrainChip model-zoo workflows are unavailable.',
+    'sdk_issues': list([
+      'akida_models_missing',
+      'sdk_not_available',
+    ]),
+    'sdk_status': 'not_available',
+    'state': 'constructed',
+  })
+# ---

@@ -1,0 +1,118 @@
+# serializer version: 1
+# name: test_constraint_analyze_large_network_snapshot
+  dict({
+    'memory_available_kb': 1024.0,
+    'memory_fit': 'pass',
+    'memory_usage_kb': 116.51,
+    'network_neurons': 3500,
+    'neuron_fit': 'warn',
+    'quantization_needed': False,
+    'recommendations': list([
+    ]),
+    'target_capacity': 4096,
+    'target_id': 'teensy41',
+    'unsupported_features': list([
+    ]),
+    'warnings': list([
+      'Network uses 3500/4096 neurons (>80% capacity)',
+    ]),
+    'weight_bit_width_required': 32,
+  })
+# ---
+# name: test_constraint_analyze_small_network_snapshot
+  dict({
+    'memory_available_kb': 1024.0,
+    'memory_fit': 'pass',
+    'memory_usage_kb': 5.25,
+    'network_neurons': 128,
+    'neuron_fit': 'pass',
+    'quantization_needed': False,
+    'recommendations': list([
+    ]),
+    'target_capacity': 4096,
+    'target_id': 'teensy41',
+    'unsupported_features': list([
+    ]),
+    'warnings': list([
+    ]),
+    'weight_bit_width_required': 8,
+  })
+# ---
+# name: test_estimate_latency_small_network_snapshot
+  dict({
+    'best_case_us': 0.005,
+    'clock_speed_mhz': 600.0,
+    'inter_core_overhead_us': 0.0,
+    'network_depth': 3,
+    'target_id': 'teensy41',
+    'typical_us': 0.005,
+    'worst_case_us': 0.0075,
+  })
+# ---
+# name: test_estimate_power_small_network_snapshot
+  dict({
+    'exceeds_envelope': False,
+    'notes': 'Estimated — measure on real hardware for production.',
+    'per_population_breakdown': list([
+      dict({
+        'energy_pj': 76000.0,
+        'name': 'sensory',
+        'spike_count': 19,
+      }),
+      dict({
+        'energy_pj': 0.0,
+        'name': 'motor',
+        'spike_count': 19,
+      }),
+    ]),
+    'power_envelope_mw': 100.0,
+    'target_id': 'teensy41',
+    'total_energy_pj': 76000.0,
+  })
+# ---
+# name: test_quantize_8bit_snapshot
+  dict({
+    'accuracy': 0.9016,
+    'accuracy_loss_pct': 7.84,
+    'bit_width': 8,
+    'memory_reduction_factor': 4.0,
+    'memory_size_kb': 0.5,
+    'power_estimate_pj': 20480.0,
+    'spike_fidelity': 0.9608,
+    'target_device': <TargetDevice.TEENSY_41: 'Teensy 4.1'>,
+  })
+# ---
+# name: test_quantize_batch_snapshot
+  list([
+    dict({
+      'accuracy': 0.9016,
+      'accuracy_loss_pct': 7.84,
+      'bit_width': 8,
+      'memory_reduction_factor': 4.0,
+      'memory_size_kb': 0.5,
+      'power_estimate_pj': 20480.0,
+      'spike_fidelity': 0.9608,
+      'target_device': <TargetDevice.TEENSY_41: 'Teensy 4.1'>,
+    }),
+    dict({
+      'accuracy': 0.9412,
+      'accuracy_loss_pct': 3.88,
+      'bit_width': 16,
+      'memory_reduction_factor': 2.0,
+      'memory_size_kb': 1.0,
+      'power_estimate_pj': 40960.0,
+      'spike_fidelity': 0.9806,
+      'target_device': <TargetDevice.TEENSY_41: 'Teensy 4.1'>,
+    }),
+    dict({
+      'accuracy': 0.9785,
+      'accuracy_loss_pct': 0.15,
+      'bit_width': 32,
+      'memory_reduction_factor': 1.0,
+      'memory_size_kb': 2.0,
+      'power_estimate_pj': 81920.0,
+      'spike_fidelity': 0.9992,
+      'target_device': <TargetDevice.TEENSY_41: 'Teensy 4.1'>,
+    }),
+  ])
+# ---

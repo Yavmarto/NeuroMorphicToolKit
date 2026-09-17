@@ -1,0 +1,17 @@
+{
+    "id": "akida",
+    "name": "BrainChip Akida",
+    "manufacturer": "BrainChip",
+    "description": "Event-based neural processor offering ultra-low power and high-performance edge AI inference.",
+    "core_count": 80,
+    "neuron_capacity": 1200000,
+    "supported_neuron_models": ["LIF"],
+    "weight_bit_widths": [1, 2, 4],
+    "on_chip_memory_kb": 8192,
+    "io_pins": 32,
+    "clock_speed_mhz": 100.0,
+    "power_envelope_mw": 500.0,
+    "pj_per_spike_op": 10.0,
+    "access": "commercial",
+    "notes": "Available as PCIe card or Soc. Uses MetaTF framework for development."
+}

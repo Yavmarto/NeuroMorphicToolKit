@@ -1,0 +1,59 @@
+name: Verify Akida Package Manifest
+
+# `akidaRuntime.requiredPackages` in modules.json is baked into every backend
+# release image and handed to `pip install` on the end user's paired Akida
+# host. Only six packages are pinned; the resolve pulls ~130 more from live
+# PyPI at install time. Nothing else in the suite checks that the set can
+# actually be installed — the launcher tests only assert the literal strings
+# round-trip — so an incompatible set ships green and then breaks the Akida
+# update for every user at once, with no in-app way out.
+#
+# The nightly run is the load-bearing half: this rots without any commit,
+# because upstream moves (cnn2snn 2.19 switched to quantizeml~=1.2.2 and broke
+# a pin that had been correct for months). The release gate is the backstop.
+
+on:
+  workflow_call:
+  schedule:
+    - cron: '0 4 * * *'  # Nightly at 4 AM UTC
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'nmtk/neuro_toolkit/assets/modules.json'
+      - 'Neurochip/pyproject.toml'
+      - 'scripts/verify_akida_package_manifest.py'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-akida-manifest-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify-manifest:
+    name: Resolve pinned Akida packages
+    # Must be Linux: the manifest has to resolve the way a paired host will,
+    # and the script drives docker to pin the interpreter per supported minor.
+    # GitHub-hosted by default: this gate blocks every Docker release and the
+    # nightly, so it must not depend on a self-hosted machine being awake.
+    # Override with the RELEASE_RUNNER_LINUX repository variable.
+    runs-on: ${{ vars.RELEASE_RUNNER_LINUX || 'ubuntu-latest' }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The script imports nmtk.launcher_control.module_environment, and
+          # Neurochip (whose pyproject carries the matching extra) is a
+          # submodule. GITHUB_TOKEN cannot read sibling private repositories.
+          submodules: recursive
+          token: ${{ secrets.NMTK_SUBMODULE_TOKEN || github.token }}
+
+      - name: Install packaging
+        run: python3 -m pip install --user --upgrade packaging
+
+      # No --python filter: every minor the manifest claims in its pythonRange
+      # is resolved, so the range stays honest rather than only being true for
+      # whichever interpreter the lab host happens to run.
+      - name: Resolve the manifest on every supported interpreter
+        run: python3 scripts/verify_akida_package_manifest.py

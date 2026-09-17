@@ -1,0 +1,25 @@
+{
+  "id": "emg_prosthetic",
+  "name": "EMG for Prosthetic Control",
+  "signal_type": "emg",
+  "description": "Optimized for forearm EMG acquisition targeting prosthetic hand control. Uses 20-450 Hz bandpass to capture the full EMG frequency range, 50 Hz notch to reject power line interference, envelope extraction for smooth motor intent signals, and rate encoding at up to 200 Hz to drive spiking motor controllers.",
+  "electrode_placement": "## Forearm EMG (2-Channel)\n\n1. **Clean skin** with alcohol wipe on the inner forearm\n2. **Channel 0 (Flexor):** Place electrode on the wrist flexor muscle group, approximately 1/3 of the way from the elbow to the wrist on the ventral (palm-side) surface\n3. **Channel 1 (Extensor):** Place electrode on the wrist extensor muscle group, on the dorsal (back) surface of the forearm, directly opposite Channel 0\n4. **Reference:** Place on the bony prominence of the elbow (olecranon)\n5. **Ground:** Place on the wrist, over the ulnar styloid process\n\n**Verification:** Flex and extend the wrist. Channel 0 should activate during flexion, Channel 1 during extension.",
+  "electrode_diagram": "electrode_diagrams/forearm_emg.svg",
+  "channel_mapping": {
+    "0": "flexor",
+    "1": "extensor"
+  },
+  "filter_config": {
+    "bandpass_low_hz": 20.0,
+    "bandpass_high_hz": 450.0,
+    "notch_hz": 50.0,
+    "artifact_rejection": true
+  },
+  "encoding_config": {
+    "method": "rate",
+    "rate_max_hz": 200.0,
+    "temporal_phase_bins": null,
+    "delta_threshold": null
+  },
+  "recommended_device": "cyton"
+}

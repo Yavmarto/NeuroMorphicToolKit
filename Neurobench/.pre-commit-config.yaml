@@ -1,0 +1,46 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+        exclude: "frontend/pubspec.yaml$"
+      - id: check-added-large-files
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.4.4
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+        files: ^neurobench/.*\.py$
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.19.1
+    hooks:
+      - id: mypy
+        args: ["--config-file", "neurobench/pyproject.toml"]
+        files: ^neurobench/.*\.py$
+        additional_dependencies: ["pydantic>=2.0.0", "numpy", "fastapi", "pydantic-settings", "pytest", "sqlalchemy>=2.0"]
+
+  # Flutter frontend (only runs when files under frontend/ change)
+  - repo: local
+    hooks:
+      - id: dart-format
+        name: dart format (frontend)
+        entry: bash -c 'cd frontend && dart format --set-exit-if-changed .'
+        language: system
+        files: ^frontend/.*\.dart$
+        pass_filenames: false
+      - id: flutter-analyze
+        name: flutter analyze (frontend)
+        entry: bash -c 'cd frontend && ~/flutter/bin/flutter analyze'
+        language: system
+        files: ^frontend/.*\.dart$
+        pass_filenames: false
+      - id: flutter-test
+        name: flutter test (frontend)
+        entry: bash -c 'cd frontend && ~/flutter/bin/flutter test'
+        language: system
+        files: ^frontend/.*\.dart$
+        pass_filenames: false
