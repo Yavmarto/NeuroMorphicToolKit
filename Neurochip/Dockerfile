@@ -1,5 +1,5 @@
 # Stage 1: Builder
-FROM python:3.12-slim@sha256:3d5ed973e45820f5ba5e46bd065bd88b3a504ff0724d85980dcd05eab361fcf4 AS builder
+FROM python:3.14-slim@sha256:cad9a2c871761c413caa6fdd6441c783451e740a48aaeba60ae62a8b53525ef6 AS builder
 
 WORKDIR /app
 
@@ -16,7 +16,7 @@ RUN cd neurochip && \
     poetry install --no-root --without dev
 
 # Stage 2: Final
-FROM python:3.12-slim@sha256:3d5ed973e45820f5ba5e46bd065bd88b3a504ff0724d85980dcd05eab361fcf4 AS final
+FROM python:3.14-slim@sha256:cad9a2c871761c413caa6fdd6441c783451e740a48aaeba60ae62a8b53525ef6 AS final
 
 # Create a non-root user
 RUN groupadd -r appgroup && useradd -r -g appgroup appuser
