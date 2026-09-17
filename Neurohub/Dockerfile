@@ -1,5 +1,5 @@
 # Stage 1: Install dependencies
-FROM python:3.12.8-slim-bookworm AS builder
+FROM python:3.14.7-slim-bookworm AS builder
 
 WORKDIR /app
 
@@ -16,7 +16,7 @@ COPY Neurohub/neurohub/ neurohub/
 RUN pip install --no-cache-dir .
 
 # Stage 2: Runtime
-FROM python:3.12.8-slim-bookworm
+FROM python:3.14.7-slim-bookworm
 
 WORKDIR /app
 
