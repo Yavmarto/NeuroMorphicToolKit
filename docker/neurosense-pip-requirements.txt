@@ -8,4 +8,4 @@ scipy
 h5py
 nir>=1.0.5
 python-multipart
-slowapi>=0.1.9
+slowapi>=0.1.10
