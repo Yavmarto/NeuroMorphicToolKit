@@ -16,3 +16,18 @@ repos:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
         types_or: [python, pyi]
+
+  # Keep the app's hash-pinned deployment bundle in step with its sources.
+  # The bundle is what the launcher ships to a host, so a stale copy deploys
+  # old compose instead of the committed one. This hook regenerates it and
+  # fails the commit with the changed files staged for re-add, so drift heals
+  # on the next commit instead of surviving silently.
+  - repo: local
+    hooks:
+      - id: sync-flutter-deployment-assets
+        name: sync Flutter deployment asset bundle
+        description: Regenerate the app's hash-pinned compose bundle when a source changes.
+        entry: python3 scripts/sync_flutter_deployment_assets.py
+        language: system
+        pass_filenames: false
+        files: ^(docker-compose(\.[a-z]+)?\.ya?ml|monitoring/.*\.ya?ml|nmtk/neuro_toolkit/assets/deployment/|scripts/sync_flutter_deployment_assets\.py)
