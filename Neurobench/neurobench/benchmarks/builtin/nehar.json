@@ -1,0 +1,24 @@
+{
+    "id": "nehar",
+    "name": "Neuromorphic Human Activity Recognition",
+    "description": "Human activity recognition benchmark using the WISDM motion sensor dataset. Classifies activities such as walking, jogging, and sitting from accelerometer data. Evaluates classification accuracy and neuromorphic efficiency metrics (activation sparsity, synaptic operations). Reference task from NeuroBench.",
+    "task_type": "classification",
+    "executor": "neurobench",
+    "input_spec": {
+        "type": "timeseries",
+        "synthetic_config": null,
+        "recording_session_id": null,
+        "data_path": null
+    },
+    "assertions": [],
+    "scoring": {
+        "primary_metric": "accuracy",
+        "secondary_metrics": ["activation_sparsity", "synaptic_operations"],
+        "higher_is_better": true,
+        "pass_threshold": 0.70
+    },
+    "default_params": {
+        "batch_size": 256
+    },
+    "builtin": true
+}

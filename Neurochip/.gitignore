@@ -1,0 +1,48 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+!frontend/lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Flutter/Dart
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+
+# Misc
+.DS_Store
+*.swp
+deployments.db
+
+# Test coverage
+.coverage
+htmlcov/
+.hypothesis/
+.pytest_cache/
+
+# Cache
+.cache/
+venv
+frontend/.idea
+.claude/settings.local.json

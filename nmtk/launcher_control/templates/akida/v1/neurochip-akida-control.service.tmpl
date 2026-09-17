@@ -1,0 +1,17 @@
+[Unit]
+Description=Neurochip Akida host control service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=@@SERVICE_USER@@
+Group=@@SERVICE_USER@@
+WorkingDirectory=@@INSTALL_ROOT@@
+EnvironmentFile=@@INSTALL_ROOT@@/env/@@CONTROL_SERVICE_NAME@@.env
+ExecStart=@@VENV_PATH@@/bin/python @@INSTALL_ROOT@@/bin/akida_remote_control_service.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,187 @@
+# serializer version: 1
+# name: test_cnl_to_graph_node_count_and_edge_count
+  dict({
+    'edge_count': 1,
+    'node_count': 2,
+  })
+# ---
+# name: test_cnl_to_graph_single_population_snapshot
+  dict({
+    'edges': list([
+    ]),
+    'metadata': dict({
+      'pan': list([
+        0,
+        0,
+      ]),
+      'zoom': 1.0,
+    }),
+    'nodes': list([
+      dict({
+        'component_id': 'lif_population',
+        'height': 132.0,
+        'id': 'input',
+        'is_visible': True,
+        'parameters': dict({
+          'n_neurons': 200,
+          'name': 'input',
+        }),
+        'position': tuple(
+          100.0,
+          200.0,
+        ),
+        'width': 150.0,
+      }),
+    ]),
+  })
+# ---
+# name: test_cnl_to_graph_three_population_chain_snapshot
+  dict({
+    'edges': list([
+      dict({
+        'id': 'edge_0',
+        'parameters': dict({
+          'synapse_type': 'static_synapse',
+          'weight': 0.3,
+        }),
+        'source_node_id': 'encoder',
+        'source_port': 'out',
+        'target_node_id': 'hidden',
+        'target_port': 'in',
+      }),
+      dict({
+        'id': 'edge_1',
+        'parameters': dict({
+          'synapse_type': 'static_synapse',
+          'weight': 0.7,
+        }),
+        'source_node_id': 'hidden',
+        'source_port': 'out',
+        'target_node_id': 'decoder',
+        'target_port': 'in',
+      }),
+    ]),
+    'metadata': dict({
+      'pan': list([
+        0,
+        0,
+      ]),
+      'zoom': 1.0,
+    }),
+    'nodes': list([
+      dict({
+        'component_id': 'lif_population',
+        'height': 132.0,
+        'id': 'encoder',
+        'is_visible': True,
+        'parameters': dict({
+          'n_neurons': 64,
+          'name': 'encoder',
+        }),
+        'position': tuple(
+          100.0,
+          200.0,
+        ),
+        'width': 150.0,
+      }),
+      dict({
+        'component_id': 'lif_population',
+        'height': 132.0,
+        'id': 'hidden',
+        'is_visible': True,
+        'parameters': dict({
+          'n_neurons': 128,
+          'name': 'hidden',
+        }),
+        'position': tuple(
+          400.0,
+          200.0,
+        ),
+        'width': 150.0,
+      }),
+      dict({
+        'component_id': 'lif_population',
+        'height': 132.0,
+        'id': 'decoder',
+        'is_visible': True,
+        'parameters': dict({
+          'n_neurons': 32,
+          'name': 'decoder',
+        }),
+        'position': tuple(
+          700.0,
+          200.0,
+        ),
+        'width': 150.0,
+      }),
+    ]),
+  })
+# ---
+# name: test_cnl_to_graph_two_population_snapshot
+  dict({
+    'edges': list([
+      dict({
+        'id': 'edge_0',
+        'parameters': dict({
+          'synapse_type': 'static_synapse',
+          'weight': 0.5,
+        }),
+        'source_node_id': 'sensory',
+        'source_port': 'out',
+        'target_node_id': 'motor',
+        'target_port': 'in',
+      }),
+    ]),
+    'metadata': dict({
+      'pan': list([
+        0,
+        0,
+      ]),
+      'zoom': 1.0,
+    }),
+    'nodes': list([
+      dict({
+        'component_id': 'lif_population',
+        'height': 132.0,
+        'id': 'sensory',
+        'is_visible': True,
+        'parameters': dict({
+          'n_neurons': 100,
+          'name': 'sensory',
+        }),
+        'position': tuple(
+          100.0,
+          200.0,
+        ),
+        'width': 150.0,
+      }),
+      dict({
+        'component_id': 'lif_population',
+        'height': 132.0,
+        'id': 'motor',
+        'is_visible': True,
+        'parameters': dict({
+          'n_neurons': 50,
+          'name': 'motor',
+        }),
+        'position': tuple(
+          400.0,
+          200.0,
+        ),
+        'width': 150.0,
+      }),
+    ]),
+  })
+# ---
+# name: test_cnl_to_graph_with_position_hints_snapshot
+  dict({
+    'motor': tuple(
+      450.0,
+      150.0,
+    ),
+    'sensory': tuple(
+      50.0,
+      150.0,
+    ),
+  })
+# ---

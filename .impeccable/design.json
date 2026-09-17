@@ -1,0 +1,358 @@
+{
+  "schemaVersion": 3,
+  "generatedAt": "2026-05-24T12:00:00Z",
+  "title": "Design System: NeuroMorphicToolKit",
+  "foundation": {
+    "system": "Zeta",
+    "package": "zeta_flutter",
+    "version": "1.4.5",
+    "themeId": "nmtk",
+    "description": "Zeta (Zebra Design System) is the foundation. NMTK extends it with Command Blue primary, workbench-mode accents, and a shell token layer."
+  },
+  "zeta": {
+    "primitives": {
+      "note": "Source: zeta_flutter_theme-1.3.0/lib/src/generated/tokens/primitives.g.dart. Dark mode shade60 = primary. Light mode shade60 = primary. Do NOT use primitive values directly in production UI.",
+      "blue": {
+        "dark_primary": "#599fe5",
+        "light_primary": "#0073e6",
+        "dark": { "10":"#101b25","20":"#002c58","30":"#004d99","40":"#0061c2","50":"#0073e6","60":"#599fe5","70":"#7ebeff","80":"#b7dbff","90":"#e2f1ff","100":"#f1f8ff" },
+        "light": { "10":"#f1f8ff","20":"#e2f1ff","30":"#b7dbff","40":"#7ebeff","50":"#599fe5","60":"#0073e6","70":"#0061c2","80":"#004d99","90":"#002c58","100":"#101b25" }
+      },
+      "green": {
+        "dark_primary": "#67b796",
+        "light_primary": "#00864f",
+        "dark": { "10":"#081711","20":"#00331e","30":"#005f38","40":"#006d3f","50":"#00864f","60":"#67b796","70":"#84dab6","80":"#beefdb","90":"#d8ffef","100":"#ecfff7" },
+        "light": { "10":"#ecfff7","20":"#d8ffef","30":"#beefdb","40":"#84dab6","50":"#67b796","60":"#00864f","70":"#006d3f","80":"#005f38","90":"#00331e","100":"#081711" }
+      },
+      "red": {
+        "dark_primary": "#f36170",
+        "light_primary": "#d70015",
+        "dark": { "10":"#220f11","20":"#520008","30":"#8f000e","40":"#b50012","50":"#d70015","60":"#f36170","70":"#f98c97","80":"#ffb3bb","90":"#ffe1e4","100":"#fff0f1" },
+        "light": { "10":"#fff0f1","20":"#ffe1e4","30":"#ffb3bb","40":"#f98c97","50":"#f36170","60":"#d70015","70":"#b50012","80":"#8f000e","90":"#520008","100":"#220f11" }
+      },
+      "teal": {
+        "dark_primary": "#65c4c4",
+        "light_primary": "#1a8080",
+        "dark": { "10":"#0a1616","20":"#003535","30":"#005b5b","40":"#017474","50":"#1a8080","60":"#65c4c4","70":"#91e1e1","80":"#bcfbfb","90":"#d9ffff","100":"#ecffff" },
+        "light": { "10":"#ecffff","20":"#d9ffff","30":"#bcfbfb","40":"#91e1e1","50":"#65c4c4","60":"#1a8080","70":"#017474","80":"#005b5b","90":"#003535","100":"#0a1616" }
+      },
+      "purple": {
+        "dark_primary": "#9b71df",
+        "light_primary": "#7e0cff",
+        "dark": { "10":"#180f22","20":"#260052","30":"#43008f","40":"#6400d6","50":"#7e0cff","60":"#9b71df","70":"#cea4ff","80":"#dcc1fb","90":"#efe1ff","100":"#f7f0ff" },
+        "light": { "10":"#f7f0ff","20":"#efe1ff","30":"#dcc1fb","40":"#cea4ff","50":"#9b71df","60":"#7e0cff","70":"#6400d6","80":"#43008f","90":"#260052","100":"#180f22" }
+      },
+      "orange": {
+        "dark_primary": "#d78d26",
+        "light_primary": "#ae6500",
+        "dark": { "10":"#1e1100","20":"#402600","30":"#764502","40":"#965802","50":"#ae6500","60":"#d78d26","70":"#ffb348","80":"#ffd292","90":"#ffe7c6","100":"#fef2e2" },
+        "light": { "10":"#fef2e2","20":"#ffe7c6","30":"#ffd292","40":"#ffb348","50":"#d78d26","60":"#ae6500","70":"#965802","80":"#764502","90":"#402600","100":"#1e1100" }
+      },
+      "yellow": {
+        "dark_primary": "#c2a728",
+        "light_primary": "#8d7400",
+        "dark": { "10":"#181400","20":"#352b00","30":"#564908","40":"#766200","50":"#8d7400","60":"#c2a728","70":"#dbb91c","80":"#f3d961","90":"#ffea89","100":"#fff7d4" },
+        "light": { "10":"#fff7d4","20":"#ffea89","30":"#f3d961","40":"#dbb91c","50":"#c2a728","60":"#8d7400","70":"#766200","80":"#564908","90":"#352b00","100":"#181400" }
+      },
+      "cool": {
+        "dark_primary": "#8d95a3",
+        "light_primary": "#7a8190",
+        "dark": { "10":"#0c0d0e","20":"#1d1e23","30":"#2c2f36","40":"#545963","50":"#7a8190","60":"#8d95a3","70":"#bbc1cb","80":"#e0e3e9","90":"#f3f6fa","100":"#f8fbff" },
+        "light": { "10":"#f8fbff","20":"#f3f6fa","30":"#e0e3e9","40":"#ced2db","50":"#8d95a3","60":"#7a8190","70":"#545963","80":"#2c2f36","90":"#1d1e23","100":"#0c0d0e" }
+      },
+      "warm": {
+        "dark_primary": "#b9b9b9",
+        "light_primary": "#858585",
+        "dark": { "10":"#151519","20":"#1d1e23","30":"#313131","40":"#585858","50":"#858585","60":"#b9b9b9","70":"#dedede","80":"#ececec","90":"#f6f6f6","100":"#fafafa" },
+        "light": { "10":"#fafafa","20":"#f6f6f6","30":"#ececec","40":"#dedede","50":"#b9b9b9","60":"#858585","70":"#585858","80":"#313131","90":"#1d1e23","100":"#151519" }
+      },
+      "pink": {
+        "dark_primary": "#ee78c3",
+        "light_primary": "#d30589",
+        "dark": { "10":"#2e001e","20":"#640040","30":"#840054","40":"#ab006d","50":"#d30589","60":"#ee78c3","70":"#ff94d8","80":"#ffbee7","90":"#ffe3f5","100":"#fff7fc" },
+        "light": { "10":"#fff7fc","20":"#ffe3f5","30":"#ffbee7","40":"#ff94d8","50":"#ee78c3","60":"#d30589","70":"#ab006d","80":"#840054","90":"#640040","100":"#2e001e" }
+      }
+    },
+    "spacing": {
+      "note": "Source: Zeta spacing docs. 4px grid. Flutter: Zeta.of(context).spacing.*",
+      "none":    0,
+      "minimum": 4,
+      "small":   8,
+      "medium":  12,
+      "large":   16,
+      "xl":      20,
+      "2xl":     24,
+      "3xl":     28,
+      "4xl":     32,
+      "5xl":     36,
+      "6xl":     40,
+      "7xl":     44,
+      "8xl":     48,
+      "9xl":     64,
+      "10xl":    80,
+      "11xl":    96
+    },
+    "radius": {
+      "note": "Source: Zeta radius docs. Flutter: Zeta.of(context).radius.*",
+      "none":    0,
+      "minimal": 4,
+      "rounded": 8,
+      "large":   16,
+      "xl":      24,
+      "full":    360
+    },
+    "typography": {
+      "note": "Zeta spec font is IBM Plex Sans. NMTK overrides to Space Grotesk for all UI chrome.",
+      "zeta_font":  "IBM Plex Sans",
+      "nmtk_font":  "Space Grotesk",
+      "nmtk_mono":  "JetBrains Mono",
+      "scale": {
+        "displayLarge":   { "size": 52, "lineHeight": 60, "weight": 300 },
+        "displayMedium":  { "size": 44, "lineHeight": 52, "weight": 300 },
+        "displaySmall":   { "size": 36, "lineHeight": 40, "weight": 300 },
+        "headlineLarge":  { "size": 32, "lineHeight": 36, "weight": 500 },
+        "headlineMedium": { "size": 28, "lineHeight": 32, "weight": 500 },
+        "headlineSmall":  { "size": 24, "lineHeight": 28, "weight": 500 },
+        "titleLarge":     { "size": 20, "lineHeight": 24, "weight": 500 },
+        "titleMedium":    { "size": 16, "lineHeight": 20, "weight": 500 },
+        "titleSmall":     { "size": 12, "lineHeight": 16, "weight": 500 },
+        "bodyLarge":      { "size": 20, "lineHeight": 24, "weight": 400 },
+        "bodyMedium":     { "size": 16, "lineHeight": 24, "weight": 400 },
+        "bodySmall":      { "size": 14, "lineHeight": 18, "weight": 400 },
+        "bodyXSmall":     { "size": 12, "lineHeight": 16, "weight": 400 },
+        "labelLarge":     { "size": 16, "lineHeight": 24, "weight": 500 },
+        "labelMedium":    { "size": 14, "lineHeight": 20, "weight": 500 },
+        "labelSmall":     { "size": 12, "lineHeight": 16, "weight": 500 },
+        "labelIndicator": { "size": 12, "lineHeight": 14, "weight": 500 }
+      }
+    }
+  },
+  "nmtk": {
+    "colors": {
+      "note": "NMTK brand overrides applied on top of Zeta via ZetaCustomTheme + NmtkShellTokens.",
+      "primary": {
+        "command-blue":       "#1337EC",
+        "command-blue-hover": "#0D2EC0",
+        "command-blue-press": "#0B28A8"
+      },
+      "mode_accents": {
+        "studio-violet":        "#8B5CF6",
+        "studio-violet-light":  "#7C3AED",
+        "instrument-cyan":      "#06B6D4",
+        "instrument-teal":      "#0F766E"
+      },
+      "status": {
+        "healthy":  "#22C55E",
+        "running":  "#38BDF8",
+        "degraded": "#F59E0B",
+        "warning":  "#F97316",
+        "error":    "#EF4444",
+        "live":     "#E11D48"
+      },
+      "surface_dark": {
+        "canvas":           "#0A0F1D",
+        "shell-bg":         "#0B1020",
+        "top-bar":          "#101728",
+        "workspace-bar":    "#0D1424",
+        "utility-panel":    "#111A2C",
+        "chrome-border":    "#243044",
+        "subtle-border":    "#1A2436",
+        "metadata":         "#9BA8BC"
+      },
+      "surface_light": {
+        "canvas":           "#FFFFFF",
+        "shell-bg":         "#F3F5FA",
+        "top-bar":          "#FFFFFF",
+        "workspace-bar":    "#F7F9FC",
+        "utility-panel":    "#FAFBFD",
+        "chrome-border":    "#D9E0EA",
+        "subtle-border":    "#E7ECF3",
+        "metadata":         "#5B677C"
+      }
+    },
+    "typography": {
+      "display":  { "fontFamily": "Space Grotesk", "size": "28px", "weight": 700, "lineHeight": 1.1 },
+      "headline": { "fontFamily": "Space Grotesk", "size": "20px", "weight": 600, "lineHeight": 1.2 },
+      "title":    { "fontFamily": "Space Grotesk", "size": "16px", "weight": 700, "lineHeight": 1.3 },
+      "body":     { "fontFamily": "Space Grotesk", "size": "14px", "weight": 400, "lineHeight": 1.5 },
+      "label":    { "fontFamily": "Space Grotesk", "size": "12px", "weight": 500, "lineHeight": 1.4, "letterSpacing": "0.5px" },
+      "mono":     { "fontFamily": "JetBrains Mono", "size": "13px", "weight": 400, "lineHeight": 1.6 }
+    },
+    "radius": {
+      "sm":     12,
+      "md":     16,
+      "lg":     22,
+      "card":   24,
+      "dialog": 28,
+      "input":  8,
+      "chip":   360
+    },
+    "spacing": {
+      "xs":  8,
+      "sm":  12,
+      "md":  16,
+      "lg":  24,
+      "xl":  32
+    },
+    "chrome": {
+      "topAppBarHeight":   52,
+      "workspaceBarHeight": 48,
+      "utilityPanelWidth": 320
+    }
+  },
+  "extensions": {
+    "motion": [
+      { "name": "fast",          "value": "120ms ease-out",      "purpose": "Hover states, micro-feedback, tooltip appearance." },
+      { "name": "standard",      "value": "180ms ease-in-out",   "purpose": "Expand/collapse, chip open, standard transitions." },
+      { "name": "emphasized",    "value": "240ms ease-in-out",   "purpose": "Panel transitions, loading entrance/exit." },
+      { "name": "status-pulse",  "value": "900ms ease-in-out infinite", "purpose": "Status dot oscillation for degraded/error states only." },
+      { "name": "tap-scale",     "value": "0.96",                "purpose": "Scale factor on button press-down." }
+    ],
+    "breakpoints": [
+      { "name": "compact", "value": 600,  "purpose": "Shell adapts to compact layout below this width." },
+      { "name": "normal",  "value": 1080, "purpose": "Standard desktop workspace layout." },
+      { "name": "wide",    "value": 1280, "purpose": "Wide desktop; utility panel always visible." }
+    ],
+    "shadows": [],
+    "colorMeta": {
+      "command-blue": {
+        "role": "primary",
+        "displayName": "Command Blue",
+        "zetaMapping": "ZetaCustomTheme(id: 'nmtk', primary: Color(0xFF1337EC))",
+        "usage": "Primary actions, active navigation, command-mode chrome. Max 15% of any surface."
+      },
+      "studio-violet": {
+        "role": "mode-accent",
+        "displayName": "Studio Violet",
+        "usage": "neurocnl and Neurosim surfaces only. Never on shell, Neurohub, or instrument surfaces."
+      },
+      "instrument-cyan": {
+        "role": "mode-accent",
+        "displayName": "Instrument Cyan",
+        "usage": "Neurosense, Neurochip, Neurobench surfaces only."
+      },
+      "state-healthy": {
+        "role": "semantic-status",
+        "displayName": "Healthy",
+        "meaning": "System or module operating normally. Exactly one meaning: never decorative."
+      },
+      "state-running": {
+        "role": "semantic-status",
+        "displayName": "Running",
+        "meaning": "Actively executing; process in progress."
+      },
+      "state-degraded": {
+        "role": "semantic-status",
+        "displayName": "Degraded",
+        "meaning": "Reduced capability; workflow can continue."
+      },
+      "state-warning": {
+        "role": "semantic-status",
+        "displayName": "Warning",
+        "meaning": "Threshold approaching or non-fatal issue."
+      },
+      "state-error": {
+        "role": "semantic-status",
+        "displayName": "Error",
+        "meaning": "Workflow cannot continue without intervention."
+      },
+      "state-live": {
+        "role": "semantic-status",
+        "displayName": "Live",
+        "meaning": "Hardware actively connected, recording, or streaming."
+      }
+    },
+    "typographyMeta": {
+      "display":  { "purpose": "Module-level headers and major surface titles. Used sparingly." },
+      "headline": { "purpose": "Section headers within module surfaces and panel titles." },
+      "title":    { "purpose": "Card headers, workspace labels, group headers." },
+      "body":     { "purpose": "All readable content: descriptions, documentation, pipeline step text." },
+      "label":    { "purpose": "Status labels, metadata, chip text, navigation items. The workhorse at density." },
+      "mono":     { "purpose": "Code, CNL spec text, terminal output, numeric telemetry. Never for chrome." }
+    }
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "zetaComponent": "ZetaButton",
+      "description": "Definitive action for a workflow step. Command-blue fill, white label.",
+      "html": "<button class=\"ds-btn-primary\">Run Pipeline</button>",
+      "css": ".ds-btn-primary { background: #1337EC; color: #ffffff; padding: 10px 20px; border: none; border-radius: 16px; font-family: 'Space Grotesk', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 120ms ease-out, transform 120ms ease-out; } .ds-btn-primary:hover { background: #0D2EC0; } .ds-btn-primary:active { transform: scale(0.96); } .ds-btn-primary:focus-visible { outline: 2px solid rgba(19,55,236,0.4); outline-offset: 2px; } .ds-btn-primary:disabled { opacity: 0.38; cursor: not-allowed; }"
+    },
+    {
+      "name": "Outlined Button",
+      "kind": "button",
+      "zetaComponent": "ZetaButton(type: ZetaButtonType.outline)",
+      "description": "Secondary action. Transparent with command-blue border.",
+      "html": "<button class=\"ds-btn-outlined\">View Logs</button>",
+      "css": ".ds-btn-outlined { background: rgba(19,55,236,0.08); color: #1337EC; padding: 10px 20px; border: 1px solid rgba(19,55,236,0.35); border-radius: 16px; font-family: 'Space Grotesk', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 120ms ease-out; } .ds-btn-outlined:hover { background: rgba(19,55,236,0.18); } .ds-btn-outlined:active { transform: scale(0.96); } .ds-btn-outlined:disabled { opacity: 0.38; cursor: not-allowed; }"
+    },
+    {
+      "name": "Surface Card (Dark)",
+      "kind": "card",
+      "zetaComponent": "SurfaceCard / ZetaCardContainer",
+      "description": "Primary bounded container. Dark theme. Flat, zero elevation.",
+      "html": "<div class=\"ds-card-dark\"><span class=\"ds-card-title\">Model Deployment</span><span class=\"ds-card-sub\">AKD1000 · Target ready</span><div class=\"ds-card-body\">Content here.</div></div>",
+      "css": ".ds-card-dark { background: #101728; border: 1px solid rgba(36,48,68,0.65); border-radius: 24px; padding: 14px; font-family: 'Space Grotesk', sans-serif; } .ds-card-title { display:block; font-size:16px; font-weight:700; color:#e8eaf0; line-height:1.3; } .ds-card-sub { display:block; font-size:12px; color:#9BA8BC; margin-top:2px; } .ds-card-body { margin-top:10px; font-size:14px; color:#c8cfde; line-height:1.5; }"
+    },
+    {
+      "name": "Surface Card (Light)",
+      "kind": "card",
+      "zetaComponent": "SurfaceCard / ZetaCardContainer",
+      "description": "Primary bounded container. Light theme. Flat, zero elevation.",
+      "html": "<div class=\"ds-card-light\"><span class=\"ds-card-title-l\">Model Deployment</span><span class=\"ds-card-sub-l\">AKD1000 · Target ready</span><div class=\"ds-card-body-l\">Content here.</div></div>",
+      "css": ".ds-card-light { background: #FFFFFF; border: 1px solid rgba(217,224,234,0.65); border-radius: 24px; padding: 14px; font-family: 'Space Grotesk', sans-serif; } .ds-card-title-l { display:block; font-size:16px; font-weight:700; color:#1a2030; line-height:1.3; } .ds-card-sub-l { display:block; font-size:12px; color:#5B677C; margin-top:2px; } .ds-card-body-l { margin-top:10px; font-size:14px; color:#3a4558; line-height:1.5; }"
+    },
+    {
+      "name": "Workspace Chip (Active)",
+      "kind": "chip",
+      "zetaComponent": "NMTK-specific (WorkspaceSwitcherBar)",
+      "description": "Active module chip. Mode-accent background, full pill, command variant shown.",
+      "html": "<div class=\"ds-wchip ds-wchip--active\"><span>neurocnl</span><span class=\"ds-wdot\" style=\"background:#22C55E\"></span></div>",
+      "css": ".ds-wchip { display:inline-flex; align-items:center; gap:6px; padding:5px 12px; border-radius:999px; font-family:'Space Grotesk',sans-serif; font-size:12px; font-weight:500; cursor:pointer; transition:background 120ms ease-out; } .ds-wchip--active { background:#1337EC; color:#fff; } .ds-wchip--idle { background:rgba(155,168,188,0.10); color:#9BA8BC; } .ds-wchip--idle:hover { background:rgba(155,168,188,0.20); } .ds-wdot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }"
+    },
+    {
+      "name": "Shell Status Badge",
+      "kind": "badge",
+      "zetaComponent": "ZetaStatusLabel / ShellStatusBadge",
+      "description": "Compact suite-level health indicator. All six operational states.",
+      "html": "<div style=\"display:flex;gap:8px;flex-wrap:wrap;\"><div class=\"ds-sbadge ds-sbadge--healthy\"><span class=\"ds-sdot\"></span><span>ready</span></div><div class=\"ds-sbadge ds-sbadge--running\"><span class=\"ds-sdot\"></span><span>running</span></div><div class=\"ds-sbadge ds-sbadge--error\"><span class=\"ds-sdot\"></span><span>error</span></div></div>",
+      "css": ".ds-sbadge { display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:12px; font-family:'Space Grotesk',sans-serif; font-size:12px; font-weight:500; } .ds-sdot { width:7px; height:7px; border-radius:50%; flex-shrink:0; } .ds-sbadge--healthy { color:#166534; background:rgba(34,197,94,0.12); } .ds-sbadge--healthy .ds-sdot { background:#22C55E; } .ds-sbadge--running { color:#0C4A6E; background:rgba(56,189,248,0.12); } .ds-sbadge--running .ds-sdot { background:#38BDF8; } .ds-sbadge--degraded { color:#78350F; background:rgba(245,158,11,0.12); } .ds-sbadge--degraded .ds-sdot { background:#F59E0B; } .ds-sbadge--error { color:#7F1D1D; background:rgba(239,68,68,0.12); } .ds-sbadge--error .ds-sdot { background:#EF4444; } .ds-sbadge--live { color:#7F1D1D; background:rgba(225,29,72,0.12); } .ds-sbadge--live .ds-sdot { background:#E11D48; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Transparent Machine",
+    "overview": "NMTK is a suite where complexity is accessible on demand. The user sees a calm, controlled workspace. Behind that surface, pipeline state, hardware diagnostics, and process telemetry are always one interaction away.\n\nFoundation: Zeta (zeta_flutter ^1.4.5). NMTK custom theme id 'nmtk' sets Command Blue #1337EC as primary. Shell tokens (NmtkShellTokens) layer dark-navy and light-silver-blue surfaces on top. Three workbench modes carry distinct accents within one shared type and shape language.\n\nTwo symmetrical themes: dark navy and light silver-blue. Neither is the default; both are fully specified.",
+    "rules": [
+      { "name": "Semantic Purity", "body": "Status colors have one job each. They are never used for decoration, emphasis, or branding.", "section": "colors" },
+      { "name": "Mode Palette", "body": "Command blue, studio violet, and instrument cyan are applied only to their assigned modules. These assignments never cross.", "section": "colors" },
+      { "name": "No-Oversize", "body": "Hierarchy through weight contrast before scale. 28px is the ceiling.", "section": "typography" },
+      { "name": "Mono Boundary", "body": "JetBrains Mono is reserved for code, CNL text, and numeric telemetry. Never for chrome.", "section": "typography" },
+      { "name": "Flat-By-Default", "body": "Surfaces are flat at rest. State changes produce tint shifts or border accents, not shadows.", "section": "elevation" },
+      { "name": "Border-Not-Shadow", "body": "Cards use a 1px border to define their bounds. Do not add a shadow.", "section": "elevation" },
+      { "name": "No-Nested-Cards", "body": "A card inside a card is always wrong.", "section": "components" },
+      { "name": "Inline-Over-Modal", "body": "Modals are for blocking decisions only. Use utility panel or inline expansion first.", "section": "components" }
+    ],
+    "dos": [
+      "Apply mode palettes strictly: command blue → shell + Neurohub; studio violet → neurocnl + Neurosim; instrument cyan/teal → Neurosense + Neurochip + Neurobench.",
+      "Use tonal depth (background steps) not shadows for surface hierarchy.",
+      "Achieve typographic hierarchy through Space Grotesk weight contrast (w400 vs w700) before size.",
+      "Map every status indicator to exactly one of the six semantic states.",
+      "Access Zeta semantics via Zeta.of(context).colors, .spacing, .radius.",
+      "Use ZetaButton, ZetaTextInput, ZetaAvatar, ZetaStatusLabel where the Zeta component fits.",
+      "Keep top app bar at 52px and workspace bar at 48px.",
+      "Use the pulsing status dot exclusively for degraded and error states."
+    ],
+    "donts": [
+      "Use Zeta primitive swatches directly in production UI.",
+      "Use status colors decoratively.",
+      "Add box shadows. Use tonal surface steps instead.",
+      "Nest cards.",
+      "Use side-stripe borders (border-left/right > 1px as colored accent).",
+      "Use gradient text (background-clip: text with a gradient).",
+      "Reach for a modal first.",
+      "Let NMTK feel like consumer SaaS, Arduino IDE, dark hacker terminal, SAP/Jira, ZBrush/Blender, or VS Code."
+    ]
+  }
+}

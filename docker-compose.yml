@@ -1,0 +1,415 @@
+x-healthcheck-defaults: &default-healthcheck-params
+  interval: 10s
+  timeout: 5s
+  retries: 5
+
+services:
+
+  suite_api:
+    build:
+      context: .
+      dockerfile: suite_api/Dockerfile
+    ports:
+      - "${SUITE_API_PORT:-9000}:9000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - NEUROCNL_FIREBASE_BUCKET=${NEUROCNL_FIREBASE_BUCKET:-nmtk-41e11.firebasestorage.app}
+      # Phase 4 worker URLs — must match Docker service names when profiles are active
+      - NEUROSENSE_HW_WORKER_URL=http://neurosense-hw-worker:8004
+      - NEUROBENCH_RUNNER_URL=http://neurobench-runner-worker:8003
+      - NEUROCHIP_HW_WORKER_URL=http://neurochip-hw-worker:8002
+      - NEUROCNL_PHYSICS_WORKER_URL=http://neurocnl-physics-worker:8006
+      - NEUROCNL_LAVA_WORKER_URL=http://lava-backend:8012
+      - NEUROCNL_BRIAN2_WORKER_URL=http://brian2-backend:8013
+      - SNN_MLIR_COMPILER_WORKER_URL=http://snn-mlir-compiler:8007
+      # Remote Lava timeout — must exceed Lava's cold-start compilation (30–90 s).
+      # Increase this if the warm-up isn't active or the network is unusually large.
+      - NEUROCNL_LAVA_REMOTE_TIMEOUT_S=${NEUROCNL_LAVA_REMOTE_TIMEOUT_S:-120}
+      # Jupyter worker — internal URL for health probing
+      - JUPYTER_WORKER_URL=http://jupyter-server:8008
+      # Public URL returned to the Flutter WebView.  Override on remote deployments
+      # with the host's reachable address, e.g. http://my-server:8008/lab
+      - JUPYTER_PUBLIC_URL=${JUPYTER_PUBLIC_URL:-http://localhost:8008/lab}
+      # Local mirror dir for kernel_runner; notebooks are also published to Jupyter via Contents API
+      - JUPYTER_NOTEBOOK_DIR=/home/app/notebooks
+      # Where sqlite databases go. Without this the default is "." — i.e. WORKDIR /repo,
+      # which in dev is the host bind mount (docker-compose.dev.yml) that the non-root `app`
+      # user (suite_api/Dockerfile:73) cannot create files in. Both
+      # Neurobench/neurobench/app/services/result_store.py:9 and suite_api/config.py:8 read
+      # this, and both were writing into /repo. /home/app/data is created and chowned in
+      # suite_api/Dockerfile:58-61. neurocnl-physics-worker already does this (see below).
+      - NEUROCNL_DATA_DIR=/home/app/data
+      - NEUROSIM_PROJECT_DB=/home/app/data/neurosim/projects.db
+      - NEUROCHIP_DEPLOYMENT_DB=/home/app/data/neurochip/deployments.db
+      - GITHUB_OAUTH_CLIENT_ID=${GITHUB_OAUTH_CLIENT_ID:-}
+    volumes:
+      - suite_api_data:/home/app/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9000/api/suite/health')"]
+      start_period: 120s
+      <<: *default-healthcheck-params
+    depends_on:
+      lava-backend:
+        # Lava is an optional accelerator for the core API. A cold or
+        # degraded Lava install must not prevent suite_api from starting.
+        condition: service_started
+        required: false
+      brian2-backend:
+        condition: service_started
+        required: false
+    restart: unless-stopped
+    networks:
+      - backend-net
+
+  # ── Phase 4 workers — started only with the matching Docker Compose profile ──
+
+  neurosense-hw-worker:
+    profiles: ["neurosense"]
+    build:
+      context: .
+      dockerfile: workers/neurosense_hw/Dockerfile
+    ports:
+      - "${NEUROSENSE_PORT:-8004}:8004"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - NEUROSENSE_RECORDINGS_DIR=/app/recordings
+    volumes:
+      - .:/repo:ro
+      - neurosense-recordings:/app/recordings
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8004/health')"]
+      start_period: 90s
+      <<: *default-healthcheck-params
+    restart: unless-stopped
+    networks:
+      - backend-net
+
+  neurobench-runner-worker:
+    build:
+      context: .
+      dockerfile: workers/neurobench_runner/Dockerfile
+    ports:
+      - "${NEUROBENCH_PORT:-8003}:8003"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - NEUROCNL_DATA_DIR=/app/data
+      - NEUROBENCH_DATA_DIR=/app/data
+      - SNN_MLIR_COMPILER_WORKER_URL=http://snn-mlir-compiler:8007
+    volumes:
+      - .:/repo:ro
+      - neurobench-data:/app/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8003/health')"]
+      start_period: 90s
+      <<: *default-healthcheck-params
+    restart: unless-stopped
+    networks:
+      - backend-net
+
+  neurochip-hw-worker:
+    build:
+      context: .
+      dockerfile: workers/neurochip_hw/Dockerfile
+    ports:
+      - "${NEUROCHIP_PORT:-8002}:8002"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - NEUROCHIP_LAVA_BACKEND_URL=http://lava-backend:8012
+      - NMTK_DATA_DIR=/app/data
+      - NEUROCHIP_AKIDA_MODEL_DIR=/app/data/akida-models
+    volumes:
+      - .:/repo:ro
+      - neurochip-data:/app/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8002/health')"]
+      start_period: 90s
+      <<: *default-healthcheck-params
+    restart: unless-stopped
+    depends_on:
+      lava-backend:
+        # The worker exposes a stable health endpoint even when optional
+        # Lava support is unavailable; Lava operations report that capability
+        # failure at request time instead of blocking the core stack.
+        condition: service_started
+        required: false
+    networks:
+      - backend-net
+
+  lava-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.lava
+    ports:
+      - "${LAVA_BACKEND_PORT:-8012}:8012"
+    environment:
+      - PYTHONUNBUFFERED=1
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8012/health')"]
+      start_period: 120s
+      <<: *default-healthcheck-params
+    restart: unless-stopped
+    networks:
+      - backend-net
+
+  brian2-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.brian2
+    ports:
+      - "${BRIAN2_BACKEND_PORT:-8013}:8013"
+    environment:
+      - PYTHONUNBUFFERED=1
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8013/health')"]
+      start_period: 90s
+      <<: *default-healthcheck-params
+    restart: unless-stopped
+    networks:
+      - backend-net
+
+  launcher-control:
+    build:
+      context: .
+      dockerfile: Dockerfile.control
+    ports:
+      # LAUNCHER_CONTROL_PORT changes the host-side port only; container always listens on 8091.
+      # Default is 8090 to match the Flutter app's NMTK_CONTROL_API_PORT default so that
+      # entering a bare IP address (e.g. 192.168.2.90) connects without requiring a port suffix.
+      - "${LAUNCHER_CONTROL_PORT:-8090}:8091"
+    extra_hosts:
+      # Allows the launcher to probe externally managed services (Jupyter, lava-backend)
+      # via the host's published port mappings rather than the container loopback.
+      - "host.docker.internal:host-gateway"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - NMTK_STATE_DIR=/app/state
+      - NMTK_DATA_DIR=/app/data
+      - NMTK_BACKEND_DEPLOYMENT_READY=1
+      # launcher-control is a separate container, so Suite API must be
+      # checked on the compose network rather than its own loopback.
+      - NMTK_SUITE_API_URL=http://suite_api:9000
+      # Internal Docker network URL for the Neurochip hardware worker.
+      # This is the containerized stub worker (no Akida SDK installed — see
+      # workers/neurochip_hw/Dockerfile), reachable from backend-net directly.
+      # On boxes with a real Akida card, docker-compose.akida-native.yml
+      # overrides this to point at the native neurochip.service instead
+      # (via host.docker.internal), which has the SDK and real hardware access.
+      - NEUROCHIP_HW_WORKER_URL=http://neurochip-hw-worker:8002
+    volumes:
+      - launcher_control_state:/app/state
+      - launcher_control_data:/app/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8091/health')"]
+      start_period: 90s
+      <<: *default-healthcheck-params
+    restart: unless-stopped
+    networks:
+      - backend-net
+
+  neurocnl-physics-worker:
+    build:
+      context: .
+      dockerfile: workers/neurocnl_physics/Dockerfile
+    ports:
+      - "${NEUROCNL_PHYSICS_PORT:-8006}:8006"
+    environment:
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - .:/repo:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8006/health')"]
+      start_period: 90s
+      <<: *default-healthcheck-params
+    restart: unless-stopped
+    networks:
+      - backend-net
+
+  snn-mlir-compiler:
+    build:
+      context: .
+      dockerfile: workers/snn_mlir_compiler/Dockerfile
+    ports:
+      - "${SNN_MLIR_COMPILER_PORT:-8007}:8007"
+    environment:
+      - PYTHONUNBUFFERED=1
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8007/health')"]
+      start_period: 90s
+      <<: *default-healthcheck-params
+    restart: unless-stopped
+    networks:
+      - backend-net
+
+  jupyter-server:
+    build:
+      context: .
+      dockerfile: workers/jupyter_server/Dockerfile
+    ports:
+      - "${JUPYTER_PORT:-8008}:8008"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - LAVA_BACKEND_URL=http://lava-backend:8012
+      - SUITE_API_URL=http://suite_api:9000
+    volumes:
+      - jupyter_notebooks:/home/appuser
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8008/api/status')"]
+      start_period: 120s
+      <<: *default-healthcheck-params
+    restart: unless-stopped
+    depends_on:
+      suite_api:
+        condition: service_started
+      lava-backend:
+        condition: service_started
+        required: false
+    networks:
+      - backend-net
+
+  # ── Observability stack — started only with the `monitoring` profile ──
+  #
+  # Opt-in. Nothing here starts on a normal `docker compose up -d` or on an
+  # end-user deployment. Enable it explicitly with:
+  #
+  #   docker compose --profile monitoring up -d        (or: make monitoring-up)
+  #
+  # Ports bind to ${MONITORING_BIND:-127.0.0.1} so the stack is not exposed on
+  # the LAN by default. Override MONITORING_BIND=0.0.0.0 only on a trusted
+  # network. See monitoring/README.md for the operator workflow and the
+  # smoke test (make monitoring-smoke).
+
+  prometheus:
+    profiles: ["monitoring"]
+    image: prom/prometheus:v2.54.1
+    ports:
+      - "${MONITORING_BIND:-127.0.0.1}:${PROMETHEUS_PORT:-9090}:9090"
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-15d}"
+      - "--web.enable-lifecycle"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
+      - prometheus-data:/prometheus
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:9090/-/ready"]
+      start_period: 30s
+      <<: *default-healthcheck-params
+    restart: unless-stopped
+    networks:
+      - backend-net
+
+  alertmanager:
+    profiles: ["monitoring"]
+    image: prom/alertmanager:v0.28.1
+    # alertmanager.yml reads the Slack webhook from a file, and Alertmanager
+    # cannot expand environment variables, so entrypoint.sh materializes that
+    # file from SLACK_WEBHOOK_URL before exec'ing alertmanager.
+    entrypoint: ["/bin/sh", "/etc/alertmanager/entrypoint.sh"]
+    ports:
+      - "${MONITORING_BIND:-127.0.0.1}:${ALERTMANAGER_PORT:-9093}:9093"
+    environment:
+      # Default is a local no-op URL so the profile starts with no secrets set.
+      # Set SLACK_WEBHOOK_URL to the real #nmtk-alerts incoming webhook or no
+      # alert will reach Slack. See monitoring/README.md.
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-http://127.0.0.1:9093/slack}
+    volumes:
+      - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ./monitoring/alertmanager/entrypoint.sh:/etc/alertmanager/entrypoint.sh:ro
+      - alertmanager-data:/alertmanager
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:9093/-/healthy"]
+      start_period: 20s
+      <<: *default-healthcheck-params
+    restart: unless-stopped
+    networks:
+      - backend-net
+
+  loki:
+    profiles: ["monitoring"]
+    image: grafana/loki:3.1.1
+    ports:
+      - "${MONITORING_BIND:-127.0.0.1}:${LOKI_PORT:-3100}:3100"
+    command:
+      - "-config.file=/etc/loki/local-config.yaml"
+    volumes:
+      - ./monitoring/loki/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki-data:/loki
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:3100/ready"]
+      start_period: 60s
+      retries: 10
+      <<: *default-healthcheck-params
+    restart: unless-stopped
+    networks:
+      - backend-net
+
+  promtail:
+    profiles: ["monitoring"]
+    image: grafana/promtail:3.1.1
+    ports:
+      # Promtail's own API (log discovery status / readiness).
+      - "${MONITORING_BIND:-127.0.0.1}:${PROMTAIL_PORT:-9080}:9080"
+    command:
+      - "-config.file=/etc/promtail/config.yml"
+    environment:
+      # Rootless Podman exposes the API socket at a different path than Docker.
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    volumes:
+      - ./monitoring/promtail/promtail-config.yml:/etc/promtail/config.yml:ro
+      - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock:ro
+      - promtail-positions:/tmp
+    depends_on:
+      loki:
+        condition: service_healthy
+        required: false
+    restart: unless-stopped
+    networks:
+      - backend-net
+
+  grafana:
+    profiles: ["monitoring"]
+    image: grafana/grafana:11.2.0
+    ports:
+      - "${MONITORING_BIND:-127.0.0.1}:${GRAFANA_PORT:-3000}:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_AUTH_ANONYMOUS_ENABLED=${GRAFANA_ANONYMOUS_ENABLED:-false}
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    healthcheck:
+      # First boot on a fresh volume runs ~600 SQLite migrations and can take
+      # several minutes under load; only then does /api/health answer.
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:3000/api/health"]
+      start_period: 180s
+      retries: 24
+      <<: *default-healthcheck-params
+    depends_on:
+      - prometheus
+      - loki
+    restart: unless-stopped
+    networks:
+      - backend-net
+
+networks:
+  backend-net:
+    driver: bridge
+
+volumes:
+  jupyter_notebooks:
+  launcher_control_state:
+  launcher_control_data:
+  suite_api_data:
+  neurobench-data:
+  neurochip-data:
+  neurosense-recordings:
+  prometheus-data:
+  alertmanager-data:
+  loki-data:
+  promtail-positions:
+  grafana-data:

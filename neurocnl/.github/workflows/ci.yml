@@ -1,0 +1,146 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+    paths:
+      - 'neurocnl/**'
+      - 'pyproject.toml'
+      - '.github/workflows/ci.yml'
+  pull_request:
+    branches: [main, dev]
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: [self-hosted, Linux, X64]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install lint deps
+        run: pip install ruff mypy pydantic "numpy<2" nengo nir
+
+      - name: Ruff
+        run: ruff check neurocnl/
+
+      - name: Mypy (core packages)
+        run: |
+          mypy neurocnl/cnl \
+               neurocnl/ir \
+               neurocnl/backends \
+               neurocnl/layers \
+               neurocnl/generation \
+               neurocnl/pipeline.py \
+               neurocnl/planner.py \
+               --ignore-missing-imports \
+               --explicit-package-bases
+        working-directory: neurocnl
+
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - [self-hosted, macOS, ARM64]
+          - [self-hosted, Windows, X64]
+          - [self-hosted, Linux, X64]
+        python-version: ["3.11", "3.12"]
+    runs-on: ${{ matrix.os }}
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Add Git to PATH (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          if exist "C:\Program Files\Git\cmd\git.exe" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
+          if exist "C:\Program Files\Git\bin\git.exe" echo C:\Program Files\Git\bin>>%GITHUB_PATH%
+          if exist "C:\Program Files (x86)\Git\cmd\git.exe" echo C:\Program Files (x86)\Git\cmd>>%GITHUB_PATH%
+
+      - uses: actions/checkout@v4
+
+      - name: Configure tool cache
+        shell: bash
+        run: |
+          TOOL_CACHE="${RUNNER_TEMP}/_tool_cache"
+          mkdir -p "$TOOL_CACHE"
+          echo "AGENT_TOOLSDIRECTORY=$TOOL_CACHE" >> "$GITHUB_ENV"
+          echo "RUNNER_TOOL_CACHE=$TOOL_CACHE" >> "$GITHUB_ENV"
+      - name: Install Python via Homebrew (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install python@${{ matrix.python-version }} || true
+          echo "$(brew --prefix python@${{ matrix.python-version }})/bin" >> "$GITHUB_PATH"
+
+      - name: Set up Python ${{ matrix.python-version }}
+        if: runner.os != 'macOS'
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+        env:
+          AGENT_TOOLSDIRECTORY: ${{ github.workspace }}/_tool_cache
+          RUNNER_TOOL_CACHE: ${{ github.workspace }}/_tool_cache
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-cov nengo "numpy<2" nir pydantic hypothesis
+
+      - name: Run tests
+        run: pytest neurocnl/ -v --tb=short --cov=neurocnl --cov-fail-under=70
+
+  test-backend:
+    runs-on: self-hosted
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install .
+          pip install aiosqlite pytest pytest-asyncio httpx uvicorn fastapi
+      - name: Run backend tests
+        run: PYTHONPATH=. pytest backend/tests/ -v
+      - name: Run studio backend smoke test
+        run: NEUROCNL_RUN_BACKEND_SMOKE=1 PYTHONPATH=. pytest tests/test_backend_smoke.py -v
+
+  install-smoke:
+    needs: [lint]
+    runs-on: [self-hosted, Linux, X64]
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install build deps
+        run: pip install --upgrade pip build pytest
+
+      - name: Build wheel (verifies packaging itself)
+        run: python -m build --wheel --outdir /tmp/neurocnl-dist
+        working-directory: neurocnl
+
+      - name: Run install smoke (core + viz + loihi)
+        run: NEUROCNL_RUN_INSTALL_SMOKE=1 pytest tests/test_install_smoke.py -v
+        working-directory: neurocnl

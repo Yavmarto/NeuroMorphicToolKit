@@ -1,0 +1,79 @@
+[
+  {
+    "slug": "audio-mfcc-rate",
+    "name": "Audio MFCC Rate Encoding",
+    "description": "Rate coding preset for MFCC audio features. Maps coefficient values to firing rates up to 300 Hz with 3 ms refractory period. Optimal for keyword spotting on Google Speech Commands v2.",
+    "filename": "audio_mfcc_rate.json",
+    "tags": [
+      "audio",
+      "mfcc",
+      "rate-coding",
+      "keyword-spotting"
+    ],
+    "data": {
+      "method": "rate",
+      "temporal_resolution": 0.001,
+      "rate_max_hz": 300.0,
+      "refractory_period": 0.003,
+      "temporal_phase_bins": null,
+      "delta_threshold": null,
+      "recommended_benchmarks": [
+        "keyword_spotting"
+      ],
+      "notes": "Prevents saturation via 3 ms refractory period."
+    },
+    "id": "a3000001-0000-4000-8000-000000000001"
+  },
+  {
+    "slug": "biomedical-delta",
+    "name": "Biomedical Delta Encoding",
+    "description": "Delta (change-based) encoding for biosignals (ECG, EEG). Emits a spike when signal changes by ≥5% of full scale. Low 5 ms refractory period preserves fine temporal structure in cardiac and neural signals.",
+    "filename": "biomedical_delta.json",
+    "tags": [
+      "ecg",
+      "eeg",
+      "delta-coding",
+      "biosignal",
+      "always-on"
+    ],
+    "data": {
+      "method": "delta",
+      "delta_threshold": 0.05,
+      "temporal_resolution": 0.01,
+      "refractory_period": 0.005,
+      "rate_max_hz": null,
+      "temporal_phase_bins": null,
+      "recommended_benchmarks": [
+        "ecg_classification"
+      ],
+      "notes": "5% delta threshold; 5 ms refractory preserves ECG morphology."
+    },
+    "id": "a3000002-0000-4000-8000-000000000002"
+  },
+  {
+    "slug": "fast-signal-temporal",
+    "name": "Fast-Signal Temporal (Phase) Encoding",
+    "description": "Temporal/phase coding preset for fast, transient signals (EMG, vibration). Divides the signal into 8 phase bins and fires one spike per bin, timed earlier for higher amplitude — per neurocnl.spike_encoding.temporal_encode()'s default n_phases=8.",
+    "filename": "fast_signal_temporal.json",
+    "tags": [
+      "emg",
+      "vibration",
+      "temporal-coding",
+      "phase-coding",
+      "fast-signal"
+    ],
+    "data": {
+      "method": "temporal",
+      "temporal_resolution": 0.001,
+      "rate_max_hz": null,
+      "refractory_period": null,
+      "temporal_phase_bins": 8,
+      "delta_threshold": null,
+      "recommended_benchmarks": [
+        "grip_stability"
+      ],
+      "notes": "Divides the signal into 8 phase bins; spike timing within each bin encodes amplitude (earlier spike = higher amplitude). Suited to fast/transient signals such as EMG or vibration, per the source module's own guidance."
+    },
+    "id": "a3000003-0000-4000-8000-000000000003"
+  }
+]

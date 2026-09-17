@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Benchmark Report</title>
+    <style>
+        body { font-family: sans-serif; color: #333; }
+        h1 { color: #0056b3; }
+        h2 { color: #333; border-bottom: 1px solid #ccc; padding-bottom: 5px; }
+        .section { margin-bottom: 2em; page-break-inside: avoid; }
+        table { border-collapse: collapse; width: 100%; margin-top: 1em; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+        th { background-color: #f4f4f4; }
+        .chart-container { text-align: center; margin-top: 2em; }
+        .chart-container img { max-width: 100%; height: auto; border: 1px solid #ddd; }
+    </style>
+</head>
+<body>
+    <h1>Benchmark Report: {{ report_id }}</h1>
+    <p><strong>Generated:</strong> {{ timestamp }}</p>
+
+    <div class="section">
+        <h2>Executive Summary</h2>
+        <p>{{ summary }}</p>
+    </div>
+
+    <div class="section">
+        <h2>Methodology</h2>
+        <p>{{ methodology }}</p>
+    </div>
+
+    <div class="section">
+        <h2>Results</h2>
+        <p>The following table and chart summarize the performance metrics obtained during the benchmark run.</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>Value</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for metric, value in results.items() %}
+                <tr>
+                    <td>{{ metric }}</td>
+                    <td>{{ value | round(4) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        {% if chart_base64 %}
+        <div class="chart-container">
+            <h3>Performance Metrics Chart</h3>
+            <img src="data:image/png;base64,{{ chart_base64 }}" alt="Performance Metrics Chart" />
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="section">
+        <h2>Recommendations</h2>
+        <p>{{ recommendations }}</p>
+    </div>
+</body>
+</html>

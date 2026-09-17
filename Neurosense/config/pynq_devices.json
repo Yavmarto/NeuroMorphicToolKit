@@ -1,0 +1,4 @@
+{
+  "_comment": "Environment-specific PYNQ edge nodes. The NeuroSense PYNQ router reads this file (after NEUROSENSE_PYNQ_DEVICES and before the repo default) to list real boards alongside the pynq_sim_01 rehearsal stub. device_id is the mDNS name prefix (ws://{device_id}.local:8000/stream); address is an optional static IP for backends that cannot resolve .local. Empty by default so clean checkouts and tests list only the simulated stub.",
+  "devices": []
+}

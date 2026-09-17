@@ -1,0 +1,108 @@
+.git
+.github
+.claude
+__pycache__
+*.pyc
+*.egg-info
+**/.venv
+**/.venv/
+**/venv
+**/venv/
+.env.local
+**/node_modules
+**/.opencode
+.pytest_cache
+.mypy_cache
+.ruff_cache
+*.log
+
+# Flutter build artifacts
+build/
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+*.g.dart
+
+# Module frontend build dirs (not needed by suite_api)
+neurocnl/frontend/
+Neurohub/frontend/
+Neurosense/Dockerfile.frontend
+Neurosim/frontend/
+Neurochip/frontend/
+Neurobench/frontend/
+nmtk/
+!nmtk/launcher_control/
+!nmtk/neuro_toolkit/
+!nmtk/__init__.py
+!nmtk/http_metrics.py
+!nmtk/metrics_core.py
+nmtk_ui_core/
+!nmtk_ui_core/
+# Webtop build needs the full Flutter project including path-dep packages.
+# Whitelist every frontend the launcher (or its shell adapters) statically
+# depend on at build time, so `flutter pub get` can resolve path deps.
+# NOTE: `!dir/` re-includes everything under it, overriding the generic
+# `build/`/`.dart_tool/` excludes above for these specific paths -- re-exclude
+# each whitelisted frontend's own build output explicitly below, or local
+# Flutter build artifacts (multi-GB debug APKs, gradle caches) get shipped
+# into every image's build context and can exhaust the Docker VM's disk.
+!Neurobench/frontend/
+!neurocnl/frontend/
+!Neurosim/frontend/
+!Neurochip/frontend/
+!Neurohub/frontend/
+Neurobench/frontend/build/
+Neurobench/frontend/.dart_tool/
+neurocnl/frontend/build/
+neurocnl/frontend/.dart_tool/
+Neurosim/frontend/build/
+Neurosim/frontend/.dart_tool/
+Neurochip/frontend/build/
+Neurochip/frontend/.dart_tool/
+Neurohub/frontend/build/
+Neurohub/frontend/.dart_tool/
+
+# Test and demo data
+data/
+Neuro-Dream-Hand/
+ai_safe/
+issues/
+issues-archive/
+docs/
+monitoring/
+
+# Tool caches / editor state (not needed by any Dockerfile)
+.cache/
+.hypothesis/
+.kiro/
+.understand-anything/
+.sisyphus/
+.impeccable/
+.tmp_manual_ui/
+
+# Prevent massive context uploads
+scripts/data/
+paper/
+codeflow-report.json
+nmtk/neuro_toolkit/build/
+nmtk/neuro_toolkit/.dart_tool/
+nmtk_ui_core/build/
+nmtk_ui_core/.dart_tool/
+
+# Tool caches, at every depth. Docker matches each pattern against the whole
+# relative path, so a bare `.mypy_cache` covers only the repo root -- the ones
+# inside modules (neurocnl, Neurochip, Neurobench, Neurohub, neurocli ...) were
+# still being uploaded, ~850 MB into every image's context, which is enough on
+# its own to fill the Docker VM disk and fail the build with "no space left on
+# device". These come last so they also win over the `!module/frontend/`
+# re-includes above.
+**/.mypy_cache/
+**/.pytest_cache/
+**/.ruff_cache/
+**/__pycache__/
+**/.hypothesis/
+**/*.pyc
+**/*.egg-info
+**/.venv/
+**/venv/
+**/*.log

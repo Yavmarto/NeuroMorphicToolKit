@@ -1,0 +1,160 @@
+name: NeuroHub CI
+
+on:
+  push:
+    branches: [ main, dev ]
+    paths:
+      - 'neurohub/**'
+      - 'frontend/**'
+      - '.github/workflows/neurohub-ci.yml'
+      - 'pyproject.toml'
+  pull_request:
+    branches: [ main, dev ]
+    paths:
+      - 'neurohub/**'
+      - 'frontend/**'
+      - '.github/workflows/neurohub-ci.yml'
+      - 'pyproject.toml'
+
+jobs:
+  backend:
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - [self-hosted, macOS, ARM64]
+          - [self-hosted, Windows, X64]
+          - [self-hosted, Linux, X64]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Add Git to PATH (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
+      - uses: actions/checkout@v4
+
+      - name: Configure tool cache
+        shell: bash
+        run: |
+          TOOL_CACHE="${RUNNER_TEMP}/_tool_cache"
+          mkdir -p "$TOOL_CACHE"
+          echo "AGENT_TOOLSDIRECTORY=$TOOL_CACHE" >> "$GITHUB_ENV"
+          echo "RUNNER_TOOL_CACHE=$TOOL_CACHE" >> "$GITHUB_ENV"
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+        env:
+          AGENT_TOOLSDIRECTORY: ${{ runner.temp }}/_tool_cache
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Lint with ruff
+        run: |
+          ruff check neurohub
+          ruff format --check neurohub
+
+      - name: Type check with mypy
+        run: mypy neurohub
+
+      - name: Verify database migrations
+        run: |
+          rm -f neurohub_ci_test.db
+          NEUROHUB_DB_URL="sqlite:///./neurohub_ci_test.db" alembic upgrade head
+
+      - name: Run unit tests
+        run: |
+          python -m pytest neurohub --ignore=neurohub/tests/properties --tb=short
+
+      - name: Run CDD-PBT property tests
+        run: |
+          python -m pytest neurohub/tests/properties --tb=short
+
+      - name: Run orchestration smoke tests
+        run: |
+          ./scripts/run_smoke_test.sh
+
+      - name: Build Docker image (Backend)
+        run: |
+          docker build -t neurohub-backend:latest .
+
+      - name: Security Scan Docker Images (Backend)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'neurohub-backend:latest'
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
+
+  frontend:
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - [self-hosted, macOS, ARM64]
+          - [self-hosted, Windows, X64]
+          - [self-hosted, Linux, X64]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Add Git to PATH (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.41.2'
+          channel: 'stable'
+
+      - name: Install dependencies (nmtk_ui_core)
+        run: |
+          cd nmtk_ui_core
+          flutter pub get
+
+      - name: Analyze (nmtk_ui_core)
+        run: |
+          cd nmtk_ui_core
+          flutter analyze
+
+      - name: Test (nmtk_ui_core)
+        run: |
+          cd nmtk_ui_core
+          # Only run tests if test directory exists
+          if [ -d "test" ]; then flutter test; fi
+
+      - name: Install dependencies (frontend)
+        run: |
+          cd frontend
+          flutter pub get
+          flutter pub get --offline
+
+      - name: Analyze (frontend)
+        run: |
+          cd frontend
+          flutter analyze
+
+      - name: Test (frontend)
+        run: |
+          cd frontend
+          flutter test
+
+      - name: Build Docker image (Frontend)
+        run: |
+          docker build -t neurohub-frontend:latest -f frontend/Dockerfile .
+
+      - name: Security Scan Docker Images (Frontend)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'neurohub-frontend:latest'
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'

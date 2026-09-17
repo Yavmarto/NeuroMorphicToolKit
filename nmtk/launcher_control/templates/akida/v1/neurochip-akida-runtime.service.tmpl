@@ -1,0 +1,17 @@
+[Unit]
+Description=Neurochip Akida runtime
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=@@SERVICE_USER@@
+Group=@@SERVICE_USER@@
+WorkingDirectory=@@INSTALL_ROOT@@
+EnvironmentFile=@@INSTALL_ROOT@@/env/@@RUNTIME_SERVICE_NAME@@.env
+ExecStart=@@VENV_PATH@@/bin/uvicorn neurochip.app.main:app --host 0.0.0.0 --port @@RUNTIME_PORT@@
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

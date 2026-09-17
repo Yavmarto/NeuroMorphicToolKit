@@ -1,0 +1,38 @@
+# Probabilistic Decision Maker
+# Weak stimulus drives two competing populations; mutual inhibition creates winner-take-all dynamics.
+
+Define a network named stochastic_decision with timestep 0.002.
+# Network with 1 input, 3 LIF neurons, 4 linear transforms, 1 output.
+# flow: input → stimulus → choice_A → output
+#        stimulus → choice_B
+#        (mutual inhibition: choice_A ⇄ choice_B)
+
+# Layers:
+Define an input port named input with shape (10,).
+Define a LIF neuron named stimulus with time constant 0.02, resistance 1.0, leak voltage 0.0, and firing threshold 1.0.
+Define a linear transformation named w_stimulus_choice_A with weight matrix shape (40, 10) annotated with metadata weight_init equal to "xavier" annotated with metadata seed equal to 42.
+Define a linear transformation named w_stimulus_choice_B with weight matrix shape (40, 10) annotated with metadata weight_init equal to "xavier" annotated with metadata seed equal to 43.
+Define a LIF neuron named choice_A with time constant 0.02, resistance 1.0, leak voltage 0.0, and firing threshold 0.75.
+Define a linear transformation named w_choice_A_choice_B with weight matrix shape (40, 40).
+# inhibitory connection (weights will be negative) — zero-initialised intentionally
+Define a LIF neuron named choice_B with time constant 0.02, resistance 1.0, leak voltage 0.0, and firing threshold 0.75.
+Define a linear transformation named w_choice_B_choice_A with weight matrix shape (40, 40).
+# inhibitory connection (weights will be negative) — zero-initialised intentionally
+Define an output port named output with shape (40,).
+
+# Connections:
+input connects to stimulus.
+stimulus connects to w_stimulus_choice_A.
+w_stimulus_choice_A connects to choice_A.
+stimulus connects to w_stimulus_choice_B.
+w_stimulus_choice_B connects to choice_B.
+choice_A connects to output.
+
+# recurrent: choice_A ↺ choice_B
+choice_A connects to w_choice_A_choice_B.
+w_choice_A_choice_B connects to choice_B.
+choice_B connects to w_choice_B_choice_A.
+w_choice_B_choice_A connects to choice_A.
+
+# Note: background noise, homeostasis (15 Hz target), STP, and neuromodulation are dropped.
+# Future extension: encode as metadata on population nodes.

@@ -1,0 +1,24 @@
+{
+    "id": "keyword_spotting",
+    "name": "Keyword Spotting (MFCC-SNN)",
+    "description": "35-class spoken keyword recognition on Google Speech Commands v2 using MFCC features fed into a spiking neural network. Primary metric is top-1 classification accuracy. Evaluated via the upstream NeuroBench library using MFCCPreProcessor. Note: Speech2Spikes (S2SPreProcessor) is proprietary and is explicitly blocked — this benchmark uses open MFCC preprocessing only. Reference task from NeuroBench v1.0.",
+    "task_type": "classification",
+    "executor": "neurobench",
+    "input_spec": {
+        "type": "timeseries",
+        "synthetic_config": null,
+        "recording_session_id": null,
+        "data_path": null
+    },
+    "assertions": [],
+    "scoring": {
+        "primary_metric": "accuracy",
+        "secondary_metrics": ["activation_sparsity", "synaptic_operations", "memory_kb"],
+        "higher_is_better": true,
+        "pass_threshold": 0.75
+    },
+    "default_params": {
+        "batch_size": 64
+    },
+    "builtin": true
+}

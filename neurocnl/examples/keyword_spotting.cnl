@@ -1,0 +1,30 @@
+# Keyword Spotting (MFCC -> LIF SNN)
+# 35-class spoken-keyword classifier (Google Speech Commands v2) — the NeuroBench v1.0 reference
+# task. All-LIF feedforward net: 20 MFCC features -> two 256-unit hidden layers -> 35-way readout.
+# Weights are LEARNED in the Train canvas (snnTorch, BPTT + surrogate gradient, export_nir=true)
+# and re-imported as NIR. This spec is round-trip valid (compile_to_nir <-> NIR_Renderer).
+
+Define a network named keyword_spotting.
+# Network with 1 input, 7 hidden nodes, 1 output.
+# flow: mfcc → encode → w_encode_hidden → hidden → w_hidden_association → association → w_association_readout → readout → keyword
+
+# Layers:
+Define an input port named mfcc with shape (20,).
+Define a LIF neuron named encode with time constant shape (20,), resistance shape (20,), leak voltage shape (20,), and firing threshold shape (20,).
+Define a linear transformation named w_encode_hidden with weight matrix shape (256, 20).
+Define a LIF neuron named hidden with time constant shape (256,), resistance shape (256,), leak voltage shape (256,), and firing threshold shape (256,).
+Define a linear transformation named w_hidden_association with weight matrix shape (256, 256).
+Define a LIF neuron named association with time constant shape (256,), resistance shape (256,), leak voltage shape (256,), and firing threshold shape (256,).
+Define a linear transformation named w_association_readout with weight matrix shape (35, 256).
+Define a LIF neuron named readout with time constant shape (35,), resistance shape (35,), leak voltage shape (35,), and firing threshold shape (35,).
+Define an output port named keyword with shape (35,).
+
+# Connections:
+mfcc connects to encode.
+encode connects to w_encode_hidden.
+w_encode_hidden connects to hidden.
+hidden connects to w_hidden_association.
+w_hidden_association connects to association.
+association connects to w_association_readout.
+w_association_readout connects to readout.
+readout connects to keyword.

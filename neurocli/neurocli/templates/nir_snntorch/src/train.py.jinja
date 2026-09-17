@@ -1,0 +1,80 @@
+"""Train a tiny deterministic snnTorch classifier and export trained NIR."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import nir
+import numpy as np
+import snntorch as snn
+import torch
+
+
+def train() -> tuple[torch.Tensor, float]:
+    """Return non-zero trained weights and final accuracy."""
+    torch.manual_seed(7)
+    features = torch.tensor(
+        [[2.0, 0.0], [1.5, 0.2], [0.0, 2.0], [0.2, 1.5]],
+        dtype=torch.float32,
+    )
+    labels = torch.tensor([0, 0, 1, 1])
+    linear = torch.nn.Linear(2, 2, bias=False)
+    lif = snn.Leaky(beta=0.9)
+    optimizer = torch.optim.Adam(linear.parameters(), lr=0.05)
+
+    for _ in range(80):
+        optimizer.zero_grad()
+        _, membrane = lif(linear(features), lif.init_leaky())
+        loss = torch.nn.functional.cross_entropy(membrane, labels)
+        loss.backward()
+        optimizer.step()
+
+    with torch.no_grad():
+        _, membrane = lif(linear(features), lif.init_leaky())
+        accuracy = float((membrane.argmax(dim=1) == labels).float().mean())
+    return linear.weight.detach(), accuracy
+
+
+def export_nir(weight: torch.Tensor, destination: Path) -> None:
+    """Write the trained classifier using names shared with network.cnl."""
+    size = 2
+
+    def lif_node() -> nir.LIF:
+        return nir.LIF(
+            tau=np.full(size, 0.02, dtype=np.float32),
+            r=np.ones(size, dtype=np.float32),
+            v_leak=np.zeros(size, dtype=np.float32),
+            v_threshold=np.ones(size, dtype=np.float32),
+        )
+
+    graph = nir.NIRGraph(
+        nodes={
+            "pixels": nir.Input(input_type={"input": np.array([size])}),
+            "hidden": lif_node(),
+            "classifier": nir.Linear(weight=weight.numpy()),
+            "out": lif_node(),
+            "labels": nir.Output(output_type={"output": np.array([size])}),
+        },
+        edges=[
+            ("pixels", "hidden"),
+            ("hidden", "classifier"),
+            ("classifier", "out"),
+            ("out", "labels"),
+        ],
+    )
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    nir.write(str(destination), graph)
+
+
+def main() -> None:
+    weight, accuracy = train()
+    if accuracy < 1.0 or not torch.any(weight != 0):
+        raise RuntimeError(f"Training smoke failed: accuracy={accuracy:.3f}")
+    destination = Path("artifacts/trained.nir")
+    export_nir(weight, destination)
+    print(f"{{ project_name }}: accuracy={accuracy:.3f}")
+    print(f"Trained NIR written to {destination}")
+
+
+if __name__ == "__main__":
+    main()

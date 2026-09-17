@@ -1,0 +1,39 @@
+# EEG Attention Monitor — CNL Spec
+# Demo 3: An SNN classifies attention state (focused vs. relaxed) from
+# EEG alpha band power (8-12 Hz) using rate coding.
+# High alpha → relaxed population fires; Low alpha → focused population fires.
+
+The network MUST operate WITH timestep of 1 ms
+
+The network MUST contain an excitatory sensory population of 1 neurons
+The network MUST contain an inhibitory interneuron population of 35 neurons
+The network MUST contain an excitatory motor population of 1 neurons
+
+# Sensory population responds to alpha band power input
+The sensory population MUST fire ONLY IF membrane potential exceeds 0.4
+
+# Interneuron suppresses the output for relaxed alpha-dominant states
+The interneuron population MUST fire ONLY IF membrane potential exceeds 0.5
+
+# Motor population represents attention classification output
+The motor population MUST emit a spike ONLY IF membrane potential exceeds 0.6
+
+# Standard refractory periods
+The sensory population MUST NOT fire DURING the refractory period of 0.002 seconds
+The motor population MUST NOT fire DURING the refractory period of 0.002 seconds
+
+# Slower time constants for EEG signal processing (alpha is 8-12 Hz)
+The sensory population membrane potential MUST decay WITH time constant of 0.05 seconds
+The motor population membrane potential MUST decay WITH time constant of 0.03 seconds
+
+# Moderate coupling weight for rate-coded classification
+The sensory population MUST project to motor population
+The sensory population MUST project to interneuron population
+The interneuron population MUST project to motor population
+
+The connection from sensory population to motor population MUST have WITH synaptic weight of 1.0
+The connection from sensory population to interneuron population MUST have WITH synaptic weight of 0.9
+The connection from interneuron population to motor population MUST be inhibitory with weight of -0.6
+
+# Transmission delay reflecting thalamocortical pathway
+A synapse MUST have a transmission delay of 10ms

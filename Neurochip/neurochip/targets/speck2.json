@@ -1,0 +1,17 @@
+{
+    "id": "speck2",
+    "name": "SynSense Speck 2",
+    "manufacturer": "SynSense",
+    "description": "Smart vision sensor combining a DVS camera with an asynchronous SNN processor for ultra-low power real-time vision.",
+    "core_count": 11,
+    "neuron_capacity": 320000,
+    "supported_neuron_models": ["LIF"],
+    "weight_bit_widths": [8],
+    "on_chip_memory_kb": 2048,
+    "io_pins": 16,
+    "clock_speed_mhz": 0.0,
+    "power_envelope_mw": 1.0,
+    "pj_per_spike_op": 50.0,
+    "access": "commercial",
+    "notes": "Features integrated 128x128 DVS sensor. Uses Sinabs/Samna framework for development."
+}

@@ -1,0 +1,32 @@
+#!/bin/bash
+# Kiosk autostart — sourced by openbox when the X session begins.
+# linuxserver/webtop copies /defaults/.config/openbox/ to the container
+# user's home at first run, so this file ends up at
+# ~/.config/openbox/autostart and is executed by openbox-session.
+#
+# Strategy: kill the XFCE desktop chrome (panel + desktop manager) so
+# nothing renders behind our app, then launch NMTK. The openbox rc.xml
+# window rule forces the first window fullscreen, so no wmctrl timing
+# hacks are needed.
+
+NMTK_BIN=/app/nmtk/nmtk/neuro_toolkit/build/linux/x64/release/bundle/neuro_toolkit
+
+# Guard: binary must exist (built into the image by Dockerfile.webtop).
+if [ ! -f "$NMTK_BIN" ]; then
+    zenity --error --title="NMTK Kiosk" \
+        --text="Binary not found:\n$NMTK_BIN\n\nRe-build the Docker image." 2>/dev/null || \
+        xmessage -center "NMTK binary not found at $NMTK_BIN — re-build the Docker image." 2>/dev/null
+    exit 1
+fi
+
+# Ensure DISPLAY is set (openbox autostart runs inside the X session, so
+# this should always be populated — defensive guard only).
+export DISPLAY="${DISPLAY:-:1}"
+
+# Suppress XFCE chrome — run serially so each quit RPC completes before
+# we launch the app (avoids a race where the panel redraws over NMTK).
+xfce4-panel -q   2>/dev/null
+xfdesktop --quit 2>/dev/null
+
+# Launch the app. Openbox rc.xml forces it fullscreen on map.
+exec "$NMTK_BIN"

@@ -1,0 +1,122 @@
+"""
+NeuroChip Auto-Generated Loihi 2 Deployment Script
+Network: {{ network_name | default("SNN Network") }}
+Generated: {{ timestamp }}
+
+Prerequisites:
+  - Intel NxSDK {{ nxsdk_version | default(">=1.0") }}
+  - Access to Intel Neuromorphic Research Community (INRC) board
+  - Python 3.8+
+
+Usage:
+  python deploy.py [--board BOARD_ID] [--timesteps N]
+"""
+
+import argparse
+import json
+import h5py
+import numpy as np
+
+try:
+    import nxsdk.api.n2a as nx
+    from nxsdk.graph.monitor.probes import PerformanceProbeCondition
+except ImportError:
+    raise RuntimeError(
+        "NxSDK not found. Install it from the Intel INRC portal: "
+        "https://www.intel.com/content/www/us/en/research/neuromorphic-community.html"
+    )
+
+
+def load_config(config_path="config.json"):
+    with open(config_path, "r") as f:
+        return json.load(f)
+
+
+def load_weights(hdf5_path="crossbar_weights.h5"):
+    with h5py.File(hdf5_path, "r") as f:
+        weights = {key: np.array(val) for key, val in f.items()}
+    return weights
+
+
+def build_network(config, weights):
+    net = nx.NxNet()
+
+    # Create neuron groups (compartments)
+    compartment_groups = {}
+    {% for pop in populations %}
+    proto_{{ pop.name }} = nx.CompartmentPrototype(
+        vThMant={{ pop.threshold_mantissa | default(100) }},
+        compartmentCurrentDecay={{ pop.current_decay | default(4096) }},
+        compartmentVoltageDecay={{ pop.voltage_decay | default(256) }},
+        refractoryDelay={{ pop.refractory | default(2) }}
+    )
+    compartment_groups["{{ pop.name }}"] = net.createCompartmentGroup(
+        size={{ pop.size }},
+        prototype=proto_{{ pop.name }}
+    )
+    {% endfor %}
+
+    # Create connections with quantized weights from HDF5
+    {% for conn in connections %}
+    w_{{ conn.pre }}_{{ conn.post }} = weights.get(
+        "{{ conn.pre }}_to_{{ conn.post }}",
+        np.zeros(({{ conn.post_size }}, {{ conn.pre_size }}))
+    )
+    compartment_groups["{{ conn.pre }}"].connect(
+        compartment_groups["{{ conn.post }}"],
+        prototype=nx.ConnectionPrototype(weight=w_{{ conn.pre }}_{{ conn.post }}.astype(np.int8)),
+        connectionMask=(w_{{ conn.pre }}_{{ conn.post }} != 0)
+    )
+    {% endfor %}
+
+    return net, compartment_groups
+
+
+def setup_probes(net, compartment_groups):
+    probes = {}
+    {% for pop in populations %}
+    probes["{{ pop.name }}_spikes"] = compartment_groups["{{ pop.name }}"].probe(
+        nx.ProbeParameter.SPIKE
+    )
+    {% endfor %}
+    return probes
+
+
+def run(net, config):
+    board = nx.N2Board(1, 1, [{{ num_cores | default(4) }}])
+    compiler = nx.N2Compiler()
+    board_compiled = compiler.compile(net)
+    board_compiled.run(config["run_time_steps"])
+    return board_compiled
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Deploy SNN to Loihi 2")
+    parser.add_argument("--config", default="config.json", help="Config JSON path")
+    parser.add_argument("--weights", default="crossbar_weights.h5", help="HDF5 weights path")
+    parser.add_argument("--timesteps", type=int, default=None, help="Override run timesteps")
+    args = parser.parse_args()
+
+    config = load_config(args.config)
+    if args.timesteps:
+        config["run_time_steps"] = args.timesteps
+
+    weights = load_weights(args.weights)
+    net, compartments = build_network(config, weights)
+    probes = setup_probes(net, compartments)
+
+    print(f"Deploying to Loihi 2 — {config['run_time_steps']} timesteps")
+    board = run(net, config)
+
+    print("Run complete. Extracting probe data...")
+    for name, probe in probes.items():
+        data = probe.data
+        spike_count = np.sum(data > 0)
+        print(f"  {name}: {spike_count} spikes over {config['run_time_steps']} steps")
+
+    board.disconnect()
+    print("Done.")
+
+
+if __name__ == "__main__":
+    main()

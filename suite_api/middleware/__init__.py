@@ -1,0 +1,261 @@
+"""Shared middleware for suite_api.
+Attach all middleware through the single attach_middleware() function.
+"""
+
+import hmac
+import logging
+import os
+import time
+import uuid
+from pathlib import Path
+
+import httpx
+from fastapi import FastAPI, Request, Response
+from fastapi.middleware.cors import CORSMiddleware
+from starlette.datastructures import Headers
+from starlette.middleware.base import RequestResponseEndpoint
+from starlette.types import ASGIApp, Receive, Scope, Send
+
+from suite_api.errors import error_response
+
+logger = logging.getLogger("suite_api")
+
+ADMIN_HEADER = "X-NMTK-Admin-Token"
+_ADMIN_COOKIE = "nmtk_admin_session"
+
+
+def _launcher_control_url() -> str:
+    return os.getenv("NMTK_LAUNCHER_CONTROL_URL", "http://launcher-control:8091").strip()
+
+
+_SESSION_TOKEN_CACHE_TTL_S = float(
+    os.getenv("NMTK_SESSION_TOKEN_CACHE_TTL_S", "30").strip() or "30"
+)
+# ponytail: in-process dict; upgrade to shared cache if suite_api scales horizontally.
+_SESSION_TOKEN_CACHE_MAX = 1024
+_session_token_cache: dict[str, tuple[bool, float]] = {}
+
+
+def _session_token_cache_get(token: str) -> bool | None:
+    entry = _session_token_cache.get(token)
+    if entry is None:
+        return None
+    valid, expires_at = entry
+    if time.monotonic() >= expires_at:
+        _session_token_cache.pop(token, None)
+        return None
+    return valid
+
+
+def _session_token_cache_set(token: str, valid: bool) -> None:
+    if len(_session_token_cache) >= _SESSION_TOKEN_CACHE_MAX:
+        now = time.monotonic()
+        expired = [
+            key
+            for key, (_, expires_at) in _session_token_cache.items()
+            if now >= expires_at
+        ]
+        for key in expired:
+            _session_token_cache.pop(key, None)
+        if len(_session_token_cache) >= _SESSION_TOKEN_CACHE_MAX:
+            for key in list(_session_token_cache)[: _SESSION_TOKEN_CACHE_MAX // 2]:
+                _session_token_cache.pop(key, None)
+    _session_token_cache[token] = (valid, time.monotonic() + _SESSION_TOKEN_CACHE_TTL_S)
+
+
+def clear_session_token_cache() -> None:
+    """Clear cached introspection results (tests only)."""
+    _session_token_cache.clear()
+
+
+async def _session_token_valid(token: str) -> bool:
+    """Ask launcher-control whether a connect-session bearer token is live.
+
+    suite_api has no session store of its own -- launcher-control mints and
+    holds these tokens in memory (see launcher_auth.py), so a credential that
+    doesn't match the shared static admin-token is checked against
+    launcher-control's introspection endpoint over backend-net instead.
+    """
+    if not token:
+        return False
+    cached = _session_token_cache_get(token)
+    if cached is not None:
+        return cached
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.get(
+                f"{_launcher_control_url()}/api/launcher/auth/introspect",
+                headers={"Authorization": f"Bearer {token}"},
+            )
+    except httpx.HTTPError:
+        # ponytail: do not negative-cache transport blips; retry on next request.
+        logger.warning("session_token_introspection_failed")
+        return False
+    valid = resp.status_code == 200
+    _session_token_cache_set(token, valid)
+    return valid
+
+
+def _load_admin_token() -> str:
+    secret_file = os.getenv("NMTK_ADMIN_TOKEN_FILE", "").strip()
+    if secret_file:
+        try:
+            return Path(secret_file).read_text(encoding="utf-8").strip()
+        except OSError:
+            logger.exception("admin_token_file_unreadable")
+            return ""
+    return os.getenv("NMTK_ADMIN_TOKEN", "").strip()
+
+
+def load_admin_token() -> str:
+    """Return the configured suite administrator token, if any."""
+    return _load_admin_token()
+
+
+def admin_token_valid(provided: str) -> bool:
+    """Validate one supplied administrator credential in constant time."""
+    expected = _load_admin_token()
+    return bool(expected and provided and hmac.compare_digest(provided, expected))
+
+
+def _bearer_token(headers: Headers) -> str:
+    authorization = headers.get("authorization", "").strip()
+    scheme, _, credential = authorization.partition(" ")
+    return credential.strip() if scheme.lower() == "bearer" else ""
+
+
+class _AdminWebSocketMiddleware:
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        required = os.getenv("NMTK_AUTH_REQUIRED", "").strip().lower() in {
+            "1",
+            "true",
+            "yes",
+        }
+        if scope["type"] == "websocket" and required:
+            headers = Headers(scope=scope)
+            cookie_token = ""
+            for item in headers.get("cookie", "").split(";"):
+                name, _, value = item.strip().partition("=")
+                if name == _ADMIN_COOKIE:
+                    cookie_token = value
+                    break
+            provided = (
+                headers.get(ADMIN_HEADER, "") or _bearer_token(headers) or cookie_token
+            )
+            if not (
+                provided
+                and (
+                    admin_token_valid(provided)
+                    or await _session_token_valid(provided)
+                )
+            ):
+                await send(
+                    {
+                        "type": "websocket.close",
+                        "code": 4401,
+                        "reason": "Administrator authentication required",
+                    }
+                )
+                return
+        await self.app(scope, receive, send)
+
+
+def attach_middleware(app: FastAPI) -> None:
+    app.add_middleware(_AdminWebSocketMiddleware)
+    # CORS — read from env var so production can lock this down.
+    # allow_credentials=True is incompatible with allow_origins=["*"] per the
+    # CORS spec; Starlette silently drops credentials when origins is a wildcard,
+    # so we only enable it when specific origins are configured.
+    _allowed_origins_str = os.getenv(
+        "ALLOWED_ORIGINS",
+        "",
+    )
+    _origins = [o.strip() for o in _allowed_origins_str.split(",") if o.strip()]
+    _allow_credentials = "*" not in _origins
+    if "*" in _origins:
+        logger.warning(
+            "cors_open_to_all_origins: CORS is open to all origins. "
+            "Set ALLOWED_ORIGINS for production."
+        )
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=_origins,
+        allow_credentials=_allow_credentials,
+        allow_methods=["*"],
+        allow_headers=[
+            "Accept",
+            "Authorization",
+            "Content-Type",
+            "X-NMTK-Admin-Token",
+            "X-Request-ID",
+        ],
+    )
+
+    @app.middleware("http")
+    async def admin_auth_middleware(
+        request: Request, call_next: RequestResponseEndpoint
+    ) -> Response:
+        protected = (
+            request.url.path not in {"/api/suite/health", "/metrics"}
+            and request.method != "OPTIONS"
+        )
+        required = os.getenv("NMTK_AUTH_REQUIRED", "").strip().lower() in {
+            "1",
+            "true",
+            "yes",
+        }
+        if not required:
+            return await call_next(request)
+        expected = _load_admin_token()
+        header_token = request.headers.get(ADMIN_HEADER, "")
+        bearer_token = _bearer_token(request.headers)
+        request_token = header_token or bearer_token
+        provided = request_token or request.cookies.get(_ADMIN_COOKIE, "")
+        if protected and not (
+            provided
+            and (
+                (expected and admin_token_valid(provided))
+                or await _session_token_valid(provided)
+            )
+        ):
+            return error_response(
+                request,
+                status_code=401,
+                code="unauthorized",
+                message="Administrator authentication required.",
+                retryable=False,
+            )
+        response = await call_next(request)
+        if request_token and expected and hmac.compare_digest(request_token, expected):
+            response.set_cookie(
+                _ADMIN_COOKIE,
+                expected,
+                httponly=True,
+                samesite="strict",
+                path="/",
+            )
+        return response
+
+    @app.middleware("http")
+    async def request_id_middleware(
+        request: Request, call_next: RequestResponseEndpoint
+    ) -> Response:
+        # Honour an incoming X-Request-ID so cross-service traces stay correlated.
+        request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
+        request.state.request_id = request_id
+        response = await call_next(request)
+        response.headers["X-Request-Id"] = request_id
+        return response
+
+    @app.middleware("http")
+    async def response_time_middleware(
+        request: Request, call_next: RequestResponseEndpoint
+    ) -> Response:
+        start = time.perf_counter()
+        response = await call_next(request)
+        elapsed_ms = (time.perf_counter() - start) * 1000
+        response.headers["X-Response-Time-Ms"] = f"{elapsed_ms:.2f}"
+        return response

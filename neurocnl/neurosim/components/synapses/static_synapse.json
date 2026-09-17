@@ -1,0 +1,42 @@
+{
+  "id": "static_synapse",
+  "name": "Static Synapse",
+  "category": "Synapses",
+  "description": "A fixed-weight connection between populations.",
+  "icon": "cable",
+  "parameters": [
+    {
+      "name": "weight",
+      "label": "Synaptic Weight",
+      "description": "Strength of the connection.",
+      "type": "float",
+      "default": 1.0,
+      "min": null,
+      "max": null,
+      "unit": null
+    },
+    {
+      "name": "delay",
+      "label": "Synaptic Delay",
+      "description": "Nengo synapse time constant (tau) used as a post-synaptic low-pass filter in local preview, not true axonal transmission delay.",
+      "type": "float",
+      "default": 0.001,
+      "min": 0.0,
+      "max": 0.1,
+      "unit": "s"
+    }
+  ],
+  "ports": [
+    {
+      "id": "src",
+      "direction": "input",
+      "label": "Source"
+    },
+    {
+      "id": "dst",
+      "direction": "output",
+      "label": "Target"
+    }
+  ],
+  "cnl_template": "Connect {src} to {dst}."
+}

@@ -1,0 +1,33 @@
+{
+    "id": "mnist_fcn",
+    "name": "MNIST FCN",
+    "description": "10-class digit classification using the MNIST dataset. Static images are flattened and repeated across 25 timesteps into a fully connected SNN.",
+    "task_type": "classification",
+    "executor": "cnl",
+    "input_spec": {
+        "type": "synthetic",
+        "synthetic_config": {
+            "n_classes": 10,
+            "n_samples": 2000,
+            "sensor_size": [784],
+            "time_window_ms": 250,
+            "n_time_bins": 25
+        },
+        "recording_session_id": null,
+        "data_path": null
+    },
+    "assertions": [],
+    "scoring": {
+        "primary_metric": "accuracy",
+        "secondary_metrics": ["latency_ms", "energy_uj", "spike_fidelity"],
+        "higher_is_better": true,
+        "pass_threshold": 0.90
+    },
+    "default_params": {
+        "n_steps": 25,
+        "batch_size": 128,
+        "threshold": 1.0,
+        "beta": 0.95
+    },
+    "builtin": true
+}

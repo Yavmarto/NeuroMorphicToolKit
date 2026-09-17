@@ -1,0 +1,45 @@
+# EMG-Controlled Adaptive Gripper — CNL Spec
+# Demo 1: An SNN reads forearm EMG, classifies grip intent, and drives
+# a gripper with spiking motor commands that adapt via STDP.
+
+The network MUST operate WITH timestep of 1 ms
+
+The network MUST contain an excitatory sensory population of 1 neurons
+The network MUST contain an excitatory interneuron population of 60 neurons
+The network MUST contain an excitatory motor population of 1 neurons
+
+# Sensory population fires when EMG amplitude exceeds detection threshold
+The sensory population MUST fire ONLY IF membrane potential exceeds 0.8
+
+# Interneuron separates intent detection from final gripper actuation
+The interneuron population MUST fire ONLY IF membrane potential exceeds 0.55
+
+# Motor population fires when activation exceeds grip command threshold
+The motor population MUST emit a spike ONLY IF membrane potential exceeds 0.6
+
+# Refractory periods prevent runaway firing
+The sensory population MUST NOT fire DURING the refractory period of 0.002 seconds
+The motor population MUST NOT fire DURING the refractory period of 0.003 seconds
+
+# Membrane dynamics with fast time constants for responsive control
+The sensory population membrane potential MUST decay WITH time constant of 0.01 seconds
+The motor population membrane potential MUST decay WITH time constant of 0.02 seconds
+
+# Adaptive gripper topology uses an intermediate intent population
+The sensory population MUST project to interneuron population
+The interneuron population MUST project to motor population
+The sensory population MUST project to motor population
+
+The connection from sensory population to interneuron population MUST have WITH synaptic weight of 1.5
+The connection from interneuron population to motor population MUST have WITH synaptic weight of 1.2
+The connection from sensory population to motor population MUST have WITH synaptic weight of 0.5
+
+# STDP: synapse strengthens when grip correlates with EMG intent
+The connection from sensory population to interneuron population MUST adapt WITH STDP learning rate of 0.0001
+
+# STDP: synapse weakens for anti-causal timing
+The connection from sensory population to interneuron population MUST weaken IF post fires before pre WITHIN 20 ms
+
+# Weight bounds prevent runaway excitation or silencing
+A synapse MUST NOT have weights exceeding 3.0
+A synapse MUST NOT have weights below 0.1

@@ -1,0 +1,50 @@
+---
+description: Governance rules for NeuroMorphicToolKit — quality gates, security, conventions
+globs:
+  - "**/*.py"
+alwaysApply: true
+---
+
+# Governance — NeuroMorphicToolKit
+
+> Generated from governance.md by [crag](https://crag.sh). Regenerate: `crag compile --target cursor`
+
+**Stack:** python, docker
+
+## Quality Gates
+
+Run these checks in order before committing:
+### Test
+- `pytest`
+- `make ci`
+
+### Ci (inferred from workflow)
+- `python -m pip --version`
+- `where pytest || true`
+- `poetry run ruff check .`
+- `poetry run ruff format --check .`
+- `poetry run mypy .`
+- `poetry run pytest --tb=short --hypothesis-show-statistics`
+- `python -m ruff check .`
+- `python -m ruff format --check .`
+
+### Contributor docs (advisory — confirm before enforcing)
+- `mypy --strict  # from CONTRIBUTING.md`
+## Security
+
+- No hardcoded secrets — grep for sk_live, AKIA, password= before commit
+## Anti-Patterns
+
+Do not:
+- Do not write absolute local paths in governance (e.g. `D:/project/src/`) — use relative paths only (e.g. `src/`). Governance files are checked into the repo and must remain portable across machines.
+- Do not catch bare `Exception` — catch specific exceptions
+- Do not use mutable default arguments (e.g., `def f(x=[])`)
+- Do not use `import *` — use explicit imports
+- Do not use `latest` tag in FROM — pin to a specific version
+- Do not run containers as root — use a non-root USER
+
+
+## Conventions
+
+- Follow project commit conventions
+- Runtimes: python

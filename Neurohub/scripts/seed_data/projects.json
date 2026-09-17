@@ -1,0 +1,149 @@
+[
+  {
+    "id": "p1000001-0000-4000-8000-000000000001",
+    "name": "Prosthetic Grip Control Kit",
+    "description": "Starter kit for neuromorphic prosthetic grip control. Combines an EMG-driven spiking network with the Grip Stability benchmark for closed-loop evaluation of stopping distance.",
+    "owner": "neurohub-seed",
+    "members": [],
+    "status": "in_progress",
+    "tags": [
+      "prosthetics",
+      "emg",
+      "motor-control",
+      "grip",
+      "starter"
+    ],
+    "links": {
+      "neurobench_benchmark_ids": [
+        "grip_stability"
+      ],
+      "neurochip_deployment_ids": [],
+      "neurobench_baseline_ids": [],
+      "neurosense_session_ids": [],
+      "cnl_spec_slug": "emg-gripper"
+    }
+  },
+  {
+    "id": "p1000002-0000-4000-8000-000000000002",
+    "name": "Audio Wake-Word Detection Kit",
+    "description": "Neuromorphic keyword spotting kit. Audio wake-word CNL network evaluated against the MFCC Keyword Spotting benchmark with rate-coded audio features.",
+    "owner": "neurohub-seed",
+    "members": [],
+    "status": "in_progress",
+    "tags": [
+      "audio",
+      "keyword-spotting",
+      "speech",
+      "temporal",
+      "cnl"
+    ],
+    "links": {
+      "neurobench_benchmark_ids": [
+        "keyword_spotting"
+      ],
+      "neurochip_deployment_ids": [],
+      "neurobench_baseline_ids": [],
+      "neurosense_session_ids": [],
+      "cnl_spec_slug": "audio-wakeword"
+    }
+  },
+  {
+    "id": "p1000003-0000-4000-8000-000000000003",
+    "name": "Biosignal Classification Kit",
+    "description": "Neuromorphic biosignal classification kit. EEG attention SNN evaluated against ECG arrhythmia classification with delta spike encoding for always-on cardiac monitoring.",
+    "owner": "neurohub-seed",
+    "members": [],
+    "status": "in_progress",
+    "tags": [
+      "biosignal",
+      "ecg",
+      "eeg",
+      "classification",
+      "cnl",
+      "always-on"
+    ],
+    "links": {
+      "neurobench_benchmark_ids": [
+        "ecg_classification"
+      ],
+      "neurochip_deployment_ids": [],
+      "neurobench_baseline_ids": [],
+      "neurosense_session_ids": [],
+      "cnl_spec_slug": "eeg-attention"
+    }
+  },
+  {
+    "id": "p1000004-0000-4000-8000-000000000004",
+    "name": "Event Vision Suite",
+    "description": "Three complementary DVS event-camera SNNs evaluated on the DVS Gesture Recognition benchmark: object recognition, looming detection, and visual tracking.",
+    "owner": "neurohub-seed",
+    "members": [],
+    "status": "not_started",
+    "tags": [
+      "dvs",
+      "event-camera",
+      "gesture",
+      "visual",
+      "sparse"
+    ],
+    "links": {
+      "neurobench_benchmark_ids": [
+        "dvs_gesture"
+      ],
+      "neurochip_deployment_ids": [],
+      "neurobench_baseline_ids": [],
+      "neurosense_session_ids": [],
+      "cnl_spec_slug": "object-recognition"
+    }
+  },
+  {
+    "id": "p1000005-0000-4000-8000-000000000005",
+    "name": "Motor Control Research Kit",
+    "description": "Biological motor control SNNs for BCI research. Reflex arc evaluated on Primate Reaching (R² decoding); CPG rhythm generator on Mackey-Glass chaotic time-series prediction.",
+    "owner": "neurohub-seed",
+    "members": [],
+    "status": "not_started",
+    "tags": [
+      "motor",
+      "bci",
+      "primate",
+      "reflex",
+      "cpg",
+      "regression"
+    ],
+    "links": {
+      "neurobench_benchmark_ids": [
+        "primate_reaching",
+        "mackey_glass"
+      ],
+      "neurochip_deployment_ids": [],
+      "neurobench_baseline_ids": [],
+      "neurosense_session_ids": [],
+      "cnl_spec_slug": "reflex-arc"
+    }
+  },
+  {
+    "id": "p1000006-0000-4000-8000-000000000006",
+    "name": "Prosthetics Full Suite",
+    "description": "Complete neuromorphic prosthetics research suite. Combines EMG gripper, prosthetic reflex, slip reflex, and Dream Hand CNL specs, all evaluated against Grip Stability.",
+    "owner": "neurohub-seed",
+    "members": [],
+    "status": "not_started",
+    "tags": [
+      "prosthetics",
+      "emg",
+      "slip-reflex",
+      "dream-hand",
+      "full-suite"
+    ],
+    "links": {
+      "neurobench_benchmark_ids": [
+        "grip_stability"
+      ],
+      "neurochip_deployment_ids": [],
+      "neurobench_baseline_ids": [],
+      "neurosense_session_ids": [],
+      "cnl_spec_slug": "emg-gripper"
+    }
+  }
+]

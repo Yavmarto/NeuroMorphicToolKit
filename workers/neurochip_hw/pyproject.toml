@@ -1,0 +1,38 @@
+[project]
+name = "neurochip-hw-worker"
+version = "0.1.0"
+requires-python = ">=3.11"
+license = { text = "AGPL-3.0-or-later" }
+classifiers = [
+    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+]
+dependencies = [
+    "fastapi>=0.111",
+    "uvicorn[standard]>=0.29",
+]
+
+[project.optional-dependencies]
+akida = ["akida>=2.0.0", "tensorflow==2.19.*", "cnn2snn==2.19.1"]
+pynq = ["pynq>=2.7"]
+lava = ["lava-nc"]
+dev = [
+    "pytest",
+    "httpx",
+    "ruff",
+    "mypy",
+]
+
+[tool.mypy]
+disable_error_code = ["import-untyped", "no-untyped-call"]
+warn_unused_ignores = false
+disallow_untyped_decorators = false
+python_version = "3.11"
+strict = true
+ignore_missing_imports = true
+warn_unused_configs = true
+exclude = [
+    "(^|/)(build|dist)(/|$)",
+    "(^|/)(\\.venv|venv)(/|$)",
+    "\\.egg-info($|/)",
+]
+plugins = ["pydantic.mypy"]

@@ -1,0 +1,491 @@
+[
+  {
+    "slug": "lif-reference-neuron",
+    "name": "LIF Reference Neuron",
+    "description": "Minimal single-neuron LIF reference workspace — Input(1) -> Linear(1x1, no bias) -> LIF(tau=2.5ms, v_th=0.1) -> Output(1). Canonical 'hello world' model for verifying a new deploy target end-to-end; matches the analytically-solvable reference model used across the LIF paper task's per-platform notebooks (Norse-authored, snnTorch-simulated).",
+    "filename": "lif_reference_neuron.json",
+    "tags": [
+      "lif",
+      "tutorial",
+      "reference",
+      "single-neuron",
+      "snntorch",
+      "studio-workspace"
+    ],
+    "metadata": {
+      "artifact_family": "studio_workspace",
+      "workspace_kind": "workspace",
+      "architecture": "Input(1) -> Linear(1x1, no bias) -> LIF(tau_mem=2.5ms, v_th=0.1) -> Output(1)",
+      "hardware_targets": [
+        "snntorch_sim"
+      ],
+      "source_reference": "paper/01_lif/lif_norse.ipynb, lif_snntorch.ipynb (gen test/lif_norse.ipynb, lif_snntorch.ipynb; cnlstudio_notebook_analysis_extended.md, 2 July 2026)",
+      "viability": "HIGH — buildable via Model canvas + NIR Exporter, no unsupported nodes"
+    },
+    "data": {
+      "files": [
+        {
+          "id": "file-lif-reference",
+          "name": "lif_reference.cnl",
+          "content": "Define a network named lif_reference.\nDefine an input port named input with shape (1,).\nDefine a linear transformation named w_in with weight matrix shape (1, 1).\nDefine a leaky integrate-and-fire neuron named neuron with time constant 0.0025, resistance 1.0, leak voltage 0.0, and firing threshold 0.1.\nDefine an output port named output with shape (1,).\ninput connects to w_in.\nw_in connects to neuron.\nneuron connects to output.\n",
+          "path": "lif_reference.cnl",
+          "dirty": false,
+          "isUntitled": false,
+          "cursorOffset": 0,
+          "selectionBase": 0,
+          "selectionExtent": 0,
+          "scrollOffset": 0.0,
+          "revision": 1
+        }
+      ],
+      "activeFileId": "file-lif-reference",
+      "workspaceName": "LIF Reference Neuron",
+      "workspaceSourceKind": null,
+      "activePanel": "validation",
+      "activePipelineStep": "defineModel",
+      "selectedBenchmarkId": null,
+      "selectedBenchmarkName": null,
+      "selectedDataset": null,
+      "selectedDatasetPath": null,
+      "selectedPlatforms": [
+        "snntorch_sim"
+      ],
+      "selectedDeployTarget": "snntorch_sim",
+      "benchmarkResultSummary": {},
+      "validationFocus": null,
+      "splitRatio": 0.5,
+      "recentActivities": []
+    },
+    "id": "a4000001-0000-4000-8000-000000000001"
+  },
+  {
+    "slug": "braille-gesture-classifier-subtract",
+    "name": "Braille Tactile Gesture Classifier (subtract reset)",
+    "description": "Recurrent SNN for 12-electrode Braille tactile gesture classification into 7 output classes. Input(12) -> Affine(12x40, no bias) -> cnl.RSynaptic(n=40, beta=0.95, threshold=1.0, reset='subtract') -> Affine(40x7, no bias) -> cnl.Synaptic(n=7, beta=0.95, threshold=1.0, reset='subtract') -> Output(7). cnl.RSynaptic/cnl.Synaptic have no CNL text syntax yet, so the recurrent graph is carried in canvasGraph rather than the CNL text file.",
+    "filename": "braille_gesture_classifier_subtract.json",
+    "tags": [
+      "braille",
+      "tactile",
+      "rnn",
+      "recurrent",
+      "snntorch",
+      "prosthetics",
+      "studio-workspace"
+    ],
+    "metadata": {
+      "artifact_family": "studio_workspace",
+      "workspace_kind": "workspace",
+      "architecture": "Input(12) -> Affine(12x40, no bias) -> cnl.RSynaptic(n=40, beta=0.95, threshold=1.0, reset='subtract', use_bias=false) -> Affine(40x7, no bias) -> cnl.Synaptic(n=7, beta=0.95, threshold=1.0, reset='subtract') -> Output(7)",
+      "hardware_targets": [
+        "snntorch_sim"
+      ],
+      "task": "Braille tactile character/gesture classification (12-electrode array, 7 classes)",
+      "reset_mechanism": "subtract",
+      "use_bias": false,
+      "source_reference": "paper/03_rnn/Braille_training_snntorch.ipynb, snntorch_apply_subtract.ipynb (gen test/Braille_training_snntorch.ipynb, snntorch_apply_subtract.ipynb; cnlstudio_notebook_analysis_extended.md, 2 July 2026)",
+      "viability": "HIGH — cnl.RSynaptic/cnl.Synaptic already support reset_mechanism + use_bias"
+    },
+    "data": {
+      "files": [
+        {
+          "id": "file-braille-subtract",
+          "name": "braille_gesture_subtract.cnl",
+          "content": "Define a network named braille_gesture_subtract.\nDefine an input port named input with shape (12,).\nDefine a linear transformation named fc1 with weight matrix shape (40, 12).\nDefine a linear transformation named fc2 with weight matrix shape (7, 40).\nDefine an output port named output with shape (7,).\ninput connects to fc1.\nfc2 connects to output.\n# NOTE: cnl.RSynaptic (hidden, n=40) and cnl.Synaptic (readout, n=7) have no CNL text syntax today — wire fc1 -> hidden -> fc2 via the Model canvas; see canvasGraph.\n",
+          "path": "braille_gesture_subtract.cnl",
+          "dirty": false,
+          "isUntitled": false,
+          "cursorOffset": 0,
+          "selectionBase": 0,
+          "selectionExtent": 0,
+          "scrollOffset": 0.0,
+          "revision": 1,
+          "canvasGraph": {
+            "nodes": [
+              {
+                "id": "input",
+                "component_id": "input_node",
+                "nir_type": "nir.Input",
+                "label": "Input",
+                "parameters": {
+                  "shape": [
+                    12
+                  ]
+                },
+                "position": [
+                  0.0,
+                  200.0
+                ]
+              },
+              {
+                "id": "fc1",
+                "component_id": "nir.Affine",
+                "nir_type": "nir.Affine",
+                "label": "Affine",
+                "parameters": {
+                  "weight_shape": [
+                    40,
+                    12
+                  ],
+                  "use_bias": false
+                },
+                "position": [
+                  200.0,
+                  200.0
+                ]
+              },
+              {
+                "id": "hidden",
+                "component_id": "cnl.RSynaptic",
+                "nir_type": "cnl.RSynaptic",
+                "label": "RSynaptic",
+                "parameters": {
+                  "n_neurons": 40,
+                  "alpha": 0.9,
+                  "beta": 0.95,
+                  "threshold": 1.0,
+                  "reset_mechanism": "subtract",
+                  "use_bias": false
+                },
+                "position": [
+                  400.0,
+                  200.0
+                ]
+              },
+              {
+                "id": "fc2",
+                "component_id": "nir.Affine",
+                "nir_type": "nir.Affine",
+                "label": "Affine",
+                "parameters": {
+                  "weight_shape": [
+                    7,
+                    40
+                  ],
+                  "use_bias": false
+                },
+                "position": [
+                  600.0,
+                  200.0
+                ]
+              },
+              {
+                "id": "readout",
+                "component_id": "cnl.Synaptic",
+                "nir_type": "cnl.Synaptic",
+                "label": "Synaptic",
+                "parameters": {
+                  "n_neurons": 7,
+                  "alpha": 0.9,
+                  "beta": 0.95,
+                  "threshold": 1.0,
+                  "reset_mechanism": "subtract"
+                },
+                "position": [
+                  800.0,
+                  200.0
+                ]
+              },
+              {
+                "id": "output",
+                "component_id": "output_node",
+                "nir_type": "nir.Output",
+                "label": "Output",
+                "parameters": {
+                  "shape": [
+                    7
+                  ]
+                },
+                "position": [
+                  1000.0,
+                  200.0
+                ]
+              }
+            ],
+            "edges": [
+              {
+                "id": "edge_1",
+                "source_node_id": "input",
+                "source_port": "out",
+                "target_node_id": "fc1",
+                "target_port": "in",
+                "parameters": {}
+              },
+              {
+                "id": "edge_2",
+                "source_node_id": "fc1",
+                "source_port": "out",
+                "target_node_id": "hidden",
+                "target_port": "in",
+                "parameters": {}
+              },
+              {
+                "id": "edge_3",
+                "source_node_id": "hidden",
+                "source_port": "out",
+                "target_node_id": "fc2",
+                "target_port": "in",
+                "parameters": {}
+              },
+              {
+                "id": "edge_4",
+                "source_node_id": "fc2",
+                "source_port": "out",
+                "target_node_id": "readout",
+                "target_port": "in",
+                "parameters": {}
+              },
+              {
+                "id": "edge_5",
+                "source_node_id": "readout",
+                "source_port": "out",
+                "target_node_id": "output",
+                "target_port": "in",
+                "parameters": {}
+              }
+            ],
+            "metadata": {
+              "zoom": 1.0,
+              "pan": [
+                0.0,
+                0.0
+              ]
+            }
+          }
+        }
+      ],
+      "activeFileId": "file-braille-subtract",
+      "workspaceName": "Braille Tactile Gesture Classifier (subtract reset)",
+      "workspaceSourceKind": null,
+      "activePanel": "validation",
+      "activePipelineStep": "defineModel",
+      "selectedBenchmarkId": null,
+      "selectedBenchmarkName": null,
+      "selectedDataset": "Braille Tactile Gesture Dataset (ds_test)",
+      "selectedDatasetPath": "__BRAILLE_DATASET_PATH__",
+      "selectedPlatforms": [
+        "snntorch_sim"
+      ],
+      "selectedDeployTarget": "snntorch_sim",
+      "benchmarkResultSummary": {},
+      "validationFocus": null,
+      "splitRatio": 0.5,
+      "recentActivities": []
+    },
+    "id": "a4000002-0000-4000-8000-000000000002"
+  },
+  {
+    "slug": "braille-gesture-classifier-zero",
+    "name": "Braille Tactile Gesture Classifier (zero reset, bias)",
+    "description": "Hardware-tuning variant of the Braille tactile gesture classifier: smaller hidden layer (n=38) with bias enabled and reset_mechanism='zero' instead of 'subtract'. Input(12) -> Affine(12x38, bias) -> cnl.RSynaptic(n=38, beta=0.95, threshold=1.0, reset='zero', use_bias=true) -> Affine(38x7, bias) -> cnl.Synaptic(n=7, beta=0.95, threshold=1.0, reset='zero') -> Output(7). Pairs with the subtract-reset variant to compare how reset mechanism and bias choice affect hardware deployment behaviour.",
+    "filename": "braille_gesture_classifier_zero.json",
+    "tags": [
+      "braille",
+      "tactile",
+      "rnn",
+      "recurrent",
+      "snntorch",
+      "prosthetics",
+      "studio-workspace"
+    ],
+    "metadata": {
+      "artifact_family": "studio_workspace",
+      "workspace_kind": "workspace",
+      "architecture": "Input(12) -> Affine(12x38, bias) -> cnl.RSynaptic(n=38, beta=0.95, threshold=1.0, reset='zero', use_bias=true) -> Affine(38x7, bias) -> cnl.Synaptic(n=7, beta=0.95, threshold=1.0, reset='zero') -> Output(7)",
+      "hardware_targets": [
+        "snntorch_sim"
+      ],
+      "task": "Braille tactile character/gesture classification (12-electrode array, 7 classes)",
+      "reset_mechanism": "zero",
+      "use_bias": true,
+      "source_reference": "paper/03_rnn/snntorch_apply_zero.ipynb (gen test/snntorch_apply_zero.ipynb; cnlstudio_notebook_analysis_extended.md, 2 July 2026 — UI Replication Guide)",
+      "viability": "HIGH — cnl.RSynaptic/cnl.Synaptic already support reset_mechanism + use_bias"
+    },
+    "data": {
+      "files": [
+        {
+          "id": "file-braille-zero",
+          "name": "braille_gesture_zero.cnl",
+          "content": "Define a network named braille_gesture_zero.\nDefine an input port named input with shape (12,).\nDefine an affine transformation named fc1 with weight matrix shape (38, 12), bias vector shape (38,).\nDefine an affine transformation named fc2 with weight matrix shape (7, 38), bias vector shape (7,).\nDefine an output port named output with shape (7,).\ninput connects to fc1.\nfc2 connects to output.\n# NOTE: cnl.RSynaptic (hidden, n=38) and cnl.Synaptic (readout, n=7) have no CNL text syntax today — wire fc1 -> hidden -> fc2 via the Model canvas; see canvasGraph.\n",
+          "path": "braille_gesture_zero.cnl",
+          "dirty": false,
+          "isUntitled": false,
+          "cursorOffset": 0,
+          "selectionBase": 0,
+          "selectionExtent": 0,
+          "scrollOffset": 0.0,
+          "revision": 1,
+          "canvasGraph": {
+            "nodes": [
+              {
+                "id": "input",
+                "component_id": "input_node",
+                "nir_type": "nir.Input",
+                "label": "Input",
+                "parameters": {
+                  "shape": [
+                    12
+                  ]
+                },
+                "position": [
+                  0.0,
+                  200.0
+                ]
+              },
+              {
+                "id": "fc1",
+                "component_id": "nir.Affine",
+                "nir_type": "nir.Affine",
+                "label": "Affine",
+                "parameters": {
+                  "weight_shape": [
+                    38,
+                    12
+                  ],
+                  "use_bias": true
+                },
+                "position": [
+                  200.0,
+                  200.0
+                ]
+              },
+              {
+                "id": "hidden",
+                "component_id": "cnl.RSynaptic",
+                "nir_type": "cnl.RSynaptic",
+                "label": "RSynaptic",
+                "parameters": {
+                  "n_neurons": 38,
+                  "alpha": 0.9,
+                  "beta": 0.95,
+                  "threshold": 1.0,
+                  "reset_mechanism": "zero",
+                  "use_bias": true
+                },
+                "position": [
+                  400.0,
+                  200.0
+                ]
+              },
+              {
+                "id": "fc2",
+                "component_id": "nir.Affine",
+                "nir_type": "nir.Affine",
+                "label": "Affine",
+                "parameters": {
+                  "weight_shape": [
+                    7,
+                    38
+                  ],
+                  "use_bias": true
+                },
+                "position": [
+                  600.0,
+                  200.0
+                ]
+              },
+              {
+                "id": "readout",
+                "component_id": "cnl.Synaptic",
+                "nir_type": "cnl.Synaptic",
+                "label": "Synaptic",
+                "parameters": {
+                  "n_neurons": 7,
+                  "alpha": 0.9,
+                  "beta": 0.95,
+                  "threshold": 1.0,
+                  "reset_mechanism": "zero"
+                },
+                "position": [
+                  800.0,
+                  200.0
+                ]
+              },
+              {
+                "id": "output",
+                "component_id": "output_node",
+                "nir_type": "nir.Output",
+                "label": "Output",
+                "parameters": {
+                  "shape": [
+                    7
+                  ]
+                },
+                "position": [
+                  1000.0,
+                  200.0
+                ]
+              }
+            ],
+            "edges": [
+              {
+                "id": "edge_1",
+                "source_node_id": "input",
+                "source_port": "out",
+                "target_node_id": "fc1",
+                "target_port": "in",
+                "parameters": {}
+              },
+              {
+                "id": "edge_2",
+                "source_node_id": "fc1",
+                "source_port": "out",
+                "target_node_id": "hidden",
+                "target_port": "in",
+                "parameters": {}
+              },
+              {
+                "id": "edge_3",
+                "source_node_id": "hidden",
+                "source_port": "out",
+                "target_node_id": "fc2",
+                "target_port": "in",
+                "parameters": {}
+              },
+              {
+                "id": "edge_4",
+                "source_node_id": "fc2",
+                "source_port": "out",
+                "target_node_id": "readout",
+                "target_port": "in",
+                "parameters": {}
+              },
+              {
+                "id": "edge_5",
+                "source_node_id": "readout",
+                "source_port": "out",
+                "target_node_id": "output",
+                "target_port": "in",
+                "parameters": {}
+              }
+            ],
+            "metadata": {
+              "zoom": 1.0,
+              "pan": [
+                0.0,
+                0.0
+              ]
+            }
+          }
+        }
+      ],
+      "activeFileId": "file-braille-zero",
+      "workspaceName": "Braille Tactile Gesture Classifier (zero reset, bias)",
+      "workspaceSourceKind": null,
+      "activePanel": "validation",
+      "activePipelineStep": "defineModel",
+      "selectedBenchmarkId": null,
+      "selectedBenchmarkName": null,
+      "selectedDataset": "Braille Tactile Gesture Dataset (ds_test)",
+      "selectedDatasetPath": "__BRAILLE_DATASET_PATH__",
+      "selectedPlatforms": [
+        "snntorch_sim"
+      ],
+      "selectedDeployTarget": "snntorch_sim",
+      "benchmarkResultSummary": {},
+      "validationFocus": null,
+      "splitRatio": 0.5,
+      "recentActivities": []
+    },
+    "id": "a4000003-0000-4000-8000-000000000003"
+  }
+]

@@ -1,0 +1,11 @@
+{
+    "id": "coral_edgetpu",
+    "name": "Google Coral Edge TPU",
+    "vendor": "Google",
+    "required_format": "tflite",
+    "artifact_format": "edgetpu",
+    "compile_cmd": "edgetpu_compiler -o {artifact_dir} {intermediate}",
+    "benchmark_cmd": null,
+    "requires_hardware": false,
+    "notes": "Compiler-only spike (CEL-242 Phase 1). Coral hardware is EOL — do not procure boards unless a customer requires it."
+}

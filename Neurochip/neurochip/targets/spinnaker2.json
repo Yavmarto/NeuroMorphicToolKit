@@ -1,0 +1,19 @@
+{
+  "id": "spinnaker2",
+  "name": "SpiNNaker 2",
+  "core_count": 152,
+  "neuron_capacity": 1000,
+  "supported_neuron_models": [
+    "lif",
+    "lif_curr_exp",
+    "spike_list"
+  ],
+  "weight_bit_widths": [
+    8,
+    16,
+    32
+  ],
+  "on_chip_memory_kb": 32768,
+  "clock_speed_mhz": 300.0,
+  "io_pins": 0
+}

@@ -1,0 +1,15 @@
+services:
+  neurobench:
+    build: .
+    ports:
+      - "${NEUROBENCH_PORT:-8003}:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    volumes:
+      - ./neurobench:/app/neurobench

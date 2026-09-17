@@ -1,0 +1,23 @@
+# {{ project_name }}
+
+**Framework**: NIR + snnTorch training
+**Task**: {{ task }}
+
+## Getting started
+
+```bash
+uv sync
+uv run python src/train.py
+```
+
+## What this scaffold gives you
+
+- A deterministic snnTorch training smoke test
+- `network.cnl`, the architecture used for target validation
+- `artifacts/trained.nir`, generated after training with non-zero weights
+
+## Next steps
+
+1. Replace the tiny sample data and model in `src/train.py`.
+2. Keep the layer names and shapes in `network.cnl` synchronized with the exported NIR graph.
+3. Package for PYNQ with `neuro deploy network.cnl --trained-nir artifacts/trained.nir --hardware pynq --output pynq.zip`.

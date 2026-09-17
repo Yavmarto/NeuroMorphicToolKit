@@ -1,0 +1,146 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+log_step() { printf "[install-pynq-agent] %s\n" "$1"; }
+
+BUNDLE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+INSTALL_ROOT="${INSTALL_ROOT:-@@INSTALL_ROOT@@}"
+AGENT_VENV_PATH="${AGENT_VENV_PATH:-@@AGENT_VENV_PATH@@}"
+PYNQ_VENV_PATH="${PYNQ_VENV_PATH:-@@PYNQ_VENV_PATH@@}"
+OVERLAY_DIR="${OVERLAY_DIR:-@@OVERLAY_DIR@@}"
+SERVICE_NAME="${SERVICE_NAME:-@@SERVICE_NAME@@}"
+AGENT_EXECUTABLE_NAME="${AGENT_EXECUTABLE_NAME:-@@AGENT_EXECUTABLE_NAME@@}"
+WHEEL_NAME="${WHEEL_NAME:-@@WHEEL_NAME@@}"
+INSTALL_STATUS_PATH="${INSTALL_STATUS_PATH:-@@INSTALL_STATUS_PATH@@}"
+RUNTIME_LOG_PATH="${RUNTIME_LOG_PATH:-@@RUNTIME_LOG_PATH@@}"
+AGENT_HOST="${NEUROCHIP_PYNQ_AGENT_HOST:-127.0.0.1}"
+AGENT_PORT="${NEUROCHIP_PYNQ_AGENT_PORT:-8002}"
+CANONICAL_PYNQ_PYTHON="${CANONICAL_PYNQ_PYTHON:-/usr/local/share/pynq-venv/bin/python}"
+EFFECTIVE_PYNQ_PYTHON=""
+PYNQ_RUNTIME_SOURCE="unknown"
+AGENT_PACKAGE_VERSION=""
+AGENT_WHEEL_NAME="$WHEEL_NAME"
+
+write_install_status() {
+  python3 - "$INSTALL_STATUS_PATH" "$1" "$2" "$SERVICE_NAME" "$AGENT_VENV_PATH" "$PYNQ_VENV_PATH" "$RUNTIME_LOG_PATH" "$EFFECTIVE_PYNQ_PYTHON" "$PYNQ_RUNTIME_SOURCE" "$AGENT_PACKAGE_VERSION" "$AGENT_WHEEL_NAME" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+payload = {
+    "installMode": sys.argv[2],
+    "message": sys.argv[3],
+    "serviceName": sys.argv[4],
+    "agentVenvPath": sys.argv[5],
+    "pynqVenvPath": sys.argv[6],
+    "runtimeLogPath": sys.argv[7],
+    "effectivePynqPython": sys.argv[8],
+    "pynqRuntimeSource": sys.argv[9],
+    "agentPackageVersion": sys.argv[10],
+    "agentWheelName": sys.argv[11],
+    "autoStartSupported": sys.argv[2] == "systemd",
+}
+Path(sys.argv[1]).write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+PY
+}
+
+detect_pynq_runtime() {
+  if [ -x "$CANONICAL_PYNQ_PYTHON" ] && \
+     "$CANONICAL_PYNQ_PYTHON" -c "import pynq; import pyxrt" >/dev/null 2>&1; then
+    EFFECTIVE_PYNQ_PYTHON="$CANONICAL_PYNQ_PYTHON"
+    PYNQ_RUNTIME_SOURCE="canonical"
+    return 0
+  fi
+  return 1
+}
+
+wait_for_health() {
+  python3 - "$AGENT_HOST" "$AGENT_PORT" <<'PY'
+import sys
+import time
+import urllib.error
+import urllib.request
+
+host = sys.argv[1]
+port = int(sys.argv[2])
+url = f"http://{host}:{port}/health"
+started_at = time.monotonic()
+deadline = started_at + 120.0
+next_progress = started_at + 15.0
+while time.monotonic() < deadline:
+    try:
+        with urllib.request.urlopen(url, timeout=2.0) as response:
+            if response.status == 200:
+                sys.exit(0)
+    except (urllib.error.URLError, TimeoutError):
+        pass
+    now = time.monotonic()
+    if now >= next_progress:
+        print(f"[install-pynq-agent] Still waiting for runtime health ({now - started_at:.0f}s elapsed)", flush=True)
+        next_progress += 15.0
+    time.sleep(1.0)
+sys.exit(1)
+PY
+}
+
+log_step "Preparing install directories at $INSTALL_ROOT"
+mkdir -p "$INSTALL_ROOT" "$OVERLAY_DIR"
+log_step "Creating Python virtual environment at $AGENT_VENV_PATH"
+python3 -m venv "$AGENT_VENV_PATH"
+log_step "Upgrading pip in agent virtual environment"
+"$AGENT_VENV_PATH/bin/pip" install --upgrade pip
+log_step "Locating PYNQ runtime interpreter"
+if detect_pynq_runtime; then
+  log_step "Detected canonical PYNQ runtime at $EFFECTIVE_PYNQ_PYTHON; skipping isolated venv"
+else
+  log_step "Canonical PYNQ runtime unavailable at $CANONICAL_PYNQ_PYTHON"
+  log_step "Creating isolated PYNQ virtual environment at $PYNQ_VENV_PATH"
+  python3 -m venv "$PYNQ_VENV_PATH"
+  log_step "Upgrading pip in PYNQ virtual environment"
+  "$PYNQ_VENV_PATH/bin/pip" install --upgrade pip
+  log_step "Installing pynq runtime dependency into isolated environment"
+  "$PYNQ_VENV_PATH/bin/pip" install --upgrade pynq
+  EFFECTIVE_PYNQ_PYTHON="$PYNQ_VENV_PATH/bin/python"
+  PYNQ_RUNTIME_SOURCE="isolated"
+fi
+log_step "Force-reinstalling Neurochip PYNQ agent wheel $WHEEL_NAME"
+"$AGENT_VENV_PATH/bin/pip" install --force-reinstall "$BUNDLE_DIR/wheels/$WHEEL_NAME"
+AGENT_PACKAGE_VERSION="$(
+  "$AGENT_VENV_PATH/bin/python" - <<'PY'
+from importlib import metadata
+try:
+    print(metadata.version("neurochip"))
+except metadata.PackageNotFoundError:
+    print("")
+PY
+)"
+log_step "Checking passwordless sudo access for system service install"
+if sudo -n true >/dev/null 2>&1; then
+  log_step "Passwordless sudo available; installing systemd service"
+  write_install_status "systemd" "Runtime installed with systemd auto-start."
+  log_step "Staging systemd unit for $SERVICE_NAME.service with PYNQ runtime $EFFECTIVE_PYNQ_PYTHON"
+  sed "s|^Environment=NEUROCHIP_PYNQ_PYTHON=.*|Environment=NEUROCHIP_PYNQ_PYTHON=$EFFECTIVE_PYNQ_PYTHON|" \
+    "$BUNDLE_DIR/systemd/$SERVICE_NAME.service" > "/tmp/$SERVICE_NAME.service"
+  chmod 0644 "/tmp/$SERVICE_NAME.service"
+  log_step "Installing systemd unit into /etc/systemd/system"
+  sudo -n mv "/tmp/$SERVICE_NAME.service" "/etc/systemd/system/$SERVICE_NAME.service"
+  log_step "Reloading systemd daemon"
+  sudo -n systemctl daemon-reload
+  log_step "Enabling $SERVICE_NAME.service"
+  sudo -n systemctl enable "$SERVICE_NAME.service"
+  log_step "Restarting $SERVICE_NAME.service"
+  sudo -n systemctl restart "$SERVICE_NAME.service"
+else
+  log_step "Passwordless sudo unavailable; falling back to user-space runtime install"
+  write_install_status "user-space" "Runtime installed in user space; the launcher can start and restart it, but it will not come back automatically after a board reboot without privileged setup."
+  @@STOP_COMMAND@@
+  @@LAUNCH_COMMAND@@
+fi
+log_step "Waiting for runtime health endpoint"
+wait_for_health
+if sudo -n true >/dev/null 2>&1; then
+  printf "INSTALL_STATUS_JSON=%s\n" "$(sudo -n cat "$INSTALL_STATUS_PATH")"
+else
+  printf "INSTALL_STATUS_JSON=%s\n" "$(cat "$INSTALL_STATUS_PATH")"
+fi
+log_step "Install script completed successfully"

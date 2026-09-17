@@ -1,0 +1,55 @@
+{
+  "id": "reflex_arc",
+  "name": "Reflex Arc",
+  "description": "A two-neuron pathway with explicit thresholds, leak, and synaptic transmission.",
+  "thumbnail": "reflex_thumbnail.png",
+  "use_case": "Basic signal transmission between two LIF neurons",
+  "version": "1.0",
+  "cnl_spec": "Define a network named reflex_arc.\nDefine a LIF neuron named afferent with time constant 0.02, resistance 1.0, leak voltage 0.0, and firing threshold 1.0.\nDefine a LIF neuron named efferent with time constant 0.02, resistance 1.0, leak voltage 0.0, and firing threshold 0.8.\nConnect afferent to efferent.",
+  "graph": {
+    "nodes": [
+      {
+        "id": "afferent",
+        "component_id": "lif_population",
+        "parameters": {
+          "name": "afferent",
+          "n_neurons": 100,
+          "tau_rc": 0.02,
+          "tau_ref": 0.002,
+          "threshold": 1.0
+        },
+        "position": [100.0, 200.0]
+      },
+      {
+        "id": "efferent",
+        "component_id": "lif_population",
+        "parameters": {
+          "name": "efferent",
+          "n_neurons": 100,
+          "tau_rc": 0.02,
+          "tau_ref": 0.002,
+          "threshold": 0.8
+        },
+        "position": [500.0, 200.0]
+      }
+    ],
+    "edges": [
+      {
+        "id": "edge_1",
+        "source_node_id": "afferent",
+        "source_port": "out",
+        "target_node_id": "efferent",
+        "target_port": "in",
+        "parameters": {
+          "synapse_type": "static_synapse",
+          "weight": 1.0,
+          "delay": 0.001
+        }
+      }
+    ],
+    "metadata": {
+      "zoom": 1.0,
+      "pan": [0.0, 0.0]
+    }
+  }
+}

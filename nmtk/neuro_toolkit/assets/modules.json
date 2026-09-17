@@ -1,0 +1,339 @@
+[
+  {
+    "id": "neurocnl",
+    "name": "NeuroStudio",
+    "description": "CNL compiler and visual SNN design suite",
+    "icon": "code",
+    "port": 9000,
+    "version": "1.0.0",
+    "installPath": "neurocnl/",
+    "sourcePath": ".",
+    "runPath": ".",
+    "installStrategy": "pip",
+    "installExtras": [
+      "training",
+      "studio",
+      "rockpool",
+      "synsense",
+      "norse"
+    ],
+    "startStrategy": "none",
+    "uvicornTarget": "",
+    "localDeps": [],
+    "showInLauncherNav": true,
+    "hasFrontend": true,
+    "frontendStatus": "Yes",
+    "requiresMuJoCo": false,
+    "remoteUrl": "https://api.github.com/repos/Yavmarto/neurocnl",
+    "required": true,
+    "deployment": {
+      "supportedModes": [
+        "standalone",
+        "docker",
+        "kubernetes"
+      ],
+      "healthPath": "/health",
+      "requiredPorts": [
+        9000
+      ],
+      "requiredEnvironment": [],
+      "secretFields": [],
+      "defaultContainerImage": "ghcr.io/yavmarto/neurocnl:latest",
+      "chartTemplateId": "nmtk-backend",
+      "startupTimeoutSeconds": 120,
+      "readinessTimeoutSeconds": 120
+    },
+    "jupyterKernel": {
+      "displayName": "Python (NeuroStudio)"
+    }
+  },
+  {
+    "id": "Neurochip",
+    "name": "NeuroChip",
+    "description": "Execution, flashing, and hardware diagnostics for prepared neuromorphic networks",
+    "icon": "memory",
+    "port": 9000,
+    "version": "1.0.0",
+    "installPath": "Neurochip/",
+    "sourcePath": ".",
+    "runPath": ".",
+    "installStrategy": "pip",
+    "startStrategy": "none",
+    "uvicornTarget": "",
+    "showInLauncherNav": false,
+    "optionalImports": [
+      "lava.magma.core.run_conditions"
+    ],
+    "akidaRuntime": {
+      "supportedPlatforms": [
+        "linux",
+        "windows"
+      ],
+      "pythonRange": ">=3.10,<3.13",
+      "standaloneCPython": {
+        "version": "3.12.13",
+        "architecture": "x86_64",
+        "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20260807/cpython-3.12.13%2B20260807-x86_64-unknown-linux-gnu-install_only.tar.gz",
+        "sha256": "5bd6f36fd7ef02b909234c94dca9994ef0da06ace3bc3cece4fe27870e9cdbbe"
+      },
+      "requiredPackages": [
+        "tensorflow==2.19.*",
+        "akida==2.19.2",
+        "cnn2snn==2.19.2",
+        "quantizeml==1.2.4",
+        "onnx>=1.17,<2",
+        "akida-models==1.13.1"
+      ],
+      "docsUrl": "https://doc.brainchipinc.com/installation.html",
+      "localModeFallback": "simulator_only"
+    },
+    "launcherRuntime": {
+      "pynq": {
+        "runtimePort": 8002,
+        "sshPort": 22,
+        "defaultUsername": "xilinx",
+        "defaultState": "unpaired",
+        "defaultAuthMode": "password",
+        "legacyInstallRoot": "/opt/neurochip-pynq-agent",
+        "installRootTemplate": "/home/{username}/.local/share/neurochip-pynq-agent",
+        "agentVenvDirName": "venv",
+        "runtimeVenvDirName": "pynq-venv",
+        "overlayDirName": "overlays",
+        "serviceName": "neurochip-pynq-agent",
+        "agentExecutableName": "neurochip-pynq-agent",
+        "installStatusFilename": "install-status.json",
+        "runtimeLogFilename": "runtime.log",
+        "overlayStagingSubdir": "overlay_staging/pynq_z2"
+      },
+      "akida": {
+        "runtimePort": 8002,
+        "controlPort": 8091,
+        "sshPort": 22,
+        "defaultState": "unknown",
+        "defaultAuthMode": "password",
+        "installRoot": "/opt/neurochip-akida-host",
+        "serviceUser": "neurochip",
+        "venvDirName": "venv",
+        "runtimeServiceName": "neurochip",
+        "controlServiceName": "neurochip-akida-control",
+        "tokenRelativePath": "credentials/api-token",
+        "installStatusRelativePath": "install-status.json"
+      }
+    },
+    "hasFrontend": true,
+    "frontendStatus": "Yes",
+    "requiresMuJoCo": false,
+    "remoteUrl": "https://api.github.com/repos/Yavmarto/Neurochip",
+    "required": false,
+    "deployment": {
+      "supportedModes": [
+        "standalone",
+        "docker",
+        "kubernetes"
+      ],
+      "healthPath": "/health",
+      "requiredPorts": [
+        9000
+      ],
+      "requiredEnvironment": [],
+      "secretFields": [
+        "NEUROCHIP_API_KEY"
+      ],
+      "defaultContainerImage": "ghcr.io/yavmarto/neurochip:latest",
+      "chartTemplateId": "nmtk-backend",
+      "startupTimeoutSeconds": 120,
+      "readinessTimeoutSeconds": 120
+    }
+  },
+  {
+    "id": "Neurobench",
+    "name": "Bench",
+    "description": "SNN testing and benchmarking workbench",
+    "icon": "speed",
+    "port": 9000,
+    "version": "1.0.0",
+    "installPath": "Neurobench/",
+    "sourcePath": "neurobench/",
+    "runPath": "neurobench/",
+    "installStrategy": "pip",
+    "startStrategy": "none",
+    "uvicornTarget": "",
+    "hasFrontend": true,
+    "frontendStatus": "Yes",
+    "requiresMuJoCo": false,
+    "remoteUrl": "https://api.github.com/repos/Yavmarto/Neurobench",
+    "required": false,
+    "deployment": {
+      "supportedModes": [
+        "standalone",
+        "docker",
+        "kubernetes"
+      ],
+      "healthPath": "/health",
+      "requiredPorts": [
+        9000
+      ],
+      "requiredEnvironment": [],
+      "secretFields": [],
+      "defaultContainerImage": "ghcr.io/yavmarto/neurobench:latest",
+      "chartTemplateId": "nmtk-backend",
+      "startupTimeoutSeconds": 120,
+      "readinessTimeoutSeconds": 120
+    },
+    "installExtras": [
+      "executor"
+    ],
+    "jupyterKernel": {
+      "displayName": "Python (NeuroBench)"
+    }
+  },
+  {
+    "id": "Neurosense",
+    "name": "NeuroSense",
+    "description": "Biosignal acquisition and spike encoding",
+    "icon": "sensors",
+    "port": 9000,
+    "version": "1.0.0",
+    "installPath": "Neurosense/",
+    "sourcePath": ".",
+    "runPath": "neurosense/",
+    "installStrategy": "pip",
+    "startStrategy": "none",
+    "uvicornTarget": "",
+    "showInLauncherNav": true,
+    "hasFrontend": true,
+    "frontendStatus": "Yes",
+    "requiresMuJoCo": false,
+    "remoteUrl": "https://api.github.com/repos/Yavmarto/Neurosense",
+    "required": false,
+    "deployment": {
+      "supportedModes": [
+        "standalone",
+        "docker",
+        "kubernetes"
+      ],
+      "healthPath": "/health",
+      "requiredPorts": [
+        9000
+      ],
+      "requiredEnvironment": [],
+      "secretFields": [],
+      "defaultContainerImage": "ghcr.io/yavmarto/neurosense:latest",
+      "chartTemplateId": "nmtk-backend",
+      "startupTimeoutSeconds": 120,
+      "readinessTimeoutSeconds": 120
+    }
+  },
+  {
+    "id": "Neurohub",
+    "name": "Share",
+    "description": "Share CNL networks, canvas projects, and bench results with your team and the community",
+    "icon": "hub",
+    "port": 9000,
+    "version": "1.0.0",
+    "installPath": "Neurohub/",
+    "sourcePath": ".",
+    "runPath": ".",
+    "installStrategy": "pip",
+    "startStrategy": "none",
+    "uvicornTarget": "",
+    "showInLauncherNav": true,
+    "hasFrontend": true,
+    "frontendStatus": "Yes",
+    "requiresMuJoCo": false,
+    "remoteUrl": "https://api.github.com/repos/Yavmarto/Neurohub",
+    "required": false,
+    "deployment": {
+      "supportedModes": [
+        "standalone",
+        "docker",
+        "kubernetes"
+      ],
+      "healthPath": "/health",
+      "requiredPorts": [
+        9000
+      ],
+      "requiredEnvironment": [
+        "GITHUB_OAUTH_CLIENT_ID"
+      ],
+      "secretFields": [],
+      "defaultContainerImage": "ghcr.io/yavmarto/neurohub:latest",
+      "chartTemplateId": "nmtk-backend",
+      "startupTimeoutSeconds": 120,
+      "readinessTimeoutSeconds": 120
+    }
+  },
+  {
+    "id": "lava_backend",
+    "name": "Lava Backend",
+    "description": "Isolated Lava simulator runtime service used by Neurochip hardware routes",
+    "icon": "bolt",
+    "port": 8012,
+    "version": "1.0.0",
+    "installPath": "workers/lava_backend/",
+    "sourcePath": ".",
+    "runPath": ".",
+    "installStrategy": "pip",
+    "startStrategy": "none",
+    "uvicornTarget": "",
+    "showInLauncherNav": false,
+    "hasFrontend": false,
+    "frontendStatus": "No",
+    "requiresMuJoCo": false,
+    "remoteUrl": "",
+    "required": false,
+    "deployment": {
+      "internalProbeHost": "lava-backend",
+      "supportedModes": [
+        "docker"
+      ],
+      "healthPath": "/health",
+      "requiredPorts": [
+        8012
+      ],
+      "requiredEnvironment": [],
+      "secretFields": [],
+      "defaultContainerImage": "",
+      "chartTemplateId": "",
+      "startupTimeoutSeconds": 120,
+      "readinessTimeoutSeconds": 120
+    }
+  },
+  {
+    "id": "jupyter",
+    "name": "Notebooks",
+    "description": "Interactive Jupyter notebook editor",
+    "icon": "book",
+    "port": 8008,
+    "version": "1.0.0",
+    "installPath": "workers/jupyter_server/",
+    "sourcePath": ".",
+    "runPath": ".",
+    "installStrategy": "pip",
+    "startStrategy": "none",
+    "uvicornTarget": "",
+    "showInLauncherNav": true,
+    "hasFrontend": true,
+    "frontendStatus": "Yes",
+    "requiresMuJoCo": false,
+    "remoteUrl": "",
+    "required": false,
+    "deployment": {
+      "internalProbeHost": "jupyter-server",
+      "supportedModes": [
+        "standalone",
+        "docker"
+      ],
+      "healthPath": "/api/status",
+      "requiredPorts": [
+        8008
+      ],
+      "requiredEnvironment": [],
+      "secretFields": [],
+      "defaultContainerImage": "",
+      "chartTemplateId": "",
+      "startupTimeoutSeconds": 60,
+      "readinessTimeoutSeconds": 60
+    }
+  }
+]

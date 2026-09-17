@@ -1,0 +1,11 @@
+# The built overlay-v1 package IS tracked: it is the only way a user can get a
+# bitstream onto their board without opening a terminal, and the backend image
+# copies it straight out of this directory. Synthesis needs Linux + Vivado
+# 2022.x, so requiring every user to run `scripts/build_overlay.sh` was never a
+# real option. ~4.4 MB, replaced only when the overlay contract changes.
+*
+!.gitignore
+!README.md
+!snn_overlay.bit
+!snn_overlay.hwh
+!overlay_manifest.json

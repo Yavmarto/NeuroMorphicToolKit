@@ -1,0 +1,87 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+  schedule:
+    - cron: '0 0 * * 1'
+
+jobs:
+  python-audit:
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - [self-hosted, macOS, ARM64]
+          - [self-hosted, Windows, X64]
+          - [self-hosted, Linux, X64]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Add Git to PATH (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
+      - uses: actions/checkout@v4
+      - name: Configure tool cache
+        shell: bash
+        run: |
+          TOOL_CACHE="${RUNNER_TEMP}/_tool_cache"
+          mkdir -p "$TOOL_CACHE"
+          echo "AGENT_TOOLSDIRECTORY=$TOOL_CACHE" >> "$GITHUB_ENV"
+          echo "RUNNER_TOOL_CACHE=$TOOL_CACHE" >> "$GITHUB_ENV"
+      - name: Set up Python (macOS via Homebrew)
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          brew install python@3.12 || true
+          brew link --force --overwrite python@3.12 || true
+          PYTHON="$(brew --prefix python@3.12)/libexec/bin/python3"
+          "$PYTHON" -m venv "$RUNNER_TEMP/pip-audit-venv"
+          echo "$RUNNER_TEMP/pip-audit-venv/bin" >> "${GITHUB_PATH}"
+      - name: Set up Python (Linux and Windows)
+        if: runner.os != 'macOS'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run pip-audit
+        shell: bash
+        run: |
+          pip install pip-audit
+          IGNORE_ARGS=()
+          if [ -f .pip-audit-ignore ]; then
+            while IFS= read -r line; do
+              case "$line" in
+                ''|'#'*) continue ;;
+              esac
+              CVE_ID="$(echo "$line" | awk '{print $1}')"
+              IGNORE_ARGS+=(--ignore-vuln "$CVE_ID")
+            done < .pip-audit-ignore
+          fi
+          # Audit root and submodules; a real, non-ignored finding fails the job.
+          pip-audit "${IGNORE_ARGS[@]}"
+          find . -name "requirements.txt" -exec pip-audit -r {} "${IGNORE_ARGS[@]}" \;
+
+  trivy-scan:
+    runs-on: [self-hosted, Linux, X64]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trivy config scan (Dockerfiles)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: 'config'
+          scan-ref: '.'
+          trivyignores: '.trivyignore'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+      - name: Trivy filesystem scan (language dependencies)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          scanners: 'vuln'
+          trivyignores: '.trivyignore'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'

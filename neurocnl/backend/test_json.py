@@ -1,0 +1,8 @@
+import os
+
+os.environ["NEUROCNL_FIREBASE_BUCKET"] = "nmtk-41e11.firebasestorage.app"
+from app.services.dataset_catalog import load_dataset_catalog
+
+catalog = load_dataset_catalog(refresh=True)
+for e in catalog.datasets:
+    print(e.id, e.size_bytes)

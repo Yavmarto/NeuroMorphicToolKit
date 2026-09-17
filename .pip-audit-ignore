@@ -1,0 +1,8 @@
+# Accepted-risk CVE ignore-list for the pip-audit gate in
+# .github/workflows/security-scan.yml.
+#
+# One CVE/GHSA ID per line, followed by a short reason and a link to the
+# issue/PR that accepted the risk. Lines starting with # are ignored.
+#
+# Example:
+# GHSA-xxxx-xxxx-xxxx  no fix available upstream, unused code path, see CEL-000

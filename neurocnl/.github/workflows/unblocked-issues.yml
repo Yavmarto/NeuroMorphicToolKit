@@ -1,0 +1,38 @@
+name: Work on Unblocked Issues
+
+on:
+  issues:
+    types: [closed]
+
+permissions:
+  contents: write
+  issues: read
+  pull-requests: write
+
+jobs:
+  detect-unblocked:
+    runs-on: self-hosted
+    permissions:
+      issues: read
+    outputs:
+      matrix: ${{ steps.finder.outputs.issues }}
+      found: ${{ steps.finder.outputs.has_issues }}
+    steps:
+      - name: Find Unblocked Issues
+        id: finder
+        uses: google-labs-code/on-unblocked@v1
+
+  implement:
+    needs: detect-unblocked
+    if: needs.detect-unblocked.outputs.found == 'true'
+    strategy:
+      matrix:
+        issue-number: ${{ fromJson(needs.detect-unblocked.outputs.matrix || '[]') }}
+    uses: Yavmarto/NeuroMorphicToolKit/.github/workflows/reusable-unblocked-issues.yml@dev
+    with:
+      issue_title: "Unblocked Issue"
+      issue_body: ""
+      issue_author: ""
+    secrets:
+      JULES_API_KEY: ${{ secrets.JULES_API_KEY }}
+      JULES_API_KEY_F: ${{ secrets.JULES_API_KEY_F }}

@@ -1,0 +1,23 @@
+NeuroMorphicToolKit
+Copyright (C) 2026 Yoshimar Todihardjo and NeuroMorphicToolKit contributors.
+
+This product is licensed under the GNU Affero General Public License v3.0 or
+later (AGPL-3.0-or-later). A verbatim copy of the license is provided in the
+LICENSE file at the repository root and in every package root.
+
+This software relies on third-party open-source components, each retaining its
+own license. A generated inventory of direct dependencies and their licenses,
+together with compliance notes for copyleft and proprietary components, is
+maintained in THIRD_PARTY_NOTICES.md.
+
+Optional hardware integrations may require proprietary vendor SDKs (for example
+BrainChip Akida, SynSense samna, Prophesee Metavision, Xilinx/AMD PYNQ). These
+SDKs are NOT distributed with this project and remain subject to their
+respective vendor licenses.
+
+The single copyright/notice convention for this project is:
+
+    Copyright (C) 2026 Yoshimar Todihardjo and NeuroMorphicToolKit contributors.
+
+Per-file copyright headers are intentionally not used; this NOTICE and the
+LICENSE files at each package root govern the entire work.

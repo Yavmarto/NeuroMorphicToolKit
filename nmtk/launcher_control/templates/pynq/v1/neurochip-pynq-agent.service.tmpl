@@ -1,0 +1,23 @@
+[Unit]
+Description=NeuroChip PYNQ runtime agent
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=@@INSTALL_ROOT@@
+Environment=PYTHONPATH=@@INSTALL_ROOT@@
+Environment=NEUROCHIP_PYNQ_PYTHON=@@PYNQ_PYTHON_PATH@@
+Environment=NEUROCHIP_PYNQ_INSTALL_MODE=systemd
+Environment=NEUROCHIP_PYNQ_INSTALL_STATUS_PATH=@@INSTALL_STATUS_PATH@@
+Environment=NEUROCHIP_PYNQ_OVERLAY_DIR=@@OVERLAY_DIR@@
+Environment=XILINX_XRT=@@XILINX_XRT_PATH@@
+Environment=LD_LIBRARY_PATH=@@XILINX_XRT_PATH@@/lib:/usr/lib:/usr/local/lib
+Environment=PATH=@@XILINX_XRT_PATH@@/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Environment=BOARD=@@BOARD_NAME@@
+ExecStart=@@AGENT_VENV_PATH@@/bin/@@AGENT_EXECUTABLE_NAME@@
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

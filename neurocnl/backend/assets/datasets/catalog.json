@@ -1,0 +1,67 @@
+{
+  "datasets": [
+    {
+      "id": "mnist_spike",
+      "label": "MNIST Spike Encoded",
+      "description": "70k hand-written digit frames, rate-coded spikes",
+      "storage_path": "datasets/mnist_spike/mnist_spike.h5",
+      "size_bytes": null,
+      "content_sha256": null,
+      "format": "hdf5_generic_event",
+      "split_layout": "single_file",
+      "loader_config": {}
+    },
+    {
+      "id": "nmnist",
+      "label": "N-MNIST",
+      "description": "Event-based neuromorphic MNIST from DVS sensor",
+      "storage_path": "datasets/nmnist/nmnist.h5",
+      "size_bytes": null,
+      "content_sha256": null,
+      "format": "hdf5_generic_event",
+      "split_layout": "single_file",
+      "loader_config": {}
+    },
+    {
+      "id": "dvs_gesture",
+      "label": "DVS Gesture",
+      "description": "11 hand gesture classes from Dynamic Vision Sensor",
+      "storage_path": "datasets/dvs_gesture/dvs_gesture.h5",
+      "size_bytes": null,
+      "content_sha256": null,
+      "format": "hdf5_dvs_gesture",
+      "split_layout": "single_file",
+      "loader_config": {}
+    },
+    {
+      "id": "shd",
+      "label": "SHD",
+      "description": "Spiking Heidelberg Digits — spoken digit recognition",
+      "storage_path": "datasets/shd/shd.h5",
+      "size_bytes": null,
+      "content_sha256": null,
+      "format": "hdf5_shd",
+      "split_layout": "single_file",
+      "loader_config": {
+        "labels_path": "labels",
+        "times_path": "spikes/times",
+        "units_path": "spikes/units"
+      }
+    },
+    {
+      "id": "ntidigits",
+      "label": "N-TIDIGITS",
+      "description": "Neuromorphic cochlea recordings of spoken digits",
+      "storage_path": "datasets/ntidigits/ntidigits.h5",
+      "size_bytes": null,
+      "content_sha256": null,
+      "format": "hdf5_shd",
+      "split_layout": "single_file",
+      "loader_config": {
+        "labels_path": "labels",
+        "times_path": "spikes/times",
+        "units_path": "spikes/units"
+      }
+    }
+  ]
+}

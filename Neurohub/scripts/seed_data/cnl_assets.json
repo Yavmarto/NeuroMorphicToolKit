@@ -1,0 +1,464 @@
+[
+  {
+    "slug": "emg-gripper",
+    "name": "EMG Gripper Network",
+    "description": "3-layer LIF SNN (sensor→interneuron→actuator) for EMG-controlled prosthetic grip. Reads forearm EMG, classifies grip intent, and drives a gripper with spiking motor commands.",
+    "src": {
+      "root": "cnl_templates",
+      "file": "emg_gripper.cnl"
+    },
+    "tags": [
+      "emg",
+      "prosthetics",
+      "lif",
+      "motor-control",
+      "cnl"
+    ],
+    "metadata": {
+      "architecture": "3-layer LIF (sensor τ=10ms → interneuron τ=20ms → actuator τ=20ms)",
+      "hardware_targets": [
+        "spinnaker2",
+        "akida"
+      ],
+      "training_dataset": "Synthetic EMG + grip_stability benchmark",
+      "nodes": 3,
+      "layer_type": "LIF"
+    },
+    "id": "a1000001-0000-4000-8000-000000000001"
+  },
+  {
+    "slug": "audio-wakeword",
+    "name": "Audio Wake-Word Network",
+    "description": "Cochlear-inspired LIF SNN for neuromorphic audio wake-word detection. Temporal coincidence detection with sensor τ=5 ms. Suitable for always-on edge keyword spotting.",
+    "src": {
+      "root": "cnl_templates",
+      "file": "audio_wakeword.cnl"
+    },
+    "tags": [
+      "audio",
+      "lif",
+      "cochlear",
+      "wake-word",
+      "keyword",
+      "cnl"
+    ],
+    "metadata": {
+      "architecture": "3-layer LIF (sensor τ=5ms → interneuron τ=10ms → actuator τ=20ms)",
+      "hardware_targets": [
+        "spinnaker2"
+      ],
+      "training_dataset": "Google Speech Commands v2 (MFCC)",
+      "nodes": 3,
+      "layer_type": "LIF"
+    },
+    "id": "a1000002-0000-4000-8000-000000000002"
+  },
+  {
+    "slug": "eeg-attention",
+    "name": "EEG Attention Network",
+    "description": "SNN for EEG temporal attention classification. Applicable to biosignal monitoring including cardiac arrhythmia detection (ECG) and neural attention decoding.",
+    "src": {
+      "root": "cnl_templates",
+      "file": "eeg_attention.cnl"
+    },
+    "tags": [
+      "eeg",
+      "attention",
+      "biosignal",
+      "lif",
+      "cardiac",
+      "cnl"
+    ],
+    "metadata": {
+      "architecture": "EEG temporal attention SNN",
+      "hardware_targets": [
+        "akida",
+        "spinnaker2"
+      ],
+      "training_dataset": "PTB-XL ECG (4-class, 12-lead, 100 Hz)",
+      "layer_type": "LIF"
+    },
+    "id": "a1000003-0000-4000-8000-000000000003"
+  },
+  {
+    "slug": "object-recognition",
+    "name": "Object Recognition Network",
+    "description": "Sparse event-camera SNN for 11-class object and gesture recognition on DVS event streams. Input shape 128×128, 30 time bins.",
+    "src": {
+      "root": "cnl_templates",
+      "file": "object_recognition.cnl"
+    },
+    "tags": [
+      "vision",
+      "dvs",
+      "event-camera",
+      "sparse",
+      "classification",
+      "cnl"
+    ],
+    "metadata": {
+      "hardware_targets": [
+        "spinnaker2",
+        "akida"
+      ],
+      "input_type": "dvs_event_stream",
+      "layer_type": "LIF"
+    },
+    "id": "a1000004-0000-4000-8000-000000000004"
+  },
+  {
+    "slug": "looming-detector",
+    "name": "Looming Detector",
+    "description": "Event-camera looming detection SNN. Detects rapid approach of objects from DVS event streams. Safety-critical variant for robotics and autonomous systems.",
+    "src": {
+      "root": "cnl_templates",
+      "file": "looming_detector.cnl"
+    },
+    "tags": [
+      "vision",
+      "dvs",
+      "looming",
+      "safety",
+      "robotics",
+      "cnl"
+    ],
+    "metadata": {
+      "hardware_targets": [
+        "spinnaker2"
+      ],
+      "input_type": "dvs_event_stream",
+      "layer_type": "LIF"
+    },
+    "id": "a1000005-0000-4000-8000-000000000005"
+  },
+  {
+    "slug": "visual-tracker",
+    "name": "Visual Tracker",
+    "description": "Spatial visual tracking SNN for DVS event cameras. Tracks moving objects across the event-stream sensor plane.",
+    "src": {
+      "root": "cnl_templates",
+      "file": "visual_tracker.cnl"
+    },
+    "tags": [
+      "vision",
+      "dvs",
+      "tracking",
+      "spatial",
+      "cnl"
+    ],
+    "metadata": {
+      "hardware_targets": [
+        "spinnaker2"
+      ],
+      "input_type": "dvs_event_stream",
+      "layer_type": "LIF"
+    },
+    "id": "a1000006-0000-4000-8000-000000000006"
+  },
+  {
+    "slug": "reflex-arc",
+    "name": "Reflex Arc",
+    "description": "Biological spinal reflex arc SNN modelling the sensory-to-motor reflex pathway. Applicable as a BCI decoder for primate motor prediction tasks.",
+    "src": {
+      "root": "cnl_templates",
+      "file": "reflex_arc.cnl"
+    },
+    "tags": [
+      "motor",
+      "reflex",
+      "spinal",
+      "biological",
+      "bci",
+      "cnl"
+    ],
+    "metadata": {
+      "architecture": "Sensory → interneuron → motor pathway",
+      "hardware_targets": [
+        "spinnaker2"
+      ],
+      "layer_type": "LIF"
+    },
+    "id": "a1000007-0000-4000-8000-000000000007"
+  },
+  {
+    "slug": "cpg-rhythm",
+    "name": "CPG Rhythm Generator",
+    "description": "Central Pattern Generator SNN producing rhythmic motor output. Models oscillatory neural circuits for locomotion and periodic control. Applicable to chaotic time-series regression.",
+    "src": {
+      "root": "cnl_templates",
+      "file": "cpg_rhythm.cnl"
+    },
+    "tags": [
+      "motor",
+      "cpg",
+      "oscillation",
+      "rhythm",
+      "timeseries",
+      "cnl"
+    ],
+    "metadata": {
+      "hardware_targets": [
+        "spinnaker2"
+      ],
+      "layer_type": "LIF"
+    },
+    "id": "a1000008-0000-4000-8000-000000000008"
+  },
+  {
+    "slug": "prosthetic-reflex",
+    "name": "Prosthetic Reflex Network",
+    "description": "Prosthetic hand reflex SNN. Detects tactile slip events and generates corrective grip motor commands. Part of the Neuromorphic Prosthetics research track.",
+    "src": {
+      "root": "cnl_templates",
+      "file": "prosthetic_reflex.cnl"
+    },
+    "tags": [
+      "prosthetics",
+      "reflex",
+      "slip",
+      "motor",
+      "tactile",
+      "cnl"
+    ],
+    "metadata": {
+      "hardware_targets": [
+        "akida",
+        "spinnaker2"
+      ],
+      "layer_type": "LIF"
+    },
+    "id": "a1000009-0000-4000-8000-000000000009"
+  },
+  {
+    "slug": "slip-reflex",
+    "name": "Slip Reflex Network",
+    "description": "Fast slip detection SNN for prosthetic grip stability. Optimised for high-frequency slip events (up to 5 Hz). Robustness variant of the Prosthetic Grip benchmark.",
+    "src": {
+      "root": "cnl_templates",
+      "file": "slip_reflex.cnl"
+    },
+    "tags": [
+      "prosthetics",
+      "slip",
+      "reflex",
+      "robustness",
+      "cnl"
+    ],
+    "metadata": {
+      "hardware_targets": [
+        "akida",
+        "spinnaker2"
+      ],
+      "layer_type": "LIF",
+      "variant": "high-frequency-slip"
+    },
+    "id": "a1000010-0000-4000-8000-000000000010"
+  },
+  {
+    "slug": "coincidence-detector",
+    "name": "Coincidence Detector",
+    "description": "Dual-channel LIF network detecting timing coincidence between two sensory streams. Two independent 10-d input channels each drive their own LIF population, both converging on a shared trigger population.",
+    "src": {
+      "root": "cnl_templates",
+      "file": "coincidence_detector.cnl"
+    },
+    "tags": [
+      "coincidence-detection",
+      "sensory-fusion",
+      "dual-input",
+      "lif",
+      "cnl"
+    ],
+    "metadata": {
+      "architecture": "2x Input(10) -> sensory_A/sensory_B (LIF) -> trigger (LIF) -> Output(10)",
+      "hardware_targets": [
+        "spinnaker2"
+      ],
+      "layer_type": "LIF",
+      "nodes": 3
+    },
+    "id": "a1000013-0000-4000-8000-000000000013"
+  },
+  {
+    "slug": "dopamine-stp-decision",
+    "name": "Dopamine STP Decision Circuit",
+    "description": "Winner-take-all decision circuit: an evidence population drives two mutually-inhibiting choice populations. Feed-forward/recurrent NIR skeleton of a biological decision circuit — short-term plasticity, homeostasis, and dopamine neuromodulation are dropped (not representable in NIR).",
+    "src": {
+      "root": "cnl_templates",
+      "file": "dopamine_stp_decision.cnl"
+    },
+    "tags": [
+      "decision-making",
+      "winner-take-all",
+      "neuromodulation",
+      "lif",
+      "cnl"
+    ],
+    "metadata": {
+      "architecture": "Input(12) -> evidence (LIF) -> choice_A/choice_B (LIF, mutually inhibiting) -> Output(12)",
+      "hardware_targets": [
+        "spinnaker2"
+      ],
+      "layer_type": "LIF",
+      "dropped_features": "short-term plasticity, homeostasis (18 Hz), dopamine neuromodulation (x1.4)"
+    },
+    "id": "a1000014-0000-4000-8000-000000000014"
+  },
+  {
+    "slug": "edge-enhancement",
+    "name": "2D Edge Enhancement Grid",
+    "description": "Lateral-inhibition SNN for contrast/edge enhancement across a 20x20 pixel grid. A retina population excites a contrast population that inhibits itself recurrently, sharpening edges via lateral suppression.",
+    "src": {
+      "root": "cnl_templates",
+      "file": "edge_enhancement.cnl"
+    },
+    "tags": [
+      "vision",
+      "edge-detection",
+      "lateral-inhibition",
+      "retina",
+      "lif",
+      "cnl"
+    ],
+    "metadata": {
+      "architecture": "Input(400) -> retina (LIF) -> contrast (LIF, self-inhibitory recurrent) -> Output(400)",
+      "hardware_targets": [
+        "spinnaker2"
+      ],
+      "layer_type": "LIF",
+      "dropped_features": "local radius connectivity (radius=2/3) — dropped, encode as structured sparse weight matrices via the UI"
+    },
+    "id": "a1000015-0000-4000-8000-000000000015"
+  },
+  {
+    "slug": "prosthetic-sleep",
+    "name": "Prosthetic Sleep Consolidation",
+    "description": "Offline replay/consolidation network for prosthetic grasp episodes. A sensor-replay pathway and an internal interneuron oscillator both drive an actuator population that consolidates grasp patterns during a 'sleep' phase.",
+    "src": {
+      "root": "cnl_templates",
+      "file": "prosthetic_sleep.cnl"
+    },
+    "tags": [
+      "prosthetics",
+      "sleep",
+      "consolidation",
+      "replay",
+      "lif",
+      "cnl"
+    ],
+    "metadata": {
+      "architecture": "Input(90) -> sensor (LIF) -> actuator (LIF) <- interneuron (LIF, internal oscillator, no input port) -> Output(90)",
+      "hardware_targets": [
+        "akida",
+        "spinnaker2"
+      ],
+      "layer_type": "LIF",
+      "dropped_features": "STDP on sensor->actuator pathway — not representable in NIR"
+    },
+    "id": "a1000016-0000-4000-8000-000000000016"
+  },
+  {
+    "slug": "stochastic-decision",
+    "name": "Probabilistic Decision Maker",
+    "description": "Probabilistic winner-take-all decision circuit: a weak stimulus drives two mutually-inhibiting choice populations that amplify small initial asymmetries into a stable binary decision.",
+    "src": {
+      "root": "cnl_templates",
+      "file": "stochastic_decision.cnl"
+    },
+    "tags": [
+      "decision-making",
+      "winner-take-all",
+      "probabilistic",
+      "lif",
+      "cnl"
+    ],
+    "metadata": {
+      "architecture": "Input(10) -> stimulus (LIF) -> choice_A/choice_B (LIF, 40-d, mutually inhibiting) -> Output(40)",
+      "hardware_targets": [
+        "spinnaker2"
+      ],
+      "layer_type": "LIF",
+      "dropped_features": "background noise, homeostasis (15 Hz target), short-term plasticity, neuromodulation"
+    },
+    "id": "a1000017-0000-4000-8000-000000000017"
+  },
+  {
+    "slug": "visual-homeostasis-gate",
+    "name": "Visual Homeostasis Gate",
+    "description": "Retinal input gated through a salience population via an excitatory linear transform — a minimal attention/gating primitive for vision pipelines.",
+    "src": {
+      "root": "cnl_templates",
+      "file": "visual_homeostasis_gate.cnl"
+    },
+    "tags": [
+      "vision",
+      "gating",
+      "salience",
+      "attention",
+      "lif",
+      "cnl"
+    ],
+    "metadata": {
+      "architecture": "Input(16) -> retina (LIF) -> salience (LIF) -> Output(16)",
+      "hardware_targets": [
+        "spinnaker2"
+      ],
+      "layer_type": "LIF",
+      "dropped_features": "transmission delay (2ms), STP (facilitation, recovery=0.08s), lateral inhibition (radius=1), homeostasis (12Hz), dopamine neuromodulation (x1.2)"
+    },
+    "id": "a1000018-0000-4000-8000-000000000018"
+  },
+  {
+    "slug": "dream-hand-reflex",
+    "name": "Dream Hand Reflex Arc",
+    "description": "Reflex arc CNL spec from the Neuro-Dream-Hand prosthetic hand project. Production-validated on the NMTK Dream Hand hardware target. Uses constraint syntax (MUST / MUST NOT) rather than Define syntax.",
+    "src": {
+      "root": "dream_hand",
+      "file": "reflex_arc.cnl"
+    },
+    "dest_name": "dream_hand_reflex_arc.cnl",
+    "tags": [
+      "prosthetics",
+      "dream-hand",
+      "reflex",
+      "production",
+      "cnl"
+    ],
+    "metadata": {
+      "source_project": "Neuro-Dream-Hand",
+      "hardware_targets": [
+        "dream-hand"
+      ],
+      "layer_type": "LIF",
+      "cnl_dialect": "constraint"
+    },
+    "id": "a1000011-0000-4000-8000-000000000011"
+  },
+  {
+    "slug": "dream-hand-sleep",
+    "name": "Dream Hand Sleep Arc",
+    "description": "Low-power sleep arc CNL spec from the Neuro-Dream-Hand project. Reduces power draw during idle periods while maintaining rapid wake-up reflexes.",
+    "src": {
+      "root": "dream_hand",
+      "file": "sleep_arc.cnl"
+    },
+    "dest_name": "dream_hand_sleep_arc.cnl",
+    "tags": [
+      "prosthetics",
+      "dream-hand",
+      "sleep",
+      "low-power",
+      "cnl"
+    ],
+    "metadata": {
+      "source_project": "Neuro-Dream-Hand",
+      "hardware_targets": [
+        "dream-hand"
+      ],
+      "layer_type": "LIF",
+      "power_mode": "sleep",
+      "cnl_dialect": "constraint"
+    },
+    "id": "a1000012-0000-4000-8000-000000000012"
+  }
+]

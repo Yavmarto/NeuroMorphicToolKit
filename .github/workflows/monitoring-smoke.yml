@@ -1,0 +1,55 @@
+name: Monitoring Smoke
+
+# The monitoring stack is dev/CI-only (CEL-310 CTO decision, 2026-09-17). It
+# never starts in production: every service sits behind the opt-in `monitoring`
+# profile in docker-compose.yml, and the end-user deployment bundle never
+# enables that profile. This workflow proves the profile still starts and that
+# Grafana provisions its datasources and the NMTK Overview dashboard with no
+# manual steps.
+#
+# It is a separate workflow on purpose. It pulls five images and boots Grafana,
+# which runs ~600 SQLite migrations on a fresh volume, so it is slower and
+# heavier than the module jobs. Keeping it out of ci.yml means it cannot slow
+# down or fail the required `ci-passed` gate.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, dev]
+    paths:
+      - 'monitoring/**'
+      - 'docker-compose.yml'
+      - 'scripts/monitoring_smoke.sh'
+      - 'Makefile'
+      - '.github/workflows/monitoring-smoke.yml'
+  pull_request:
+    branches: [main, dev]
+    paths:
+      - 'monitoring/**'
+      - 'docker-compose.yml'
+      - 'scripts/monitoring_smoke.sh'
+      - 'Makefile'
+      - '.github/workflows/monitoring-smoke.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false
+      - name: Show docker compose version
+        run: docker compose version
+      - name: Run the monitoring smoke test
+        # Starts only the five monitoring services on throwaway high ports,
+        # polls readiness, asserts the Grafana datasources and dashboard, then
+        # tears the project down. See monitoring/README.md.
+        run: bash scripts/monitoring_smoke.sh

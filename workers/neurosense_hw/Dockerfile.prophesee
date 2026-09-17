@@ -1,0 +1,94 @@
+# ponytail: OpenEB-from-source is the credential-free path to metavision_core on
+# the dev rig; upgrade path is Prophesee JFrog APT when a license is available.
+#
+# Build: docker build -f workers/neurosense_hw/Dockerfile.prophesee .
+# Compose: docker compose -f docker-compose.yml -f docker-compose.prophesee.yml ...
+
+ARG OPENEB_VERSION=5.2.0
+ARG UBUNTU_TAG=24.04
+
+FROM ubuntu:${UBUNTU_TAG} AS openeb-builder
+
+ARG OPENEB_VERSION
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    apt-utils build-essential software-properties-common wget unzip curl git cmake \
+    libopencv-dev libboost-all-dev libusb-1.0-0-dev libprotobuf-dev protobuf-compiler \
+    libhdf5-dev hdf5-tools libglew-dev libglfw3-dev libcanberra-gtk-module ffmpeg \
+    python3-venv python3-dev \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN git clone --branch "${OPENEB_VERSION}" --depth 1 https://github.com/prophesee-ai/openeb.git /src/openeb
+
+RUN wget -q https://github.com/pybind/pybind11/archive/v2.11.0.zip \
+ && unzip -q v2.11.0.zip \
+ && cd pybind11-2.11.0 \
+ && mkdir build && cd build \
+ && cmake .. -DPYBIND11_TEST=OFF \
+ && cmake --build . \
+ && cmake --install .
+
+RUN python3 -m venv /opt/prophesee/py3venv --copies --system-site-packages \
+ && /opt/prophesee/py3venv/bin/python -m pip install --no-cache-dir pip --upgrade \
+ && /opt/prophesee/py3venv/bin/python -m pip install --no-cache-dir \
+      -r /src/openeb/utils/python/requirements_openeb.txt
+
+WORKDIR /src/openeb/build
+RUN cmake .. \
+      -DBUILD_TESTING=OFF \
+      -DPython3_EXECUTABLE=/opt/prophesee/py3venv/bin/python \
+      -DCMAKE_INSTALL_PREFIX=/opt/openeb \
+      -DPYTHON3_SITE_PACKAGES=/opt/prophesee/py3venv/lib/python3.12/site-packages \
+ && cmake --build . --config Release -- -j2 \
+ && cmake --install .
+
+COPY docker/neurosense-pip-requirements.txt /tmp/neurosense-pip-requirements.txt
+RUN /opt/prophesee/py3venv/bin/python -m pip install --no-cache-dir -r /tmp/neurosense-pip-requirements.txt
+
+COPY nmtk_contracts/ /tmp/nmtk_contracts/
+RUN /opt/prophesee/py3venv/bin/python -m pip install --no-cache-dir /tmp/nmtk_contracts
+
+COPY workers/neurosense_hw/ /tmp/workers/neurosense_hw/
+COPY Neurosense/ /tmp/Neurosense/
+RUN sed -i 's|nmtk-contracts @ file:../nmtk_contracts|nmtk-contracts|' /tmp/Neurosense/pyproject.toml \
+ && /opt/prophesee/py3venv/bin/python -m pip install --no-cache-dir --no-build-isolation --no-deps /tmp/Neurosense
+
+RUN /opt/prophesee/py3venv/bin/python -c "import metavision_core; print('metavision_core', metavision_core.__file__)"
+
+FROM ubuntu:${UBUNTU_TAG}
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PIP_DEFAULT_TIMEOUT=300 \
+    PIP_RETRIES=5 \
+    OPENEB_INSTALL_DIR=/opt/openeb \
+    PYTHONNOUSERSITE=1 \
+    PATH=/opt/prophesee/py3venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+    LD_LIBRARY_PATH=/opt/openeb/lib \
+    HDF5_PLUGIN_PATH=/opt/openeb/lib/hdf5/plugin \
+    MV_HAL_PLUGIN_PATH=/opt/openeb/lib/metavision/hal/plugins
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 python3-venv libpython3.12 \
+    libopencv-core406t64 libopencv-imgproc406t64 libopencv-imgcodecs406t64 \
+    libopencv-videoio406t64 libopencv-highgui406t64 libopencv-calib3d406t64 \
+    libopencv-features2d406t64 libopencv-flann406t64 libopencv-dnn406t64 \
+    libboost-system1.83.0 libboost-filesystem1.83.0 libboost-thread1.83.0 \
+    libusb-1.0-0 libprotobuf32t64 libhdf5-103-1t64 libglew2.2 libglfw3 \
+    ffmpeg curl \
+ && rm -rf /var/lib/apt/lists/*
+
+COPY --from=openeb-builder /opt/openeb /opt/openeb
+COPY --from=openeb-builder /opt/prophesee/py3venv /opt/prophesee/py3venv
+
+WORKDIR /repo
+COPY workers/neurosense_hw/ workers/neurosense_hw/
+
+# ponytail: bundle udev rules so operators can copy them to the host when needed.
+COPY --from=openeb-builder /src/openeb/hal_psee_plugins/resources/rules/ /opt/openeb/share/udev/rules.d/
+
+RUN /opt/prophesee/py3venv/bin/python -c "import importlib; importlib.import_module('metavision_core.event_io'); import neurosense; print('ok')"
+
+EXPOSE 8004
+
+CMD ["/opt/prophesee/py3venv/bin/uvicorn", "workers.neurosense_hw.main:app", "--host", "0.0.0.0", "--port", "8004"]

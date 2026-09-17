@@ -1,0 +1,259 @@
+name: Release Desktop Apps
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# Runner selection is a repository variable per platform so the release does not
+# depend on hardware that may not exist. Unset means the GitHub-hosted runner,
+# which always works; set RELEASE_RUNNER_<PLATFORM> to a self-hosted label
+# (e.g. `nmtk-win`) to move that build onto your own machine and stop paying for
+# Actions minutes. Only a single label is supported — give the self-hosted
+# runner a unique label rather than relying on a label combination.
+# See docs/ci-runners.md.
+
+jobs:
+  # Resolved once so every platform stamps the same string. A tag push gives the
+  # tag; a manual run falls back to pubspec.yaml, which the release pipeline
+  # bumps. Previously the Linux job derived this from GITHUB_REF directly, so a
+  # manual run produced an AppImage named "refs/heads/dev".
+  version:
+    runs-on: ${{ vars.RELEASE_RUNNER_LINUX || 'ubuntu-latest' }}
+    outputs:
+      version: ${{ steps.resolve.outputs.version }}
+      prerelease: ${{ steps.resolve.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: resolve
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/v}"
+          else
+            VERSION="$(sed -n 's/^version:[[:space:]]*\([0-9][0-9.]*\).*/\1/p' \
+              nmtk/neuro_toolkit/pubspec.yaml | head -1)"
+          fi
+          if [ -z "$VERSION" ]; then
+            echo "Could not resolve a version" >&2
+            exit 1
+          fi
+          # A semver pre-release carries a hyphen (1.2.0-rc.1). Marking these as
+          # GitHub pre-releases keeps them out of the "latest release" endpoint
+          # the in-app update banner reads.
+          case "$VERSION" in
+            *-*) PRERELEASE=true ;;
+            *)   PRERELEASE=false ;;
+          esac
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$PRERELEASE" >> "$GITHUB_OUTPUT"
+          echo "Releasing $VERSION (prerelease=$PRERELEASE)"
+
+  build-windows:
+    needs: version
+    runs-on: ${{ vars.RELEASE_RUNNER_WINDOWS || 'windows-latest' }}
+    # Job-level env, not step-level: a step's own `env:` block is not visible to
+    # that step's `if:` expression, so the previous step-level form evaluated to
+    # '' every run and signing was silently skipped on every release.
+    env:
+      WINDOWS_CERTIFICATE_P12: ${{ secrets.WINDOWS_CERTIFICATE_P12 }}
+      WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+      WINDOWS_SIGNING_THUMBPRINT: ${{ secrets.WINDOWS_SIGNING_THUMBPRINT }}
+    steps:
+      - name: Add Git to PATH (Windows)
+        shell: cmd
+        run: |
+          if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.NMTK_SUBMODULE_TOKEN || github.token }}
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      # GitHub-hosted Windows images do not ship Inno Setup. Without it
+      # build-standalone.ps1 warns and exits 0 with no installer, and the
+      # upload step is what finally fails.
+      - name: Install Inno Setup
+        shell: pwsh
+        run: |
+          if (Get-Command ISCC.exe -ErrorAction SilentlyContinue) { exit 0 }
+          if (Test-Path "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe") { exit 0 }
+          choco install innosetup --no-progress -y
+
+      - name: Import Windows signing certificate
+        if: env.WINDOWS_CERTIFICATE_P12 != ''
+        shell: pwsh
+        run: |
+          $certBytes = [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE_P12)
+          $certPath = Join-Path $env:RUNNER_TEMP "signing_cert.p12"
+          [IO.File]::WriteAllBytes($certPath, $certBytes)
+          $securePass = ConvertTo-SecureString $env:WINDOWS_CERTIFICATE_PASSWORD -AsPlainText -Force
+          Import-PfxCertificate -FilePath $certPath -CertStoreLocation Cert:\CurrentUser\My -Password $securePass
+          Remove-Item $certPath
+
+      # The build script signs the installer itself when
+      # WINDOWS_SIGNING_THUMBPRINT is set, and it knows where Inno Setup wrote
+      # the .exe. The workflow used to sign again in a separate step that
+      # globbed the wrong directory and hard-failed.
+      - name: Build Windows Standalone
+        shell: pwsh
+        run: |
+          Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+          & ./nmtk/installer/windows/build-standalone.ps1 -Version '${{ needs.version.outputs.version }}'
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nmtk-windows-installer
+          path: nmtk/dist/*.exe
+          if-no-files-found: error
+
+  build-macos:
+    needs: version
+    runs-on: ${{ vars.RELEASE_RUNNER_MACOS || 'macos-14' }}
+    env:
+      MACOS_CERTIFICATE_P12: ${{ secrets.MACOS_CERTIFICATE_P12 }}
+      MACOS_CERTIFICATE_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+      MACOS_SIGNING_IDENTITY: ${{ secrets.MACOS_SIGNING_IDENTITY }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.NMTK_SUBMODULE_TOKEN || github.token }}
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Import macOS signing certificate
+        if: env.MACOS_CERTIFICATE_P12 != ''
+        run: bash nmtk/installer/macos/import-signing-cert.sh
+
+      - name: Check macOS signing configuration
+        run: bash nmtk/installer/macos/sign-and-notarize.sh --check
+
+      - name: Build macOS DMG
+        run: |
+          BUILD_ARGS=(--dmg --version "${{ needs.version.outputs.version }}")
+          if [ -n "${MACOS_SIGNING_IDENTITY:-}" ]; then
+            BUILD_ARGS+=(--sign "$MACOS_SIGNING_IDENTITY")
+            if [ -n "${APPLE_ID:-}" ] && [ -n "${APPLE_APP_SPECIFIC_PASSWORD:-}" ] && [ -n "${APPLE_TEAM_ID:-}" ]; then
+              BUILD_ARGS+=(--notarize)
+              export MACOS_NOTARIZE=true
+            fi
+          fi
+          ./nmtk/installer/macos/build-standalone.sh "${BUILD_ARGS[@]}"
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nmtk-macos-dmg
+          path: "*.dmg"
+          if-no-files-found: error
+
+  build-linux:
+    needs: version
+    runs-on: ${{ vars.RELEASE_RUNNER_LINUX || 'ubuntu-latest' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          token: ${{ secrets.NMTK_SUBMODULE_TOKEN || github.token }}
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libblkid-dev liblzma-dev libgcrypt20-dev libsecret-1-dev libsystemd-dev libwebkit2gtk-4.1-dev
+
+      - name: Build Flutter Linux
+        run: |
+          cd nmtk/neuro_toolkit
+          flutter build linux --release
+
+      - name: Create AppImage
+        run: ./nmtk/installer/linux/appimage.sh "${{ needs.version.outputs.version }}"
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nmtk-linux-appimage
+          path: "*.AppImage"
+          if-no-files-found: error
+
+  # neurocli is the only user-facing non-desktop app in the repo; shipping the
+  # wheel on the release means `pip install <url>` works without repo access.
+  build-python:
+    needs: version
+    runs-on: ${{ vars.RELEASE_RUNNER_LINUX || 'ubuntu-latest' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Build neurocli sdist + wheel
+        run: |
+          python -m pip install --upgrade build
+          python -m build --outdir dist neurocli
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nmtk-python-dists
+          path: dist/*
+          if-no-files-found: error
+
+  create-release:
+    needs: [version, build-windows, build-macos, build-linux, build-python]
+    runs-on: ${{ vars.RELEASE_RUNNER_LINUX || 'ubuntu-latest' }}
+    if: startsWith(github.ref, 'refs/tags/v')
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      # Downloads of a private release cannot be verified any other way — the
+      # in-app updater and any manual download check against this file.
+      - name: Generate checksums
+        run: |
+          cd artifacts
+          find . -type f \( -name '*.exe' -o -name '*.dmg' -o -name '*.AppImage' \
+            -o -name '*.whl' -o -name '*.tar.gz' \) \
+            -exec sha256sum {} + | sed 's|\./[^/]*/||' > SHA256SUMS
+          cat SHA256SUMS
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/nmtk-windows-installer/*.exe
+            artifacts/nmtk-macos-dmg/*.dmg
+            artifacts/nmtk-linux-appimage/*.AppImage
+            artifacts/nmtk-python-dists/*
+            artifacts/SHA256SUMS
+          generate_release_notes: true
+          draft: false
+          # Was a bare `contains(...)` with no ${{ }}, so it reached the action
+          # as the literal string and every pre-release shipped as a full one.
+          prerelease: ${{ needs.version.outputs.prerelease == 'true' }}

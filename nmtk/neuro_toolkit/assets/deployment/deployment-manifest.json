@@ -1,0 +1,20 @@
+{
+  "bundleVersion": 16,
+  "files": {
+    "docker-compose.prod.yml": "f199fe7232659a2e7d916358775872d5fc335473abd17644469a94c98f3622cc",
+    "docker-compose.remote.yml": "3aecc4f84764a50fcaeb31728d53c31304ea8dba39a25cacd7d023188883bfe5",
+    "docker-compose.yml": "be19f2be16809f99c0255eeec137c5cba6bde8020ade4019fa808dabe5758dd3",
+    "install.sh": "3275774b8c4aa162fba77663357e93892b6e2c21bc2af2aafd754cd8c71c59b6",
+    "migrate_legacy.py": "72bdf5f04fc5b85ef76d24956873bab54c617c478d901efb03c342bb59df6a3b",
+    "monitoring/alertmanager/alertmanager.yml": "4c72a4cea00aa74bfeea197fd564fc5eda10ef098e86b0b29d31d8fc7851fd09",
+    "monitoring/alertmanager/entrypoint.sh": "1fa22eea09d33e96a7a904a340543389f4df84e505cba51e645a78ef99f7abd5",
+    "monitoring/grafana/dashboards/nmtk-overview.json": "cb8ef0c1bb469b1aae0da5a7fb4670bcc2716bf8d1eeb34db814e3288be7ea88",
+    "monitoring/grafana/provisioning/dashboards/dashboards.yml": "bb01061ad248bd6a76d0f3e5676e7c2f87d5f3930b674e88df4071289531de32",
+    "monitoring/grafana/provisioning/datasources/ds.yml": "36d32ec0f8c908358f58042aca32a6f018945f3da56512b2bd25b6792d14faf7",
+    "monitoring/loki/loki-config.yml": "1c3b1444ce594d226d9b773019ee9786459982aa1e3c1db8fcf729eb5f7f87c6",
+    "monitoring/prometheus/alert_rules.yml": "07c7eae6375a1d5ffd46882ad485b4a670c7c2aea12b1cd237f387d5e3d0da72",
+    "monitoring/prometheus/prometheus.yml": "e5518f0b16be1dce7a2d707f1a8675f0e4d08273fe66af378f1b0d6425e76390",
+    "monitoring/promtail/promtail-config.yml": "c918e4e00dee3e75415dc4072d3772dcea1b8966cbb68d21bf60b69cae68739b",
+    "nmtk-stack.sh": "e9f2db847d2b7bb5880d0acc52928c5e6a58095ddaf17ec78f9e87e400b0e86a"
+  }
+}

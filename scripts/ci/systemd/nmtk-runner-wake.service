@@ -1,0 +1,22 @@
+[Unit]
+Description=Wake the NMTK self-hosted runner when GitHub has queued work
+Documentation=file:///docs/ci-runners.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/opt/nmtk/scripts/ci/runner-wake.sh
+Restart=always
+RestartSec=30
+# The config file holds a GitHub token; keep it out of the unit and out of the
+# process environment listing.
+User=nmtk-ci
+Group=nmtk-ci
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

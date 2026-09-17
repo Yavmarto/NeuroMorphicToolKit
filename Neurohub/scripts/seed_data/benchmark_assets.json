@@ -1,0 +1,136 @@
+[
+  {
+    "slug": "grip-stability",
+    "src": {
+      "root": "benchmarks",
+      "file": "grip_stability.json"
+    },
+    "tags": [
+      "prosthetics",
+      "control",
+      "stopping_distance",
+      "synthetic"
+    ],
+    "id": "a2000001-0000-4000-8000-000000000001"
+  },
+  {
+    "slug": "keyword-spotting",
+    "src": {
+      "root": "benchmarks",
+      "file": "keyword_spotting.json"
+    },
+    "tags": [
+      "audio",
+      "mfcc",
+      "speech",
+      "35-class",
+      "google-speech-commands"
+    ],
+    "id": "a2000002-0000-4000-8000-000000000002"
+  },
+  {
+    "slug": "ecg-classification",
+    "src": {
+      "root": "benchmarks",
+      "file": "ecg_classification.json"
+    },
+    "tags": [
+      "ecg",
+      "cardiac",
+      "4-class",
+      "always-on",
+      "ptb-xl"
+    ],
+    "id": "a2000003-0000-4000-8000-000000000003"
+  },
+  {
+    "slug": "dvs-gesture",
+    "src": {
+      "root": "benchmarks",
+      "file": "dvs_gesture.json"
+    },
+    "tags": [
+      "dvs",
+      "gesture",
+      "event-stream",
+      "11-class",
+      "ibm-dvs128"
+    ],
+    "id": "a2000004-0000-4000-8000-000000000004"
+  },
+  {
+    "slug": "primate-reaching",
+    "src": {
+      "root": "benchmarks",
+      "file": "primate_reaching.json"
+    },
+    "tags": [
+      "bci",
+      "reaching",
+      "r2",
+      "neural-recording",
+      "nhp"
+    ],
+    "id": "a2000005-0000-4000-8000-000000000005"
+  },
+  {
+    "slug": "mackey-glass",
+    "src": {
+      "root": "benchmarks",
+      "file": "mackey_glass.json"
+    },
+    "tags": [
+      "timeseries",
+      "chaotic",
+      "regression",
+      "smape"
+    ],
+    "id": "a2000006-0000-4000-8000-000000000006"
+  },
+  {
+    "slug": "auto-radar",
+    "src": {
+      "root": "benchmarks",
+      "file": "auto_radar.json"
+    },
+    "tags": [
+      "radar",
+      "automotive",
+      "gesture",
+      "11-class",
+      "in-cabin",
+      "neurobench-v1"
+    ],
+    "id": "a2000007-0000-4000-8000-000000000007"
+  },
+  {
+    "slug": "nehar",
+    "src": {
+      "root": "benchmarks",
+      "file": "nehar.json"
+    },
+    "tags": [
+      "har",
+      "accelerometer",
+      "wisdm",
+      "activity-recognition",
+      "sparsity"
+    ],
+    "id": "a2000008-0000-4000-8000-000000000008"
+  },
+  {
+    "slug": "ptb-lm",
+    "src": {
+      "root": "benchmarks",
+      "file": "ptb_lm.json"
+    },
+    "tags": [
+      "language-modelling",
+      "ptb",
+      "spiking-lstm",
+      "sequence",
+      "neurobench-v1"
+    ],
+    "id": "a2000009-0000-4000-8000-000000000009"
+  }
+]

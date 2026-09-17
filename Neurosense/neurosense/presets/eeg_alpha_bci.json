@@ -1,0 +1,25 @@
+{
+  "id": "eeg_alpha_bci",
+  "name": "EEG Alpha Band for BCI",
+  "signal_type": "eeg",
+  "description": "Targets the occipital alpha rhythm (8-13 Hz) for brain-computer interface applications. Alpha power increases when the eyes are closed and decreases with visual attention, making it a reliable control signal. Uses bandpass filtering to isolate the alpha band, power spectral density estimation, and threshold-based temporal encoding to detect alpha events.",
+  "electrode_placement": "## Occipital EEG (O1/O2)\n\n1. **Clean skin** with NuPrep abrasive gel at electrode sites\n2. **Channel 0 (O1):** Place electrode at the O1 position -- 10% of the inion-to-nasion distance above the inion, 5% to the left of midline\n3. **Channel 1 (O2):** Place electrode at the O2 position -- 10% above the inion, 5% to the right of midline\n4. **Reference (A1):** Place on the left earlobe\n5. **Ground (Fpz):** Place on the forehead at midline\n\n**Verification:** Close your eyes for 10 seconds. You should see increased alpha (8-13 Hz) oscillations on both channels. Open your eyes and alpha should attenuate.",
+  "electrode_diagram": "electrode_diagrams/occipital_eeg.svg",
+  "channel_mapping": {
+    "0": "O1",
+    "1": "O2"
+  },
+  "filter_config": {
+    "bandpass_low_hz": 8.0,
+    "bandpass_high_hz": 13.0,
+    "notch_hz": 50.0,
+    "artifact_rejection": true
+  },
+  "encoding_config": {
+    "method": "temporal",
+    "rate_max_hz": null,
+    "temporal_phase_bins": 8,
+    "delta_threshold": null
+  },
+  "recommended_device": "cyton"
+}

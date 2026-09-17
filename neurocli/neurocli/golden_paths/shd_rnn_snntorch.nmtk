@@ -1,0 +1,156 @@
+{
+  "version": 1,
+  "workspace": {
+    "files": [
+      {
+        "id": "f1",
+        "name": "shd_rsnn.cnl",
+        "content": "Define a network named shd_rsnn with timestep 0.001.\nDefine an input port named input with shape (700,).\nDefine a linear transformation named w_in_hidden with weight matrix shape (128, 700).\nDefine a RSynaptic neuron named hidden with neuron count 128, synaptic decay 0.9, membrane decay 0.8, and firing threshold 1.0.\nDefine a linear transformation named w_hidden_out with weight matrix shape (20, 128).\nDefine a Synaptic neuron named output_layer with neuron count 20, synaptic decay 0.9, membrane decay 0.8, and firing threshold 1.0.\nDefine an output port named output with shape (20,).\ninput connects to w_in_hidden.\nw_in_hidden connects to hidden.\nhidden connects to w_hidden_out.\nw_hidden_out connects to output_layer.\noutput_layer connects to output.\n"
+      }
+    ],
+    "activeFileId": "f1",
+    "workspaceName": "cel268-shd-rsnn",
+    "selectedPlatforms": ["snntorch_sim"],
+    "selectedDataset": "SHD"
+  },
+  "canvas": {
+    "pipeline": {
+      "epochs": 50,
+      "learningRate": 0.001,
+      "optimizer": "Adam",
+      "batchSize": 32
+    },
+    "pipelinePhases": {
+      "train": {
+        "nodes": [
+          {
+            "id": "train_loader",
+            "type": "dataLoader",
+            "x": 40,
+            "y": 100,
+            "parameters": {
+              "format": "tonic_shd",
+              "batch_size": 32,
+              "shuffle": true,
+              "time_window_ms": 4
+            }
+          },
+          {
+            "id": "state_reset",
+            "type": "stateReset",
+            "x": 280,
+            "y": 100,
+            "parameters": {}
+          },
+          {
+            "id": "time_loop",
+            "type": "timeLoop",
+            "x": 520,
+            "y": 100,
+            "parameters": {"num_steps": 25}
+          },
+          {
+            "id": "forward",
+            "type": "forwardPass",
+            "x": 760,
+            "y": 100,
+            "parameters": {}
+          },
+          {
+            "id": "loss",
+            "type": "ceCountLoss",
+            "x": 1000,
+            "y": 100,
+            "parameters": {}
+          },
+          {
+            "id": "backward",
+            "type": "surrogateBackward",
+            "x": 1240,
+            "y": 100,
+            "parameters": {"function": "fast_sigmoid", "slope": 25}
+          },
+          {
+            "id": "optim",
+            "type": "adamOptimiser",
+            "x": 1480,
+            "y": 100,
+            "parameters": {"lr": 0.001}
+          },
+          {
+            "id": "val_loader",
+            "type": "testLoader",
+            "x": 1480,
+            "y": 280,
+            "parameters": {
+              "format": "tonic_shd",
+              "batch_size": 32,
+              "shuffle": false,
+              "time_window_ms": 4
+            }
+          },
+          {
+            "id": "validation",
+            "type": "validationLoop",
+            "x": 1720,
+            "y": 100,
+            "parameters": {
+              "every_n_epochs": 1,
+              "save_best_checkpoint": true,
+              "checkpoint_metric": "val_accuracy",
+              "checkpoint_mode": "max"
+            }
+          }
+        ],
+        "edges": [
+          {
+            "id": "val_data",
+            "sourceNodeId": "val_loader",
+            "sourcePort": "data",
+            "targetNodeId": "validation",
+            "targetPort": "val_data"
+          }
+        ]
+      },
+      "eval": {
+        "nodes": [
+          {
+            "id": "test_loader",
+            "type": "testLoader",
+            "x": 40,
+            "y": 100,
+            "parameters": {
+              "format": "tonic_shd",
+              "batch_size": 32,
+              "shuffle": false,
+              "time_window_ms": 4,
+              "load_best_checkpoint": true
+            }
+          },
+          {
+            "id": "eval_reset",
+            "type": "stateReset",
+            "x": 280,
+            "y": 100,
+            "parameters": {}
+          },
+          {
+            "id": "eval_forward",
+            "type": "forwardPass",
+            "x": 520,
+            "y": 100,
+            "parameters": {}
+          },
+          {
+            "id": "accuracy",
+            "type": "accuracyMetric",
+            "x": 760,
+            "y": 100,
+            "parameters": {}
+          }
+        ],
+        "edges": []
+      }
+    }
+  }
+}

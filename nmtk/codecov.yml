@@ -1,0 +1,25 @@
+coverage:
+  status:
+    project:
+      default:
+        target: 60%
+        threshold: 5%
+    patch:
+      default:
+        target: 70%
+comment:
+  layout: "diff, flags, components"
+  behavior: default
+flags:
+  neurocnl:
+    paths: ["neurocnl/neurocnl/"]
+    carryforward: true
+  ndh:
+    paths: ["Neuro-Dream-Hand/neurodreamhand/"]
+    carryforward: true
+  flutter:
+    paths: ["neurocnl/frontend/lib/"]
+    carryforward: true
+  demos:
+    paths: ["neurocnl/demos/"]
+    carryforward: true

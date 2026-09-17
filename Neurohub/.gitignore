@@ -1,0 +1,33 @@
+__pycache__/
+*.pyc
+*.db
+.DS_Store
+
+# Python
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+venv/
+.venv/
+.hypothesis/
+build
+frontend/.dart_tool
+frontend/.idea
+frontend/.flutter-plugins-dependencies
+neurohub.egg-info
+nmtk_ui_core/.dart_tool
+venv
+.DS_Store
+Neurohub_shell_adapter/.dart_tool
+.opencode
+.claude/settings.local.json
+
+# Seeded runtime outputs (recreated by scripts/seed_hub_entries.py)
+shared_assets/dataset/
+
+# Runtime and test upload artifacts
+shared_assets/*.json
+shared_assets/*.nir

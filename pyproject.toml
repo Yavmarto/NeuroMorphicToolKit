@@ -1,0 +1,34 @@
+[tool.pytest.ini_options]
+# asyncio_mode = "auto" lets every async test function and fixture run without
+# an explicit @pytest.mark.asyncio decorator.  asyncio_default_fixture_loop_scope
+# prevents the deprecation warning from pytest-asyncio >= 0.23 about implicit
+# session-scoped loop reuse.
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+# pytest-nengo triggers a broken matplotlib import at collection time in this
+# environment; disable it at root level so all root-level test runs work.
+addopts = "-p no:nengo"
+# Repo root on the import path so nmtk_sdk and other root-level packages are importable.
+pythonpath = ["."]
+
+markers = [
+    "golden_path: Full golden-path integration tests (author → validate → simulate → inspect → persist). Requires neurocnl + neurobench services to be running.",
+    "pynq_hardware: Hardware-only tests for the PYNQ-Z2 (sc-neurocore) FPGA board. Skipped unless PYNQ_HARDWARE_TEST=true. Must run on a self-hosted runner with the board physically attached.",
+    "akida_hardware: Hardware-only tests for a physical BrainChip AKida device (USB). Skipped unless AKIDA_HARDWARE_TEST=true. Must run on a self-hosted runner with the USB chip enumerated.",
+]
+
+[tool.ruff.lint]
+# Per-file suppressions for imports that must follow runtime initialization.
+[tool.ruff.lint.per-file-ignores]
+# neurosense_hw/main.py appends a runtime path to sys.path before importing the
+# neurosense package — the import cannot precede the path setup.
+"workers/neurosense_hw/main.py" = ["E402"]
+# verify_akida_package_manifest.py inserts the repo root on sys.path before
+# importing nmtk.launcher_control — the import cannot precede the path setup.
+"scripts/verify_akida_package_manifest.py" = ["E402"]
+# neurobench_runner/main.py appends the Neurobench package to sys.path before
+# importing the owning 'app' — reuse of the sibling application instance.
+"workers/neurobench_runner/main.py" = ["E402"]
+# cli.py reconfigures stdout/stderr encoding (for Windows cp1252 compat) before
+# any code prints — that initialisation must precede all other imports.
+".agents/skills/caveman-compress/scripts/cli.py" = ["E402"]

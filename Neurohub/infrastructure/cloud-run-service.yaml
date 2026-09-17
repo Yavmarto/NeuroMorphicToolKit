@@ -1,0 +1,68 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: neurohub-api
+  labels:
+    app: neurohub
+spec:
+  template:
+    metadata:
+      annotations:
+        # Scale to zero when idle — this is what keeps Cloud Run's free tier
+        # actually free. Set minScale: "1" later (costs money) only if cold
+        # starts on the first request after idle become a real problem.
+        autoscaling.knative.dev/minScale: "0"
+        autoscaling.knative.dev/maxScale: "10"
+        # No database, no object storage, no cache, no search index to bind —
+        # Neurohub holds no application data of its own. GitHub is the only
+        # persistence layer; this service just validates, translates errors,
+        # and forwards to the GitHub API on the signed-in user's own token.
+    spec:
+      containers:
+        - image: REGION-docker.pkg.dev/PROJECT_ID/neurohub/neurohub-api:latest
+          resources:
+            limits:
+              cpu: "1"
+              memory: "512Mi"
+          env:
+            # ── GitHub OAuth Device Flow ────────────────────────────────────
+            # Client IDs are public by design (sent in every OAuth request
+            # URL) — safe as a plain value, not a secret.
+            - name: GITHUB_OAUTH_CLIENT_ID
+              value: REPLACE_WITH_GITHUB_OAUTH_APP_CLIENT_ID
+            # Default is "repo read:user" if omitted — only set this to change it.
+            # - name: GITHUB_OAUTH_SCOPES
+            #   value: "repo read:user"
+            # ── Internal JWT auth for the legacy /api/neurohub and /api/v1
+            # routes this service still carries (projects/assets/sharing,
+            # registry search/community) — unrelated to GitHub sign-in, but
+            # required for the app to boot at all. Self-generated, never
+            # shared with any external provider.
+            - name: NEUROHUB_AUTH_ENABLED
+              value: "true"
+            - name: NEUROHUB_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: neurohub-secret-key
+                  key: latest
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: neurohub-jwt-secret
+                  key: latest
+            # ── Runtime ──────────────────────────────────────────────────────
+            # No NEUROHUB_DB_URL set: defaults to a local SQLite file. Cloud
+            # Run's filesystem is ephemeral, so that database resets on every
+            # redeploy/cold start — acceptable because nothing the GitHub-backed
+            # workspace/auth flow depends on lives there; only the legacy
+            # projects/assets/sharing routes use it.
+            - name: ENVIRONMENT
+              value: production
+            - name: UVICORN_WORKERS
+              value: "2"
+            - name: LOG_LEVEL
+              value: INFO
+            - name: ALLOWED_ORIGINS
+              value: "*"
+          ports:
+            - containerPort: 8000

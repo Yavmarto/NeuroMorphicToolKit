@@ -1,0 +1,32 @@
+# {{ project_name }}
+
+**Framework**: NIR → SC-NeuroCore simulator
+**Task**: {{ task }}
+
+## Getting started
+
+```bash
+uv sync
+uv run python src/main.py
+```
+
+## What this scaffold gives you
+
+- A minimal NIR graph compiled with `neurocnl.compile_to_nir()`
+- Fixed-weight simulation via `sc-neurocore` (Rust SNN engine)
+- Deterministic spike-train + voltage-trace output from the shared NMTK simulator contract
+
+## FPGA RTL export
+
+The same NIR graph can be exported as Verilog RTL for FPGA deployment:
+
+```bash
+uv run python src/export_verilog.py
+```
+
+## Next steps
+
+1. Edit `src/main.py` to describe your network in NIR-native CNL.
+2. Run `neuro run neurocnl` to start the NeuroCNL backend.
+3. Select **SC-NeuroCore (Simulation)** in CNL Studio → Simulator panel.
+4. Use `neuro hub push` to share your model once ready.

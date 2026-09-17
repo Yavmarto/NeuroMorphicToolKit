@@ -1,0 +1,31 @@
+# MNIST CNN Classifier — Akida variant
+# A single Conv2d+global-average-pool stage (fused into one Akida
+# InputConvolutional layer) feeding a small dense classifier head. This is the
+# first template to exercise the Akida converter's Conv2d/AvgPool2d support:
+# Akida's average pooling is only ever global (collapses the whole spatial
+# extent to 1x1), so the pool kernel here (26, 26) is sized to match the
+# conv's own output extent exactly — a 3x3 valid-padding conv on a 28x28
+# input leaves 26x26. Dense tail is 8 -> 10, far under the 256-neurons-per-NP
+# limit, so no hardware-fit tradeoff was needed to reach the card.
+
+Define a network named mnist_cnn_classifier_akida with timestep 0.001.
+# flow: input -> conv1 -> pool1 -> conv1_lif -> flatten -> dense -> classes_lif -> output
+
+# Layers:
+Define an input port named input with shape (1, 28, 28).
+Define a 2D convolution layer named conv1 with weight kernel shape (8, 1, 3, 3), bias vector shape (8,), stride (1, 1), padding (0, 0), dilation (1, 1), groups 1, and input height and width (28, 28).
+Define a 2D average pooling layer named pool1 with kernel size (26, 26), stride (26, 26), and padding (0, 0).
+Define a LIF neuron named conv1_lif with time constant shape (8,), resistance shape (8,), leak voltage shape (8,), and firing threshold shape (8,).
+Define a flatten layer named flatten with start dimension 1, end dimension -1, and annotated with metadata nmtk_flatten_input_shape equal to "8,1,1".
+Define an affine transformation named dense with weight matrix shape (10, 8) and bias vector shape (10,).
+Define a LIF neuron named classes_lif with time constant shape (10,), resistance shape (10,), leak voltage shape (10,), and firing threshold shape (10,).
+Define an output port named output with shape (10,).
+
+# Connections:
+input connects to conv1.
+conv1 connects to pool1.
+pool1 connects to conv1_lif.
+conv1_lif connects to flatten.
+flatten connects to dense.
+dense connects to classes_lif.
+classes_lif connects to output.

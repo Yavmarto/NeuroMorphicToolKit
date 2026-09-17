@@ -1,0 +1,17 @@
+{
+    "id": "spinnaker",
+    "name": "SpiNNaker",
+    "manufacturer": "SpiNNaker Project",
+    "description": "Massively parallel computing system designed to simulate the behavior of the human brain.",
+    "core_count": 18,
+    "neuron_capacity": 16000,
+    "supported_neuron_models": ["LIF", "Izhikevich"],
+    "weight_bit_widths": [16, 32],
+    "on_chip_memory_kb": 128,
+    "io_pins": 0,
+    "clock_speed_mhz": 200.0,
+    "power_envelope_mw": 1000.0,
+    "pj_per_spike_op": 10000.0,
+    "access": "academic",
+    "notes": "Access via HBP Collaboratory or custom-built boards. Uses sPyNNaker for software."
+}

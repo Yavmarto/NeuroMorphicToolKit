@@ -1,0 +1,17 @@
+{
+    "id": "loihi2",
+    "name": "Intel Loihi 2",
+    "manufacturer": "Intel",
+    "description": "Intel's second-generation neuromorphic research chip with highly programmable neuron models and high-speed asynchronous routing.",
+    "core_count": 128,
+    "neuron_capacity": 1000000,
+    "supported_neuron_models": ["LIF", "AdaptiveLIF", "Izhikevich", "Programmable"],
+    "weight_bit_widths": [1, 2, 4, 8],
+    "on_chip_memory_kb": 16384,
+    "io_pins": 0,
+    "clock_speed_mhz": 100.0,
+    "power_envelope_mw": 1000.0,
+    "pj_per_spike_op": 2.5,
+    "access": "academic",
+    "notes": "Requires access to Intel Neuromorphic Research Community (INRC) and NxSDK/Lava framework."
+}

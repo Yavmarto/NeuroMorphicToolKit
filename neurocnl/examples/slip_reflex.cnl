@@ -1,0 +1,39 @@
+# Tactile Slip Reflex — CNL Spec
+# Demo 2: A 3-neuron SNN implements a biological slip reflex.
+# FSR detects slip → interneuron gates response → motor neuron tightens grip.
+# Target latency: comparable to biological reflex arc (~50ms).
+
+The network MUST operate WITH timestep of 1 ms
+
+The network MUST contain an excitatory sensory population of 1 neurons
+The network MUST contain an excitatory interneuron population of 30 neurons
+The network MUST contain an excitatory motor population of 1 neurons
+
+# Sensory population fires when FSR detects slip (force drop)
+The sensory population MUST fire ONLY IF membrane potential exceeds 0.5
+
+# Interneuron gates reflex response
+The interneuron population MUST fire ONLY IF membrane potential exceeds 0.6
+
+# Motor population fires to tighten grip
+The motor population MUST emit a spike ONLY IF membrane potential exceeds 0.7
+
+# Tight refractory periods for fast reflex response
+The sensory population MUST NOT fire DURING the refractory period of 0.001 seconds
+The motor population MUST NOT fire DURING the refractory period of 0.002 seconds
+
+# Fast membrane dynamics for reflex-speed response
+The sensory population membrane potential MUST decay WITH time constant of 0.005 seconds
+The motor population membrane potential MUST decay WITH time constant of 0.01 seconds
+
+# Strong sensory-to-motor coupling for reliable reflex
+The sensory population MUST project to interneuron population
+The interneuron population MUST project to motor population
+The sensory population MUST project to motor population
+
+The connection from sensory population to interneuron population MUST have WITH synaptic weight of 1.6
+The connection from interneuron population to motor population MUST have WITH synaptic weight of 2.0
+The connection from sensory population to motor population MUST have WITH synaptic weight of 0.4
+
+# Short axonal delay modelling biological interneuron latency
+A synapse MUST have a transmission delay of 3ms

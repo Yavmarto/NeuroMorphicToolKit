@@ -1,0 +1,21 @@
+{
+  "id": "neurosense_replay_contract",
+  "name": "NeuroSense Replay Contract",
+  "description": "Validates that a canonical NeuroSense recording artifact can be ingested as benchmark input with stable spike and provenance metadata.",
+  "task_type": "contract",
+  "executor": "cnl",
+  "input_spec": {
+    "type": "recording"
+  },
+  "assertions": [],
+  "scoring": {
+    "primary_metric": "latency_ms",
+    "secondary_metrics": [
+      "spike_fidelity"
+    ],
+    "higher_is_better": false,
+    "pass_threshold": 100.0
+  },
+  "default_params": {},
+  "builtin": true
+}

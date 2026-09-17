@@ -1,0 +1,27 @@
+{
+  "id": "tactile_array",
+  "name": "Tactile Sensor Array",
+  "signal_type": "tactile",
+  "description": "Multi-channel configuration for tactile sensor arrays used in robotic skin or prosthetic fingertip sensing. Each channel maps to a tactile sensing element (e.g., piezoresistive or capacitive sensor). Delta modulation encoding at 10 uV threshold converts pressure changes into spike events, mimicking biological mechanoreceptor responses where spikes encode changes in pressure rather than absolute values.",
+  "electrode_placement": "## Tactile Sensor Array (4-Channel)\n\n1. **Connect sensor array** to the analog input channels of the acquisition board\n2. **Channel 0 (Sensor 1):** Index finger tip or first tactile element\n3. **Channel 1 (Sensor 2):** Middle finger tip or second tactile element\n4. **Channel 2 (Sensor 3):** Ring finger tip or third tactile element\n5. **Channel 3 (Sensor 4):** Little finger tip or fourth tactile element\n6. **Reference:** Connect to sensor ground/shield\n\n**Verification:** Apply gentle pressure to each sensor individually. Each channel should show a clear deflection (10-500 uV depending on sensor sensitivity). Release and confirm return to baseline.",
+  "electrode_diagram": "electrode_diagrams/forearm_emg.svg",
+  "channel_mapping": {
+    "0": "sensor_1",
+    "1": "sensor_2",
+    "2": "sensor_3",
+    "3": "sensor_4"
+  },
+  "filter_config": {
+    "bandpass_low_hz": 0.1,
+    "bandpass_high_hz": 100.0,
+    "notch_hz": 50.0,
+    "artifact_rejection": false
+  },
+  "encoding_config": {
+    "method": "delta",
+    "rate_max_hz": null,
+    "temporal_phase_bins": null,
+    "delta_threshold": 10.0
+  },
+  "recommended_device": "cyton"
+}

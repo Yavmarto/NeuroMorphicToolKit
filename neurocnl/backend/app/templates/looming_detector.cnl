@@ -1,0 +1,23 @@
+# Looming Detector
+# Detects objects moving toward the sensor (expanding visual field).
+# Visual population feeds a looming detector via an excitatory linear transform.
+
+Define a network named looming_detector with timestep 0.0025.
+# Network with 1 input, 2 LIF neurons, 1 linear transform, 1 output.
+# flow: input → visual → looming → output
+
+# Layers:
+Define an input port named input with shape (100,).
+Define a LIF neuron named visual with time constant 0.02, resistance 1.0, leak voltage 0.0, and firing threshold 1.0.
+Define a linear transformation named w_visual_looming with weight matrix shape (50, 100) annotated with metadata weight_init equal to "xavier" annotated with metadata seed equal to 42.
+Define a LIF neuron named looming with time constant 0.05, resistance 1.0, leak voltage 0.0, and firing threshold 0.5.
+Define an output port named output with shape (50,).
+
+# Connections:
+input connects to visual.
+visual connects to w_visual_looming.
+w_visual_looming connects to looming.
+looming connects to output.
+
+# Note: local radius connectivity (radius=5) and short-term facilitation are dropped — not representable in NIR.
+# Future extension: encode spatial connectivity pattern as structured weight matrix.

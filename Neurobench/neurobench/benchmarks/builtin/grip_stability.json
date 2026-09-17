@@ -1,0 +1,29 @@
+{
+  "id": "grip_stability",
+  "name": "Grip Stability",
+  "description": "Evaluates prosthetic reflex stability using synthetic or recorded slip data.",
+  "task_type": "control",
+  "executor": "cnl",
+  "input_spec": {
+    "type": "synthetic",
+    "synthetic_config": {
+      "noise_level": 0.05,
+      "slip_frequency": 2.5
+    }
+  },
+  "assertions": [
+    "The sensory neuron MUST fire ONLY IF membrane potential exceeds 0.5",
+    "The motor neuron MUST emit a spike ONLY IF membrane potential exceeds 0.5"
+  ],
+  "scoring": {
+    "primary_metric": "stopping_distance",
+    "secondary_metrics": ["accuracy", "latency_ms"],
+    "higher_is_better": false,
+    "pass_threshold": 1.5
+  },
+  "default_params": {
+    "trials": 100,
+    "simulation_duration_ms": 500
+  },
+  "builtin": true
+}

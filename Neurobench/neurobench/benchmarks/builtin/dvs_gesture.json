@@ -1,0 +1,33 @@
+{
+    "id": "dvs_gesture",
+    "name": "DVS Gesture Recognition",
+    "description": "11-class hand gesture recognition using the IBM DVS128 event camera dataset. Sparse event-stream inputs are processed by a recurrent SNN. Primary metric is top-1 accuracy. Reference task from NeuroBench v1.0.",
+    "task_type": "classification",
+    "executor": "cnl",
+    "input_spec": {
+        "type": "synthetic",
+        "synthetic_config": {
+            "n_classes": 11,
+            "n_samples": 1176,
+            "sensor_size": [128, 128],
+            "time_window_ms": 300,
+            "n_time_bins": 30
+        },
+        "recording_session_id": null,
+        "data_path": null
+    },
+    "assertions": [],
+    "scoring": {
+        "primary_metric": "accuracy",
+        "secondary_metrics": ["latency_ms", "energy_uj"],
+        "higher_is_better": true,
+        "pass_threshold": 0.80
+    },
+    "default_params": {
+        "n_steps": 30,
+        "batch_size": 32,
+        "threshold": 0.5,
+        "beta": 0.95
+    },
+    "builtin": true
+}

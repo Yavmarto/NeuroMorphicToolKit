@@ -1,0 +1,17 @@
+{
+    "id": "brainscales",
+    "name": "BrainScaleS",
+    "manufacturer": "BrainScaleS Project",
+    "description": "Accelerated neuromorphic hardware using physical models of neurons and synapses.",
+    "core_count": 50,
+    "neuron_capacity": 200000,
+    "supported_neuron_models": ["AdaptiveLIF"],
+    "weight_bit_widths": [4, 6],
+    "on_chip_memory_kb": 2048,
+    "io_pins": 0,
+    "clock_speed_mhz": 100.0,
+    "power_envelope_mw": 1000.0,
+    "pj_per_spike_op": 100.0,
+    "access": "academic",
+    "notes": "Analog-based computing, accessible through EBRAINS platform."
+}
