@@ -12,7 +12,7 @@
 # fix both the version mismatch and the build time.
 
 # ── Stage 1: install LLVM/MLIR 22 + build snn-opt ─────────────────────────────
-FROM ubuntu:24.04 AS llvm-builder
+FROM ubuntu:26.04 AS llvm-builder
 
 ARG SNN_MLIR_REF=main
 
