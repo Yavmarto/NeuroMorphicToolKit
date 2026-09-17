@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.14-slim
 
 ENV PIP_DEFAULT_TIMEOUT=300
 ENV PIP_RETRIES=5
