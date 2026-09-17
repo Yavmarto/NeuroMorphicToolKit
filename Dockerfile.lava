@@ -4,7 +4,7 @@
 # Python 3.10. The Neurochip project itself requires >=3.11, so the Lava
 # runtime is vendored here via workers/lava_backend/requirements.txt instead of
 # a `poetry install --extras lava` on Neurochip — that extra can never resolve.
-FROM python:3.10-slim
+FROM python:3.14-slim
 
 WORKDIR /app
 
