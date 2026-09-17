@@ -1,4 +1,4 @@
-FROM python:3.11.8-slim-bookworm
+FROM python:3.14.7-slim-bookworm
 
 ENV PIP_DEFAULT_TIMEOUT=300
 ENV PIP_RETRIES=5
