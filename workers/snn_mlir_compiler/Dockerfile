@@ -41,7 +41,7 @@ ENV MLIR_DIR=/usr/lib/llvm-22/lib/cmake/mlir
 RUN cd snn-mlir && sed -i 's/ninja -j"$NPROC"/ninja -j4/' scripts/build_snn_dialect.sh && bash scripts/build_snn_dialect.sh
 
 # ── Stage 2: runtime ───────────────────────────────────────────────────────────
-FROM python:3.12-slim
+FROM python:3.14-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
