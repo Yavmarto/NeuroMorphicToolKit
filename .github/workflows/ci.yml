@@ -31,7 +31,6 @@ jobs:
       neurosense_frontend: ${{ steps.filter.outputs.neurosense_frontend }}
       neurohub: ${{ steps.filter.outputs.neurohub }}
       neurohub_frontend: ${{ steps.filter.outputs.neurohub_frontend }}
-      neurodreamhand: ${{ steps.filter.outputs.neurodreamhand }}
       neurocnl: ${{ steps.filter.outputs.neurocnl }}
       neurobench: ${{ steps.filter.outputs.neurobench }}
       neurotoolkit: ${{ steps.filter.outputs.neurotoolkit }}
@@ -739,10 +738,10 @@ jobs:
       - test-neurosense-frontend
       - test-neurohub
       - test-neurohub-frontend
-      - test-neurodreamhand
       - test-neurobench
       - test-neurocnl-backend
       - test-neurotoolkit
+      - test-reference-assets
       - test-macos-installer-signing
       - test-windows-installer-signing
       - test-suite-api
@@ -756,12 +755,12 @@ jobs:
           echo "  neurochip:      ${{ needs.test-neurochip.result }}"
           echo "  neurosense:     ${{ needs.test-neurosense.result }}"
           echo "  neurohub:       ${{ needs.test-neurohub.result }}"
-          echo "  neurodreamhand: ${{ needs.test-neurodreamhand.result }}"
           echo "  neurobench:     ${{ needs.test-neurobench.result }}"
           echo "  neurocnl:       ${{ needs.test-neurocnl-backend.result }}"
           echo "  neurotoolkit:   ${{ needs.test-neurotoolkit.result }}"
           echo "  suite-api:      ${{ needs.test-suite-api.result }}"
           echo "  workers:        ${{ needs.test-workers.result }}"
+          echo "  reference-assets: ${{ needs.test-reference-assets.result }}"
           echo "  macos-installer: ${{ needs.test-macos-installer-signing.result }}"
           echo "  windows-installer: ${{ needs.test-windows-installer-signing.result }}"
 
@@ -774,12 +773,12 @@ jobs:
             "${{ needs.test-neurosense-frontend.result }}" \
             "${{ needs.test-neurohub.result }}" \
             "${{ needs.test-neurohub-frontend.result }}" \
-            "${{ needs.test-neurodreamhand.result }}" \
             "${{ needs.test-neurobench.result }}" \
             "${{ needs.test-neurocnl-backend.result }}" \
             "${{ needs.test-neurotoolkit.result }}" \
             "${{ needs.test-suite-api.result }}" \
             "${{ needs.test-workers.result }}" \
+            "${{ needs.test-reference-assets.result }}" \
             "${{ needs.test-macos-installer-signing.result }}" \
             "${{ needs.test-windows-installer-signing.result }}"; do
             if [ "$result" = "failure" ]; then
