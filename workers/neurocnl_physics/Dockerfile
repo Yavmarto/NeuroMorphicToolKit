@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.14-slim
 WORKDIR /repo
 
 # Pre-install all deps before copying source — mujoco was already here (correct).
