@@ -287,8 +287,7 @@ if [ -n "$SIGNING_IDENTITY" ]; then
   export MACOS_SIGNING_IDENTITY="$SIGNING_IDENTITY"
   bash "$SIGN_HELPER" sign-app "$APP_PATH"
 else
-  echo "==> Code signing (ad-hoc)..."
-  codesign --force --deep --sign - "$APP_PATH" 2>/dev/null || {
+  bash "$SIGN_HELPER" sign-app-adhoc "$APP_PATH" || {
     echo "  Warning: code signing failed (non-fatal for local testing)"
   }
 fi

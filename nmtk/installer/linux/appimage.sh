@@ -43,18 +43,25 @@ cp "$SCRIPT_DIR/nmtk.desktop" "$APPDIR/"
 cp "$SCRIPT_DIR/AppRun" "$APPDIR/"
 chmod +x "$APPDIR/AppRun"
 
-# Copy icons
-# Using neuro_toolkit assets if available, or fallback to neurocnl icon for now
-ICON_SRC="$REPO_ROOT/nmtk/neuro_toolkit/linux/runner/resources/app_icon.png"
-if [ ! -f "$ICON_SRC" ]; then
-  # Fallback to the one used in the previous version if it exists
-  ICON_SRC="$REPO_ROOT/neurocnl/frontend/macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_256.png"
+# Copy icons — appimagetool requires Icon= from the .desktop file to exist in AppDir.
+ICON_CANDIDATES=(
+  "$REPO_ROOT/nmtk/neuro_toolkit/macos/Runner/Assets.xcassets/AppIcon.appiconset/app_icon_256.png"
+  "$REPO_ROOT/nmtk/neuro_toolkit/web/icons/Icon-512.png"
+  "$REPO_ROOT/nmtk/neuro_toolkit/linux/runner/resources/app_icon.png"
+)
+ICON_SRC=""
+for candidate in "${ICON_CANDIDATES[@]}"; do
+  if [ -f "$candidate" ]; then
+    ICON_SRC="$candidate"
+    break
+  fi
+done
+if [ -z "$ICON_SRC" ]; then
+  echo "Error: no launcher icon found (checked: ${ICON_CANDIDATES[*]})" >&2
+  exit 1
 fi
-
-if [ -f "$ICON_SRC" ]; then
-  cp "$ICON_SRC" "$APPDIR/nmtk.png"
-  cp "$ICON_SRC" "$APPDIR/usr/share/icons/hicolor/256x256/apps/nmtk.png"
-fi
+cp "$ICON_SRC" "$APPDIR/nmtk.png"
+cp "$ICON_SRC" "$APPDIR/usr/share/icons/hicolor/256x256/apps/nmtk.png"
 
 # Download appimagetool if not present
 if [ ! -f appimagetool-x86_64.AppImage ]; then

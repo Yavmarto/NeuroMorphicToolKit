@@ -54,8 +54,7 @@ STAGED_APP="$STAGING_DIR/$(basename "$APP_PATH")"
 # no Developer ID identity was passed, re-sign the whole bundle ad-hoc so the
 # signature is internally consistent and Gatekeeper can actually verify it.
 if [ -z "$SIGNING_IDENTITY" ]; then
-  echo "==> Re-signing app ad-hoc for portability (no --sign identity provided)..."
-  codesign --force --deep --sign - "$STAGED_APP"
+  bash "$SCRIPT_DIR/sign-and-notarize.sh" sign-app-adhoc "$STAGED_APP"
 fi
 
 # ponytail: hdiutil grep + 3 retries for transient mount/detach flakes.

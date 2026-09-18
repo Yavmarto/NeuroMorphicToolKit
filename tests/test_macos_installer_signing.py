@@ -53,6 +53,15 @@ def test_sign_and_notarize_check_reports_ready_when_configured() -> None:
     assert "macos_notarize_requested=true" in result.stdout
 
 
+def test_sign_and_notarize_avoids_deep_codesign_for_developer_id(tmp_path: Path) -> None:
+    source = SIGN_SCRIPT.read_text(encoding="utf-8")
+
+    assert "sign_app_bundle_nested" in source
+    assert "sign-app-adhoc" in source
+    assert "! -path '*/python/include/*'" in source
+    assert "--deep --sign" not in source
+
+
 def test_sign_and_notarize_dry_run_emits_codesign_and_notarytool_commands(tmp_path: Path) -> None:
     app_path = tmp_path / "neuro_toolkit.app"
     app_path.mkdir()
