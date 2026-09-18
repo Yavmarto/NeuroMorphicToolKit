@@ -24,7 +24,15 @@ else
   INSTALLED_HELPER="/usr/local/libexec/nmtk-akida-driver-rebuild"
   SUDOERS_FILE="/etc/sudoers.d/nmtk-akida-driver-rebuild"
 fi
-SRC_DIR="${NMTK_AKIDA_SRC_DIR:-$HOME/akida_dw_edma}"
+default_src_dir() {
+  local home=""
+  if [ -n "${SUDO_USER:-}" ] && [ "$SUDO_USER" != "root" ]; then
+    home="$(getent passwd "$SUDO_USER" 2>/dev/null | cut -d: -f6)"
+  fi
+  [ -n "$home" ] || home="$HOME"
+  printf '%s\n' "$home/akida_dw_edma"
+}
+SRC_DIR="${NMTK_AKIDA_SRC_DIR:-$(default_src_dir)}"
 DKMS_NAME="akida-dw-edma"
 DKMS_VERSION="1.0"
 
@@ -103,7 +111,7 @@ if [ ! -d "$DKMS_TREE_DIR" ]; then
   rsync -a --exclude='.git' "$SRC_DIR"/ "$DKMS_TREE_DIR"/
 fi
 
-if ! dkms status "$DKMS_NAME/$DKMS_VERSION" 2>/dev/null | grep -q .; then
+if [ -z "$(dkms status "$DKMS_NAME/$DKMS_VERSION" 2>/dev/null)" ]; then
   dkms add -m "$DKMS_NAME" -v "$DKMS_VERSION"
 fi
 dkms build -m "$DKMS_NAME" -v "$DKMS_VERSION" -k "$KVER" --force
@@ -120,5 +128,5 @@ fi
 
 grep -q '^akida_pcie' /etc/modules 2>/dev/null || echo akida_pcie >>/etc/modules
 
-lsmod | grep -q '^akida_pcie' || fail "akida-pcie failed to load for kernel $KVER"
+grep -q '^akida_pcie' <(lsmod) || fail "akida-pcie failed to load for kernel $KVER"
 printf '==> akida-pcie bound for kernel %s. DKMS will rebuild it on future kernel updates.\n' "$KVER"
