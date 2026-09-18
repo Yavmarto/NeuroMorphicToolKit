@@ -135,16 +135,15 @@ sign_app_bundle_nested() {
     codesign_with_extra_args "$identity" "$item" "$@"
   done < <(find "$app_path/Contents/Frameworks" -maxdepth 1 -type d -name '*.framework' -print0 2>/dev/null)
 
-  if [ -d "$app_path/Contents/Frameworks/python" ]; then
+  if [ -d "$app_path/Contents/Resources/python" ]; then
     while IFS= read -r -d '' item; do
       codesign_with_extra_args "$identity" "$item" "$@"
-    done < <(find "$app_path/Contents/Frameworks/python" -type f \
-      ! -path '*/include/*' \( -name '*.dylib' -o -name '*.so' -o -perm -111 \) -print0)
+    done < <(find "$app_path/Contents/Resources/python" -type f \
+      ! -path '*/include/*' \( -name '*.dylib' -o -name '*.so' -o -path '*/bin/*' \) -print0)
 
-    # Versioned launchers (pip3.12, 2to3-3.12) are symlinks codesign checks.
     while IFS= read -r -d '' item; do
       codesign_with_extra_args "$identity" "$item" "$@"
-    done < <(find "$app_path/Contents/Frameworks/python/bin" \( -type f -o -type l \) -print0 2>/dev/null)
+    done < <(find "$app_path/Contents/Resources/python/bin" \( -type f -o -type l \) -print0 2>/dev/null)
   fi
 
   while IFS= read -r -d '' item; do

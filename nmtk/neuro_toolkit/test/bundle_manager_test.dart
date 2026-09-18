@@ -169,7 +169,7 @@ void main() {
     test('detects DEV mode when modules dir is missing', () {
       mockEnv.isMacOS = true;
       mockEnv.resolvedExecutable =
-          '/repo/nmtk/neuro_toolkit/build/macos/Build/Products/Debug/neuro_toolkit.app/Contents/MacOS/neuro_toolkit';
+          '/Users/user/repo/nmtk/neuro_toolkit/build/macos/Build/Products/Debug/neuro_toolkit.app/Contents/MacOS/neuro_toolkit';
       // No modules dir setup
 
       expect(bundleManager.isBundled, isFalse);
@@ -208,7 +208,7 @@ void main() {
       );
 
       final bundledPython =
-          '/Applications/NMTK.app/Contents/Frameworks/python/bin/python3';
+          '/Applications/NMTK.app/Contents/Resources/python/bin/python3';
       mockEnv.setupProcess(bundledPython, [
         '--version',
       ], ProcessResult(0, 0, 'Python 3.12.7', ''));
@@ -220,7 +220,7 @@ void main() {
     test('falls back to system Python', () async {
       mockEnv.isMacOS = true;
       mockEnv.resolvedExecutable =
-          '/repo/nmtk/neuro_toolkit/build/macos/Build/Products/Debug/neuro_toolkit.app/Contents/MacOS/neuro_toolkit';
+          '/Users/user/repo/nmtk/neuro_toolkit/build/macos/Build/Products/Debug/neuro_toolkit.app/Contents/MacOS/neuro_toolkit';
 
       mockEnv.setupProcess('python3', [
         '--version',
@@ -333,7 +333,7 @@ void main() {
       mockEnv.setupDirectory(p.join(bundledModules, 'neurocnl'));
 
       final bundledPython =
-          '/Applications/NMTK.app/Contents/Frameworks/python/bin/python3';
+          '/Applications/NMTK.app/Contents/Resources/python/bin/python3';
       mockEnv.setupProcess(bundledPython, [
         '--version',
       ], ProcessResult(0, 0, 'Python 3.12.7', ''));

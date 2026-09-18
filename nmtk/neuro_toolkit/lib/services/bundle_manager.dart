@@ -259,7 +259,7 @@ class BundleManager {
           p.join(
             bundleRootPath,
             'Contents',
-            'Frameworks',
+            'Resources',
             'python',
             'bin',
             'python3',
@@ -267,7 +267,7 @@ class BundleManager {
           p.join(
             bundleRootPath,
             'Contents',
-            'Frameworks',
+            'Resources',
             'python',
             'bin',
             'python',
