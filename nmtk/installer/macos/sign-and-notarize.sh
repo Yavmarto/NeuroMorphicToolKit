@@ -105,43 +105,49 @@ EOF
 
 # codesign --deep treats python/include/python3.12 as a nested bundle and fails
 # (CEL-348). Sign nested binaries bottom-up and skip the include tree.
+codesign_with_extra_args() {
+  local identity="$1"
+  local target="$2"
+  shift 2
+  if [ $# -gt 0 ]; then
+    run_cmd codesign --force "$@" --sign "$identity" "$target"
+  else
+    run_cmd codesign --force --sign "$identity" "$target"
+  fi
+}
+
 sign_app_bundle_nested() {
   local app_path="$1"
   local identity="$2"
   shift 2
-  local -a extra_args=("$@")
 
   if [ "$DRY_RUN" = true ]; then
-    run_cmd codesign --force "${extra_args[@]}" --sign "$identity" "$app_path"
+    codesign_with_extra_args "$identity" "$app_path" "$@"
     return 0
   fi
 
-  find "$app_path/Contents" -type f \( -name '*.dylib' -o -name '*.so' \) \
-    ! -path '*/python/include/*' -print0 |
-    while IFS= read -r -d '' item; do
-      run_cmd codesign --force "${extra_args[@]}" --sign "$identity" "$item"
-    done
+  while IFS= read -r -d '' item; do
+    codesign_with_extra_args "$identity" "$item" "$@"
+  done < <(find "$app_path/Contents" -type f \( -name '*.dylib' -o -name '*.so' \) \
+    ! -path '*/python/include/*' -print0)
 
-  find "$app_path/Contents/Frameworks" -maxdepth 1 -type d -name '*.framework' -print0 2>/dev/null |
-    while IFS= read -r -d '' item; do
-      run_cmd codesign --force "${extra_args[@]}" --sign "$identity" "$item"
-    done
+  while IFS= read -r -d '' item; do
+    codesign_with_extra_args "$identity" "$item" "$@"
+  done < <(find "$app_path/Contents/Frameworks" -maxdepth 1 -type d -name '*.framework' -print0 2>/dev/null)
 
-  find "$app_path/Contents/MacOS" -type f -perm -111 -print0 2>/dev/null |
-    while IFS= read -r -d '' item; do
-      run_cmd codesign --force "${extra_args[@]}" --sign "$identity" "$item"
-    done
+  while IFS= read -r -d '' item; do
+    codesign_with_extra_args "$identity" "$item" "$@"
+  done < <(find "$app_path/Contents/MacOS" -type f -perm -111 -print0 2>/dev/null)
 
   if [ -d "$app_path/Contents/Frameworks/python" ]; then
-    find "$app_path/Contents/Frameworks/python" -type f \
+    while IFS= read -r -d '' item; do
+      codesign_with_extra_args "$identity" "$item" "$@"
+    done < <(find "$app_path/Contents/Frameworks/python" -type f \
       \( -name '*.dylib' -o -name '*.so' -o -perm -111 \) \
-      ! -path '*/include/*' -print0 |
-      while IFS= read -r -d '' item; do
-        run_cmd codesign --force "${extra_args[@]}" --sign "$identity" "$item"
-      done
+      ! -path '*/include/*' -print0)
   fi
 
-  run_cmd codesign --force "${extra_args[@]}" --sign "$identity" "$app_path"
+  codesign_with_extra_args "$identity" "$app_path" "$@"
 }
 
 sign_app_bundle() {
