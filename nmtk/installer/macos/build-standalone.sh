@@ -168,7 +168,9 @@ cp -R "$PYTHON_ROOT"/* "$FRAMEWORKS_DIR/"
 # NOTE: Do NOT remove ensurepip or its bundled .whl files — they are needed
 # for `python -m venv` to bootstrap pip inside virtual environments.
 echo "==> Trimming Python bundle (using version $PYTHON_MAJ_MIN)..."
-rm -rf "$FRAMEWORKS_DIR/lib/python${PYTHON_MAJ_MIN}/test" \
+# include/python3.12 looks like a nested bundle to codesign (CEL-348).
+rm -rf "$FRAMEWORKS_DIR/include" \
+       "$FRAMEWORKS_DIR/lib/python${PYTHON_MAJ_MIN}/test" \
        "$FRAMEWORKS_DIR/lib/python${PYTHON_MAJ_MIN}/idlelib" \
        "$FRAMEWORKS_DIR/lib/python${PYTHON_MAJ_MIN}/tkinter" \
        "$FRAMEWORKS_DIR/lib/python${PYTHON_MAJ_MIN}/turtledemo" \
