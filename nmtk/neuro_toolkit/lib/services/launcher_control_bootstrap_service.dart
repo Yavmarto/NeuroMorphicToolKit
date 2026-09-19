@@ -74,6 +74,27 @@ class LauncherBootstrapState {
   final bool hostReachableNoServer;
 
   bool get canUseControlApi => status == LauncherBootstrapStatus.ready;
+
+  // Value equality so an unchanged bootstrap state stops waking
+  // ModuleNotifier/WorkspaceNotifier, which watch this provider (CEL-270).
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is LauncherBootstrapState &&
+          other.status == status &&
+          other.baseUri == baseUri &&
+          other.message == message &&
+          other.controlApiReachable == controlApiReachable &&
+          other.hostReachableNoServer == hostReachableNoServer;
+
+  @override
+  int get hashCode => Object.hash(
+    status,
+    baseUri,
+    message,
+    controlApiReachable,
+    hostReachableNoServer,
+  );
 }
 
 abstract class LauncherControlBootstrapEnvironment {

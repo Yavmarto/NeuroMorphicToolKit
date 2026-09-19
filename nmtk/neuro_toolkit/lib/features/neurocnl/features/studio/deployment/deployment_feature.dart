@@ -7,6 +7,7 @@ export 'package:neuro_toolkit/features/neurocnl/providers/hardware_reachability_
 export 'package:neuro_toolkit/features/neurocnl/providers/studio_akida_deploy_provider.dart';
 export 'package:neuro_toolkit/features/neurocnl/providers/studio_lava_deploy_provider.dart';
 export 'package:neuro_toolkit/features/neurocnl/providers/studio_pynq_deploy_provider.dart';
+export 'package:neuro_toolkit/features/neurocnl/providers/studio_voyager_deploy_provider.dart';
 export 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/presentation/akida/akida_capability_chip.dart';
 export 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/presentation/akida/akida_class_accuracy_chart.dart';
 export 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/presentation/akida/akida_output_activation_chart.dart';
@@ -58,6 +59,7 @@ export 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/deplo
 export 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/deploy/pynq_setup_pane/pynq_setup_pane.dart';
 export 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/deploy/pynq_setup_pane/pynq_weight_provenance.dart';
 export 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/deploy/pynq_workspace/studio_pynq_workspace.dart';
+export 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/deploy/voyager_workspace/studio_voyager_workspace.dart';
 export 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/deploy/pynq_workspace/support.dart';
 export 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/deploy/sc_neurocore_fpga_workspace/sc_neuro_core_execution_pane.dart';
 export 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/deploy/sc_neurocore_fpga_workspace/sc_neuro_core_setup_pane.dart';

@@ -57,6 +57,23 @@ class ConnectState {
     savedHost: savedHost ?? this.savedHost,
     savedUsername: savedUsername ?? this.savedUsername,
   );
+
+  // Value equality so an unchanged ConnectState stops re-emitting through
+  // selectedControlApiServiceProvider -> launcherBootstrapStateProvider ->
+  // moduleProvider. See connect_service.dart's ConnectSession (CEL-270).
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ConnectState &&
+          other.phase == phase &&
+          other.session == session &&
+          other.failureCause == failureCause &&
+          other.savedHost == savedHost &&
+          other.savedUsername == savedUsername;
+
+  @override
+  int get hashCode =>
+      Object.hash(phase, session, failureCause, savedHost, savedUsername);
 }
 
 final connectServiceProvider = Provider<ConnectService>((ref) {

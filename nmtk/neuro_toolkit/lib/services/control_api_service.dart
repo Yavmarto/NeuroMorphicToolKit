@@ -120,12 +120,29 @@ class ControlApiService {
          analyticsService,
          adminToken,
        ),
-       _baseUri = baseUri;
+       _baseUri = baseUri,
+       _adminToken = adminToken;
 
   final http.Client _client;
   final Uri _baseUri;
+  final String _adminToken;
 
   Uri get baseUri => _baseUri;
+
+  // Base URI + admin token fully determine what this service does, so two
+  // instances that agree on them are interchangeable. Riverpod compares
+  // provider values with `==`; without this, selectedControlApiServiceProvider
+  // emitted a "new" service on every ConnectNotifier write and cascaded a
+  // rebuild into moduleProvider while it was still building (CEL-270).
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ControlApiService &&
+          other._baseUri == _baseUri &&
+          other._adminToken == _adminToken;
+
+  @override
+  int get hashCode => Object.hash(_baseUri, _adminToken);
 
   static String get configuredBaseUrl => const String.fromEnvironment(
     'NMTK_CONTROL_API_BASE_URL',

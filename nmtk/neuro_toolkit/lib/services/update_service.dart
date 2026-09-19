@@ -35,7 +35,7 @@ class UpdateService {
            launcherRepositoryUri ?? Uri.parse(_launcherRepositoryApiUrl);
 
   static const String _launcherRepositoryApiUrl =
-      'https://api.github.com/repos/Completed-Spoon-6/NeuroMorphicToolKit';
+      'https://api.github.com/repos/Yavmarto/NeuroMorphicToolKit';
   static const Map<String, String> _githubHeaders = <String, String>{
     'Accept': 'application/vnd.github+json',
     'User-Agent': 'NeuroMorphicToolkit-Launcher',

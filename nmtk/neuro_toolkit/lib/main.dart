@@ -31,6 +31,14 @@ void main() async {
 
   final container = ProviderContainer(
     overrides: [analyticsServiceProvider.overrideWithValue(analytics)],
+    // Riverpod 3 retries any provider whose build() throws, up to 10 times
+    // with backoff. Each retry disposes and rebuilds the element underneath
+    // the widgets watching it, and a `ref.watch` landing in that window reads
+    // an uninitialized provider and kills the frame (CEL-270). The launcher
+    // does its own recovery — ModuleNotifier polls every 3s and the
+    // "Could Not Load Workspace" panel has an explicit Retry — so the
+    // implicit retry only adds churn and duplicate network calls.
+    retry: (_, _) => null,
   );
 
   // Await the settings to be loaded from SharedPreferences asynchronously

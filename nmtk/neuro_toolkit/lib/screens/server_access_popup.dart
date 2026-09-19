@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
 import 'package:neuro_toolkit/features/server/provision/provision_service.dart';
+import 'package:neuro_toolkit/screens/server_access_dialog_surface.dart';
+import 'package:neuro_toolkit/screens/server_access_sheet_surface.dart';
 import 'package:neuro_toolkit/screens/server_connect_screen.dart';
 import 'package:neuro_toolkit/screens/server_setup_screen.dart';
 
@@ -19,7 +21,10 @@ Future<void> showServerAccessPopup(
 }) {
   final useMobileSheet =
       MediaQuery.sizeOf(context).width < NmtkShellTokens.compactBreakpoint;
-  final flow = _ServerAccessFlow(initialHost: initialHost, isSheet: useMobileSheet);
+  final flow = _ServerAccessFlow(
+    initialHost: initialHost,
+    isSheet: useMobileSheet,
+  );
 
   if (useMobileSheet) {
     return showModalBottomSheet<void>(
@@ -31,7 +36,7 @@ Future<void> showServerAccessPopup(
       enableDrag: true,
       // ZETA-MIGRATION-EXEMPT: transparent (no fill) — Zeta has no transparent token
       backgroundColor: Colors.transparent,
-      builder: (_) => _ServerAccessSheetSurface(child: flow),
+      builder: (_) => ServerAccessSheetSurface(child: flow),
     );
   }
 
@@ -39,7 +44,7 @@ Future<void> showServerAccessPopup(
     context: context,
     useRootNavigator: true,
     barrierDismissible: true,
-    builder: (_) => _ServerAccessDialogSurface(child: flow),
+    builder: (_) => ServerAccessDialogSurface(child: flow),
   );
 }
 
@@ -138,55 +143,6 @@ class _ServerAccessFlowState extends ConsumerState<_ServerAccessFlow> {
           ),
         ),
       ],
-    );
-  }
-}
-
-/// Desktop/wide dialog surface for the flow. Uses the sanctioned dialog radius
-/// and a fixed but scroll-friendly size so the forms never bleed past the
-/// viewport on short windows.
-class _ServerAccessDialogSurface extends StatelessWidget {
-  const _ServerAccessDialogSurface({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Zeta.of(context).colors;
-    return Dialog(
-      backgroundColor: colors.surfaceDefault,
-      shape: RoundedRectangleBorder(
-        borderRadius: NmtkDesignTokens.dialogShape,
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 680, maxHeight: 720),
-        child: SizedBox(width: 680, height: 720, child: child),
-      ),
-    );
-  }
-}
-
-/// Phone bottom-sheet surface for the flow, with a drag handle and rounded
-/// top corners.
-class _ServerAccessSheetSurface extends StatelessWidget {
-  const _ServerAccessSheetSurface({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final tokens = NmtkShellTokens.of(context);
-    final colors = Zeta.of(context).colors;
-    return ClipRRect(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(tokens.radiusLg)),
-      child: ColoredBox(
-        color: colors.surfaceDefault,
-        child: SizedBox(
-          height: MediaQuery.sizeOf(context).height * 0.94,
-          child: SafeArea(top: false, child: child),
-        ),
-      ),
     );
   }
 }

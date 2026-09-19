@@ -330,10 +330,15 @@ class WorkspaceController extends _$WorkspaceController {
       'lava_sim',
       'snntorch_sim',
       'sc_neurocore_sim',
+      'brian2_sim',
+      'nengo_sim',
+      'sinabs_sim',
+      'rockpool',
       'akida',
       'pynq',
       'lava',
       'sc_neurocore_fpga',
+      'voyager_axelera',
     };
     final fileId = uri.queryParameters['file'];
     if (fileId != null && ws.files.any((f) => f.id == fileId)) {

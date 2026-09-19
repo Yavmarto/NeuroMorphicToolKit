@@ -47,7 +47,7 @@ final class BenchmarkExecutionControllerProvider
 }
 
 String _$benchmarkExecutionControllerHash() =>
-    r'18d09f23d542ea01fea6212a6d1d3479ae3b0f7f';
+    r'477f3eb71efe61fda038604b4ddc49f169e8ae54';
 
 abstract class _$BenchmarkExecutionController
     extends $Notifier<BenchmarkExecutionState> {

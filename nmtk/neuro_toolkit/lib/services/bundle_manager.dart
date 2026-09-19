@@ -259,7 +259,7 @@ class BundleManager {
           p.join(
             bundleRootPath,
             'Contents',
-            'Frameworks',
+            'Resources',
             'python',
             'bin',
             'python3',
@@ -267,7 +267,7 @@ class BundleManager {
           p.join(
             bundleRootPath,
             'Contents',
-            'Frameworks',
+            'Resources',
             'python',
             'bin',
             'python',
@@ -318,8 +318,7 @@ class BundleManager {
     final List<String> knownPaths = [];
 
     if (_env.isMacOS) {
-      final home =
-          _env.environment['HOME'] ?? '/Users/${_env.environment['USER']}';
+      final home = _env.environment['HOME'] ?? '';
       knownPaths.addAll([
         '/opt/homebrew/bin/python3',
         '/opt/homebrew/bin/python',

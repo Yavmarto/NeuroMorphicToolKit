@@ -1209,6 +1209,25 @@ class MockApiClient extends _i1.Mock implements _i9.ApiClient {
           as _i25.Future<void>);
 
   @override
+  _i25.Future<dynamic> getNeurosenseJson(String? segment) =>
+      (super.noSuchMethod(
+            Invocation.method(#getNeurosenseJson, [segment]),
+            returnValue: _i25.Future<dynamic>.value(),
+          )
+          as _i25.Future<dynamic>);
+
+  @override
+  _i25.Future<dynamic> postNeurosenseJson(
+    String? segment,
+    Map<String, dynamic>? body,
+  ) =>
+      (super.noSuchMethod(
+            Invocation.method(#postNeurosenseJson, [segment, body]),
+            returnValue: _i25.Future<dynamic>.value(),
+          )
+          as _i25.Future<dynamic>);
+
+  @override
   _i25.Future<String?> getJupyterUrl() =>
       (super.noSuchMethod(
             Invocation.method(#getJupyterUrl, []),

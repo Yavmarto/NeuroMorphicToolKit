@@ -34,14 +34,14 @@ enum BenchmarkJobStatus {
 class BenchmarkRunRequest {
   const BenchmarkRunRequest({
     required this.benchmarkId,
-    required this.networkPath,
-    required this.params,
+    this.networkPath,
+    this.params = const <String, dynamic>{},
     this.seed,
     this.target = 'simulation',
   });
 
   final String benchmarkId;
-  final String networkPath;
+  final String? networkPath;
   final Map<String, dynamic> params;
   final int? seed;
   final String target;
@@ -49,9 +49,10 @@ class BenchmarkRunRequest {
   Map<String, dynamic> toJson() {
     return {
       'benchmark_id': benchmarkId,
-      'network_path': networkPath,
-      'params': params,
-      'seed': seed,
+      if (networkPath != null && networkPath!.trim().isNotEmpty)
+        'network_path': networkPath,
+      if (params.isNotEmpty) 'params': params,
+      if (seed != null) 'seed': seed,
       'target': target,
     };
   }

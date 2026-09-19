@@ -25,6 +25,21 @@ class ConnectSession {
   final String host;
   final String username;
   final String sessionToken;
+
+  // Value equality: Riverpod compares provider values with `==` to decide
+  // whether to notify dependents. Identity equality here made every no-op
+  // ConnectNotifier write look like a change, which rebuilt the whole
+  // launcher provider graph mid-frame (CEL-270).
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ConnectSession &&
+          other.host == host &&
+          other.username == username &&
+          other.sessionToken == sessionToken;
+
+  @override
+  int get hashCode => Object.hash(host, username, sessionToken);
 }
 
 /// The every-launch, credential-only connect path: one HTTP call to an

@@ -113,6 +113,8 @@ class DeploymentPersistence {
       kubeconfig: secrets['kubeconfig'] as String? ?? '',
       adminToken: secrets['adminToken'] as String? ?? '',
       cleanInstall: cleanInstall,
+      releaseVersion: secrets['releaseVersion'] as String? ?? '',
+      schemaMigration: secrets['schemaMigration'] as bool? ?? false,
       moduleEnvironment: target.moduleEnvironment,
       moduleSecrets: _moduleSecretsFromJson(secrets['moduleSecrets']),
     );

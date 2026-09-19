@@ -208,7 +208,7 @@ void main() {
       );
 
       final bundledPython =
-          '/Applications/NMTK.app/Contents/Frameworks/python/bin/python3';
+          '/Applications/NMTK.app/Contents/Resources/python/bin/python3';
       mockEnv.setupProcess(bundledPython, [
         '--version',
       ], ProcessResult(0, 0, 'Python 3.12.7', ''));
@@ -333,7 +333,7 @@ void main() {
       mockEnv.setupDirectory(p.join(bundledModules, 'neurocnl'));
 
       final bundledPython =
-          '/Applications/NMTK.app/Contents/Frameworks/python/bin/python3';
+          '/Applications/NMTK.app/Contents/Resources/python/bin/python3';
       mockEnv.setupProcess(bundledPython, [
         '--version',
       ], ProcessResult(0, 0, 'Python 3.12.7', ''));

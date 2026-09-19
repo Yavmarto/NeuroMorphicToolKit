@@ -279,7 +279,7 @@ class KubernetesDeploymentService {
     _deployment(
       namespace: namespace,
       name: 'nmtk-suite-api',
-      image: 'ghcr.io/completed-spoon-6/neuromorphictoolkit/suite-api:latest',
+      image: 'ghcr.io/yavmarto/neuromorphictoolkit/suite-api:latest',
       port: 9000,
       healthPath: '/api/suite/health',
       environment: {
@@ -298,7 +298,7 @@ class KubernetesDeploymentService {
       namespace: namespace,
       name: 'nmtk-launcher-control',
       image:
-          'ghcr.io/completed-spoon-6/neuromorphictoolkit/launcher-control:latest',
+          'ghcr.io/yavmarto/neuromorphictoolkit/launcher-control:latest',
       port: 8091,
       healthPath: '/health',
       environment: {
@@ -320,49 +320,49 @@ class KubernetesDeploymentService {
       namespace,
       name: 'neurosense-hw-worker',
       image:
-          'ghcr.io/completed-spoon-6/neuromorphictoolkit/neurosense-hw-worker:latest',
+          'ghcr.io/yavmarto/neuromorphictoolkit/neurosense-hw-worker:latest',
       port: 8004,
     ),
     ..._workerResources(
       namespace,
       name: 'neurobench-runner-worker',
       image:
-          'ghcr.io/completed-spoon-6/neuromorphictoolkit/neurobench-runner-worker:latest',
+          'ghcr.io/yavmarto/neuromorphictoolkit/neurobench-runner-worker:latest',
       port: 8003,
     ),
     ..._workerResources(
       namespace,
       name: 'neurochip-hw-worker',
       image:
-          'ghcr.io/completed-spoon-6/neuromorphictoolkit/neurochip-hw-worker:latest',
+          'ghcr.io/yavmarto/neuromorphictoolkit/neurochip-hw-worker:latest',
       port: 8002,
     ),
     ..._workerResources(
       namespace,
       name: 'lava-backend',
       image:
-          'ghcr.io/completed-spoon-6/neuromorphictoolkit/lava-backend:latest',
+          'ghcr.io/yavmarto/neuromorphictoolkit/lava-backend:latest',
       port: 8012,
     ),
     ..._workerResources(
       namespace,
       name: 'neurocnl-physics-worker',
       image:
-          'ghcr.io/completed-spoon-6/neuromorphictoolkit/neurocnl-physics-worker:latest',
+          'ghcr.io/yavmarto/neuromorphictoolkit/neurocnl-physics-worker:latest',
       port: 8006,
     ),
     ..._workerResources(
       namespace,
       name: 'snn-mlir-compiler',
       image:
-          'ghcr.io/completed-spoon-6/neuromorphictoolkit/snn-mlir-compiler:latest',
+          'ghcr.io/yavmarto/neuromorphictoolkit/snn-mlir-compiler:latest',
       port: 8007,
     ),
     ..._workerResources(
       namespace,
       name: 'jupyter-server',
       image:
-          'ghcr.io/completed-spoon-6/neuromorphictoolkit/jupyter-server:latest',
+          'ghcr.io/yavmarto/neuromorphictoolkit/jupyter-server:latest',
       port: 8008,
       healthPath: '/api/status',
     ),

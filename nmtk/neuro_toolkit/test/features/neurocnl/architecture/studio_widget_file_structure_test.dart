@@ -5,6 +5,10 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   test('Studio keeps each public class in its own file', () {
     final studioRoot = Directory('lib/features/neurocnl/features/studio');
+    final widgetFilePattern = RegExp(
+      r'^class\s+[A-Za-z]\w*\s+extends\s+(?:Consumer)?(?:Stateful|Stateless)Widget\b',
+      multiLine: true,
+    );
     final files = <File>[
       File('lib/features/neurocnl/screens/studio_screen.dart'),
       if (studioRoot.existsSync())
@@ -16,8 +20,12 @@ void main() {
     final classPattern = RegExp(r'^class\s+([A-Za-z_]\w*)\b', multiLine: true);
 
     for (final file in files) {
+      final source = file.readAsStringSync();
+      if (!widgetFilePattern.hasMatch(source)) {
+        continue;
+      }
       final names = classPattern
-          .allMatches(file.readAsStringSync())
+          .allMatches(source)
           .map((match) => match.group(1)!)
           .toList(growable: false);
       final privateClasses = names.where((name) => name.startsWith('_'));

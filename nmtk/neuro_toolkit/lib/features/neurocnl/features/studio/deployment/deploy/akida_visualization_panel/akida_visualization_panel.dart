@@ -265,7 +265,9 @@ class _AkidaVisualizationPanelState extends State<AkidaVisualizationPanel> {
               NmtkShellTokens.of(context).radiusMd,
             ),
           ),
-          child: ListTile(
+          child: Material(
+            color: Colors.transparent,
+            child: ListTile(
             title: Text('${layer.index}. ${layerLabels[index]}'),
             subtitle: Text(
               subtitle,
@@ -280,6 +282,7 @@ class _AkidaVisualizationPanelState extends State<AkidaVisualizationPanel> {
             onTap: layer.visualizable
                 ? () => widget.onLayerSelected(layer.index)
                 : null,
+            ),
           ),
         );
       },

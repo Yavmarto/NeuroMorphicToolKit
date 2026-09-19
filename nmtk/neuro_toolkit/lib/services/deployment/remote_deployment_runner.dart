@@ -12,6 +12,34 @@ import 'package:neuro_toolkit/services/deployment/job_registry.dart';
 import 'package:neuro_toolkit/services/deployment/ssh_deployment_service.dart';
 import 'package:path/path.dart' as path;
 
+/// Builds the argv list passed to `install.sh` on the remote host.
+List<String> buildRemoteInstallCommandArgs({
+  required String containerEngine,
+  required int backendPort,
+  required String imageTag,
+  required bool cleanInstall,
+  required String host,
+  required String statusFile,
+  required String logFile,
+  bool schemaMigration = false,
+}) {
+  final args = <String>[
+    'bash',
+    'install.sh',
+    containerEngine,
+    backendPort.toString(),
+    imageTag,
+    cleanInstall.toString(),
+    host,
+    statusFile,
+    logFile,
+  ];
+  if (schemaMigration) {
+    args.addAll(const ['--schema-migration', 'true']);
+  }
+  return args;
+}
+
 /// Runs SSH-based deployment work against a remote host that is already
 /// reachable: starting the detached install, polling its progress, and
 /// uploading or verifying the deployment bundle. Provisioning a brand-new
@@ -108,17 +136,16 @@ class RemoteDeploymentRunner {
       final status = '$jobDir/${job.id}.status';
       final log = '$jobDir/${job.id}.log';
       final pid = '$jobDir/${job.id}.pid';
-      final installCommand = [
-        'bash',
-        'install.sh',
-        request.containerEngine,
-        request.backendPort.toString(),
-        job.imageTag,
-        request.cleanInstall.toString(),
-        request.host,
-        status,
-        log,
-      ].map(shellQuote).join(' ');
+      final installCommand = buildRemoteInstallCommandArgs(
+        containerEngine: request.containerEngine,
+        backendPort: request.backendPort,
+        imageTag: request.deploymentImageTag,
+        cleanInstall: request.cleanInstall,
+        host: request.host,
+        statusFile: status,
+        logFile: log,
+        schemaMigration: request.schemaMigration,
+      ).map(shellQuote).join(' ');
       // ponytail: `sg` is absent on Ubuntu 26.04 and the SSH login already has
       // the docker group, so only re-enter the group when `sg` actually exists.
       final detachedCommand = request.containerEngine == 'docker'

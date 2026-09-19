@@ -36,11 +36,13 @@ class BuildTimeline extends ConsumerWidget {
       itemBuilder: (context, index) {
         final entry = entries[index];
         return switch (entry.kind) {
-          StudioAgentTimelineKind.userMessage => _MessageBubble(
+          StudioAgentTimelineKind.userMessage => messageBubble(
+            context,
             text: entry.text ?? '',
             isUser: true,
           ),
-          StudioAgentTimelineKind.assistantText => _MessageBubble(
+          StudioAgentTimelineKind.assistantText => messageBubble(
+            context,
             text: entry.text ?? '',
             isUser: false,
           ),
@@ -48,18 +50,21 @@ class BuildTimeline extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               ToolCallCard(entry: entry),
-              for (final artifact in entry.toolResult?.artifacts ??
-                  const <StudioAgentArtifact>[])
+              for (final artifact
+                  in entry.toolResult?.artifacts ??
+                      const <StudioAgentArtifact>[])
                 CnlPatchCard(artifact: artifact),
               if (entry.toolResult != null)
-                _NextActionChips(
+                nextActionChips(
+                  context,
                   actions: entry.toolResult!.nextActions,
                   unlockedSteps: unlocked,
                   onStepSelected: notifier.applyStepSuggestion,
                 ),
             ],
           ),
-          StudioAgentTimelineKind.stepSuggestion => _StepSuggestionChip(
+          StudioAgentTimelineKind.stepSuggestion => stepSuggestionChip(
+            context,
             step: entry.pipelineStep ?? '',
             label: entry.suggestionLabel,
             unlocked: unlocked.contains(entry.pipelineStep),
@@ -71,116 +76,95 @@ class BuildTimeline extends ConsumerWidget {
   }
 }
 
-class _MessageBubble extends StatelessWidget {
-  const _MessageBubble({required this.text, required this.isUser});
-
-  final String text;
-  final bool isUser;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Zeta.of(context).colors;
-    return Align(
-      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 4),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: isUser ? colors.mainPrimary : colors.surfaceHover,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Text(
-          text,
-          style: Zeta.of(context).textStyles.bodyMedium.copyWith(
-            color: isUser ? colors.surfacePrimary : colors.mainDefault,
-          ),
+Widget messageBubble(
+  BuildContext context, {
+  required String text,
+  required bool isUser,
+}) {
+  final colors = Zeta.of(context).colors;
+  return Align(
+    alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+    child: Container(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: isUser ? colors.mainPrimary : colors.surfaceHover,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        text,
+        style: Zeta.of(context).textStyles.bodyMedium.copyWith(
+          color: isUser ? colors.surfacePrimary : colors.mainDefault,
         ),
       ),
-    );
-  }
+    ),
+  );
 }
 
-class _NextActionChips extends StatelessWidget {
-  const _NextActionChips({
-    required this.actions,
-    required this.unlockedSteps,
-    required this.onStepSelected,
-  });
-
-  final List<StudioAgentNextAction> actions;
-  final Set<String> unlockedSteps;
-  final bool Function(String stepName) onStepSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    if (actions.isEmpty) {
-      return const SizedBox.shrink();
-    }
-    return Padding(
-      padding: const EdgeInsets.only(top: 8),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: [
-          for (final action in actions)
-            if (_pipelineStepForAction(action) != null)
-              _StepSuggestionChip(
-                step: _pipelineStepForAction(action)!,
-                label: action.label ?? action.action,
-                unlocked: unlockedSteps.contains(_pipelineStepForAction(action)),
-                onTap: () => onStepSelected(_pipelineStepForAction(action)!),
-              ),
-        ],
-      ),
-    );
+Widget nextActionChips(
+  BuildContext context, {
+  required List<StudioAgentNextAction> actions,
+  required Set<String> unlockedSteps,
+  required bool Function(String stepName) onStepSelected,
+}) {
+  if (actions.isEmpty) {
+    return const SizedBox.shrink();
   }
-
-  String? _pipelineStepForAction(StudioAgentNextAction action) {
-    if (action.pipelineStep != null) {
-      return action.pipelineStep;
-    }
-    return switch (action.action) {
-      'submit_simulation' || 'poll_simulation_job' => 'run',
-      _ => null,
-    };
-  }
+  return Padding(
+    padding: const EdgeInsets.only(top: 8),
+    child: Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final action in actions)
+          if (pipelineStepForAction(action) != null)
+            stepSuggestionChip(
+              context,
+              step: pipelineStepForAction(action)!,
+              label: action.label ?? action.action,
+              unlocked: unlockedSteps.contains(pipelineStepForAction(action)),
+              onTap: () => onStepSelected(pipelineStepForAction(action)!),
+            ),
+      ],
+    ),
+  );
 }
 
-class _StepSuggestionChip extends StatelessWidget {
-  const _StepSuggestionChip({
-    required this.step,
-    required this.unlocked,
-    required this.onTap,
-    this.label,
-  });
-
-  final String step;
-  final String? label;
-  final bool unlocked;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    SnnWorkflowPhase? phase;
-    for (final candidate in SnnWorkflowPhase.values) {
-      if (candidate.name == step) {
-        phase = candidate;
-        break;
-      }
-    }
-    final stepLabel =
-        label ??
-        (phase != null ? (kSnnStepLabels[phase] ?? step) : step);
-    final colors = Zeta.of(context).colors;
-
-    return ActionChip(
-      label: Text(stepLabel),
-      avatar: Icon(
-        unlocked ? ZetaIcons.chevron_right : ZetaIcons.lock,
-        size: 16,
-        color: unlocked ? colors.mainPrimary : colors.mainDisabled,
-      ),
-      onPressed: unlocked ? onTap : null,
-    );
+String? pipelineStepForAction(StudioAgentNextAction action) {
+  if (action.pipelineStep != null) {
+    return action.pipelineStep;
   }
+  return switch (action.action) {
+    'submit_simulation' || 'poll_simulation_job' => 'run',
+    _ => null,
+  };
+}
+
+Widget stepSuggestionChip(
+  BuildContext context, {
+  required String step,
+  required bool unlocked,
+  required VoidCallback onTap,
+  String? label,
+}) {
+  SnnWorkflowPhase? phase;
+  for (final candidate in SnnWorkflowPhase.values) {
+    if (candidate.name == step) {
+      phase = candidate;
+      break;
+    }
+  }
+  final stepLabel =
+      label ?? (phase != null ? (kSnnStepLabels[phase] ?? step) : step);
+  final colors = Zeta.of(context).colors;
+
+  return ActionChip(
+    label: Text(stepLabel),
+    avatar: Icon(
+      unlocked ? ZetaIcons.chevron_right : ZetaIcons.lock,
+      size: 16,
+      color: unlocked ? colors.mainPrimary : colors.mainDisabled,
+    ),
+    onPressed: unlocked ? onTap : null,
+  );
 }

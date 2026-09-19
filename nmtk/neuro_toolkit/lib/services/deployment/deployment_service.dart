@@ -165,6 +165,8 @@ class DeploymentRequest {
     this.kubeconfig = '',
     this.adminToken = '',
     this.cleanInstall = false,
+    this.releaseVersion = '',
+    this.schemaMigration = false,
     this.moduleEnvironment = const <String, String>{},
     this.moduleSecrets = const <String, String>{},
   });
@@ -186,8 +188,21 @@ class DeploymentRequest {
   final String kubeconfig;
   final String adminToken;
   final bool cleanInstall;
+
+  /// Resolved release tag for the target backend images (for example
+  /// `1.2.0`). When empty, the deploy path falls back to `latest`.
+  final String releaseVersion;
+
+  /// When true, a failed update must alert and hold instead of auto-rolling
+  /// back — the release migrates schema or data inside its images.
+  final bool schemaMigration;
+
   final Map<String, String> moduleEnvironment;
   final Map<String, String> moduleSecrets;
+
+  /// Image tag passed to `install.sh` for this request.
+  String get deploymentImageTag =>
+      releaseVersion.trim().isEmpty ? 'latest' : releaseVersion.trim();
 
   DeploymentRequest withAdminToken(String value) => DeploymentRequest(
     targetType: targetType,
@@ -207,6 +222,8 @@ class DeploymentRequest {
     kubeconfig: kubeconfig,
     adminToken: value,
     cleanInstall: cleanInstall,
+    releaseVersion: releaseVersion,
+    schemaMigration: schemaMigration,
     moduleEnvironment: moduleEnvironment,
     moduleSecrets: moduleSecrets,
   );
@@ -241,6 +258,8 @@ class DeploymentRequest {
     kubeconfig: kubeconfig,
     adminToken: adminToken,
     cleanInstall: cleanInstall,
+    releaseVersion: releaseVersion,
+    schemaMigration: schemaMigration,
     moduleEnvironment: moduleEnvironment,
     moduleSecrets: moduleSecrets,
   );
@@ -272,6 +291,8 @@ class DeploymentRequest {
     if (kubeconfig.isNotEmpty) 'kubeconfig': kubeconfig,
     if (adminToken.isNotEmpty) 'adminToken': adminToken,
     if (moduleSecrets.isNotEmpty) 'moduleSecrets': moduleSecrets,
+    if (releaseVersion.isNotEmpty) 'releaseVersion': releaseVersion,
+    if (schemaMigration) 'schemaMigration': schemaMigration,
   };
 }
 

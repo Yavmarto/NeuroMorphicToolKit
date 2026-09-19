@@ -75,6 +75,40 @@ void main() {
     expect((await persistence.requestForTarget(target)).adminToken, adminToken);
   });
 
+  test('release metadata round-trips through secure storage', () async {
+    final preferences = await SharedPreferences.getInstance();
+    final secrets = _MemorySecretStorage();
+    final persistence = DeploymentPersistence(
+      preferences: preferences,
+      secureStorage: secrets,
+    );
+    const target = DeploymentTarget(
+      id: 'remote-release',
+      displayName: 'Remote',
+      targetType: 'remote_host',
+      mode: 'docker',
+      authMode: 'ssh_key',
+      host: '192.168.2.90',
+      backendPort: 9000,
+    );
+    const request = DeploymentRequest(
+      targetType: 'remote_host',
+      mode: 'docker',
+      displayName: 'Remote',
+      host: '192.168.2.90',
+      username: 'nmtk-deploy',
+      releaseVersion: '1.4.0',
+      schemaMigration: true,
+    );
+
+    await persistence.saveTarget(target, request);
+
+    final restored = await persistence.requestForTarget(target);
+    expect(restored.releaseVersion, '1.4.0');
+    expect(restored.schemaMigration, isTrue);
+    expect(restored.deploymentImageTag, '1.4.0');
+  });
+
   test('host keys use trust on first use and reject later changes', () async {
     final persistence = DeploymentPersistence(
       preferences: await SharedPreferences.getInstance(),

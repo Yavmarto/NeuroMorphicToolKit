@@ -6,6 +6,9 @@ import 'package:neuro_toolkit/features/neurocnl/services/neurochip_client.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/studio_akida_deploy_service.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/studio_lava_deploy_service.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/studio_pynq_deploy_service.dart';
+import 'package:neuro_toolkit/features/neurocnl/services/studio_voyager_deploy_service.dart';
+import 'package:neuro_toolkit/features/neurobench/providers/benchmarks_provider.dart'
+    as neurobench;
 
 import 'package:neuro_toolkit/features/neurocnl/services/studio_target_registry_service.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/feature_launch_provider.dart';
@@ -86,6 +89,14 @@ final studioLavaDeployServiceProvider = Provider<StudioLavaDeployService>((
     neurochipClient: ref.watch(neurochipClientProvider),
   );
 });
+
+final studioVoyagerDeployServiceProvider = Provider<StudioVoyagerDeployService>(
+  (ref) {
+    return StudioVoyagerDeployService(
+      apiClient: ref.watch(neurobench.apiClientProvider),
+    );
+  },
+);
 
 /// Every workspace saved on the server this client is pointed at — backs
 /// the "Load from server" picker in the Setup step.

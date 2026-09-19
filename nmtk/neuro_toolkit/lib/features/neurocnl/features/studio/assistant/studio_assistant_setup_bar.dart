@@ -269,14 +269,6 @@ class _StudioAssistantSetupBarState extends ConsumerState<StudioAssistantSetupBa
                   style: textStyle,
                 ),
               ),
-            if (snapshot?.probeHostNote != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 6),
-                child: Text(
-                  snapshot!.probeHostNote!,
-                  style: textStyle,
-                ),
-              ),
             if (!hasActiveProvider && providers.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 6),

@@ -21,6 +21,7 @@ import 'package:neuro_toolkit/features/neurocnl/services/file_picker_native_file
 import 'package:neuro_toolkit/features/neurocnl/services/platform_download_result.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/server_config_service.dart';
 import 'package:neuro_toolkit/features/neurocnl/widgets/export_menu.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -133,6 +134,8 @@ void main() {
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
+          builder: (context, child) =>
+              NmtkNotificationCenter(child: child ?? const SizedBox.shrink()),
           home: Scaffold(
             appBar: AppBar(
               actions: [ExportMenu(downloadFileOverride: (_) async => result)],
@@ -183,7 +186,6 @@ void main() {
     await tester.pump();
 
     expect(find.text('Saved to /tmp/spec.cnl'), findsOneWidget);
-    expect(find.byType(SnackBar), findsOneWidget);
   });
 
   testWidgets('Export menu saves desktop exports through the native adapter', (
@@ -211,10 +213,12 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: const MaterialApp(
+        child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: Scaffold(body: ExportMenu()),
+          builder: (context, child) =>
+              NmtkNotificationCenter(child: child ?? const SizedBox.shrink()),
+          home: const Scaffold(body: ExportMenu()),
         ),
       ),
     );
@@ -308,6 +312,8 @@ void main() {
           child: MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
+            builder: (context, child) =>
+                NmtkNotificationCenter(child: child ?? const SizedBox.shrink()),
             home: Scaffold(
               body: NeurocnlExportWorkspacePanel(
                 filePickerGatewayOverride: gateway,
@@ -393,6 +399,9 @@ void main() {
             child: MaterialApp(
               localizationsDelegates: AppLocalizations.localizationsDelegates,
               supportedLocales: AppLocalizations.supportedLocales,
+              builder: (context, child) => NmtkNotificationCenter(
+                child: child ?? const SizedBox.shrink(),
+              ),
               home: Scaffold(
                 body: NeurocnlExportWorkspacePanel(
                   filePickerGatewayOverride: gateway,

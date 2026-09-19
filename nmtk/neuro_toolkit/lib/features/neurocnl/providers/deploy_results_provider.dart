@@ -4,6 +4,7 @@ import 'package:neuro_toolkit/features/neurocnl/providers/simulator_provider.dar
 import 'package:neuro_toolkit/features/neurocnl/providers/studio_akida_deploy_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/studio_lava_deploy_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/studio_pynq_deploy_provider.dart';
+import 'package:neuro_toolkit/features/neurocnl/providers/studio_voyager_deploy_provider.dart';
 
 /// Simulator backends the Deploy step can run. Kept local to this file because
 /// it is only used to sweep the `simulatorRunProvider` family for results.
@@ -46,6 +47,9 @@ final deployTargetHasResultProvider = Provider.family<bool, String>((
         (state) => state.runResult != null || state.verifyResult != null,
       ),
     ),
+    'voyager_axelera' => ref.watch(
+      studioVoyagerDeployProvider.select((state) => state.hasCompareableResult),
+    ),
     // Codegen-preview and FPGA targets are verdict/preview only — they never
     // produce a run result, so Review has nothing to show for them.
     _ => false,
@@ -59,6 +63,7 @@ final deployResultsAvailableProvider = Provider<bool>((ref) {
     'akida',
     'lava',
     'pynq',
+    'voyager_axelera',
     ...kSimulatorDeployBackends,
   ]) {
     if (ref.watch(deployTargetHasResultProvider(target))) return true;
@@ -74,6 +79,7 @@ final deployTargetsWithResultsProvider = Provider<List<String>>((ref) {
       'akida',
       'lava',
       'pynq',
+      'voyager_axelera',
       ...kSimulatorDeployBackends,
     ])
       if (ref.watch(deployTargetHasResultProvider(target))) target,

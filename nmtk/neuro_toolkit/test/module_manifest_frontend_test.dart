@@ -12,9 +12,9 @@ void main() {
     final neurosense = manifest.cast<Map<String, dynamic>>().singleWhere(
       (entry) => entry['id'] == 'Neurosense',
     );
-    expect(neurosense['hasFrontend'], isFalse);
-    expect(neurosense['frontendStatus'], 'No');
-    expect(neurosense['showInLauncherNav'], isFalse);
+    expect(neurosense['hasFrontend'], isTrue);
+    expect(neurosense['frontendStatus'], 'Yes');
+    expect(neurosense['showInLauncherNav'], isTrue);
 
     final neurobench = manifest.cast<Map<String, dynamic>>().singleWhere(
       (entry) => entry['id'] == 'Neurobench',

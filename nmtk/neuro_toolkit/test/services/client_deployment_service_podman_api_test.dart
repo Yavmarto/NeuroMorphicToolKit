@@ -53,8 +53,9 @@ import 'deployment/client_deployment_test_fakes.dart';
         '  if [[ "\$NMTK_SYSTEMD_CREATES_SOCKET" == "true" ]]; then\n'
         "    python3 -c 'import socket,sys,time; "
         'time.sleep(.08); s=socket.socket(socket.AF_UNIX); '
-        "s.bind(sys.argv[1]); s.listen(1); time.sleep(10)' "
-        '"\$NMTK_SOCKET" >/dev/null 2>&1 &\n'
+        "s.bind(sys.argv[1]); s.listen(1)' "
+        '"\$NMTK_SOCKET" >/dev/null 2>&1\n'
+        "    python3 -c 'import time; time.sleep(10)' >/dev/null 2>&1 &\n"
         '    printf "%s\\n" "\$!" >"\$NMTK_SERVICE_PID"\n'
         '  fi\n'
         '  exit "\$NMTK_SYSTEMCTL_START_EXIT"\n'
@@ -68,10 +69,11 @@ import 'deployment/client_deployment_test_fakes.dart';
         'printf "fallback %s\\n" "\$*" >>"\$NMTK_FAKE_LOG"\n'
         'touch "\$NMTK_FALLBACK_MARKER"\n'
         '[[ "\$NMTK_FALLBACK_CREATES_SOCKET" == "true" ]] || exit 1\n'
-        "python3 -c 'import socket,sys,time; "
+        "python3 -c 'import socket,sys; "
         's=socket.socket(socket.AF_UNIX); s.bind(sys.argv[1]); '
-        "s.listen(1); time.sleep(10)' "
-        '"\$NMTK_SOCKET" >/dev/null 2>&1 &\n'
+        "s.listen(1)' "
+        '"\$NMTK_SOCKET" >/dev/null 2>&1\n'
+        "python3 -c 'import time; time.sleep(10)' >/dev/null 2>&1 &\n"
         'printf "%s\\n" "\$!" >"\$NMTK_SERVICE_PID"\n',
   );
   writeExecutable(

@@ -106,18 +106,21 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
                           itemCount: list.length,
                           itemBuilder: (context, index) {
                             final project = list[index];
-                            return ListTile(
-                              title: Text(project.name),
-                              subtitle: Text(project.description),
-                              onTap: () {
-                                widget.onProjectSelected?.call(project.id);
-                                ref
-                                    .read(currentProjectProvider.notifier)
-                                    .loadProject(project.id);
-                              },
-                              selected: currentProject.maybeWhen(
-                                data: (p) => p?.id == project.id,
-                                orElse: () => false,
+                            return Material(
+                              color: Colors.transparent,
+                              child: ListTile(
+                                title: Text(project.name),
+                                subtitle: Text(project.description),
+                                onTap: () {
+                                  widget.onProjectSelected?.call(project.id);
+                                  ref
+                                      .read(currentProjectProvider.notifier)
+                                      .loadProject(project.id);
+                                },
+                                selected: currentProject.maybeWhen(
+                                  data: (p) => p?.id == project.id,
+                                  orElse: () => false,
+                                ),
                               ),
                             );
                           },

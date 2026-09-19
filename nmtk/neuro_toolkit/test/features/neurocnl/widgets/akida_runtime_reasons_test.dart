@@ -298,6 +298,58 @@ void main() {
     );
   });
 
+  testWidgets('a hardware-verified job renders the Physical Akida badge', (
+    WidgetTester tester,
+  ) async {
+    // Cross-check for CEL-373: the CEL-372 backend run recorded
+    // runtime_target=hardware + hardwareVerified=true. The deploy UI must
+    // surface exactly that claim and never the simulator wording. The badge
+    // text had no widget-level assertion before this.
+    await pumpAkidaPanel(
+      tester,
+      const StudioAkidaDeployState(
+        selectedHost: _degradedHost,
+        deploymentJob: StudioAkidaModelJob(
+          jobId: 'deploy-hw',
+          stage: 'completed',
+          progress: 100,
+          message: 'Deployed on the AKD1000.',
+          modelId: 'model-1',
+          runtimeTarget: 'hardware',
+          hardwareVerified: true,
+          metrics: <String, double>{},
+        ),
+      ),
+    );
+
+    expect(find.text('Physical Akida verified'), findsOneWidget);
+    expect(find.text('Simulator result'), findsNothing);
+  });
+
+  testWidgets('a simulator job never renders the Physical Akida badge', (
+    WidgetTester tester,
+  ) async {
+    await pumpAkidaPanel(
+      tester,
+      const StudioAkidaDeployState(
+        selectedHost: _degradedHost,
+        deploymentJob: StudioAkidaModelJob(
+          jobId: 'deploy-sim',
+          stage: 'completed',
+          progress: 100,
+          message: 'Deployed on the Akida simulator.',
+          modelId: 'model-1',
+          runtimeTarget: 'akd1000_simulator',
+          hardwareVerified: false,
+          metrics: <String, double>{},
+        ),
+      ),
+    );
+
+    expect(find.text('Simulator result'), findsOneWidget);
+    expect(find.text('Physical Akida verified'), findsNothing);
+  });
+
   testWidgets('the two workflows are labelled separately', (
     WidgetTester tester,
   ) async {

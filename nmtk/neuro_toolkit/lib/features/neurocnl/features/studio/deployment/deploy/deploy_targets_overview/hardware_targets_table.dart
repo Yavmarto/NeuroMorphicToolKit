@@ -108,7 +108,13 @@ class HardwareTargetsTable extends ConsumerWidget {
           ),
         ),
         DataCell(
-          deviceLabel == null || deviceLabel.isEmpty
+          targetId == 'voyager_axelera'
+              ? const NmtkStatusBadge(
+                  label: 'Docker compile path',
+                  tone: NmtkTone.info,
+                  icon: ZetaIcons.cloud_outline,
+                )
+              : deviceLabel == null || deviceLabel.isEmpty
               ? const NmtkStatusBadge(
                   label: 'Not paired',
                   tone: NmtkTone.neutral,

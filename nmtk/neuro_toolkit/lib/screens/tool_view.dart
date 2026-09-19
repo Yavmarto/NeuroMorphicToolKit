@@ -32,6 +32,20 @@ class ToolViewScreen extends ConsumerStatefulWidget {
 // Module IDs that are desktop-only and must not appear in the mobile bottom nav.
 const _kMobileHiddenModuleIds = {'Neurobench'};
 
+/// Riverpod 3 throws out of `ref.watch` when the provider itself failed to
+/// build, rather than handing back an [AsyncValue] carrying the error. That
+/// kills the whole frame with a red screen instead of reaching this screen's
+/// "Could Not Load Workspace" panel below. Turn it back into an error value so
+/// that panel — and its Retry, which invalidates the provider and re-creates
+/// it — gets a chance to run.
+AsyncValue<T> _watchOrError<T>(AsyncValue<T> Function() watch) {
+  try {
+    return watch();
+  } catch (error, stackTrace) {
+    return AsyncValue<T>.error(error, stackTrace);
+  }
+}
+
 class _ToolViewScreenState extends ConsumerState<ToolViewScreen>
     implements ToolViewWorkspaceHost {
   late final ToolViewWorkspaceController _workspace =
@@ -84,9 +98,11 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen>
 
   @override
   Widget build(BuildContext context) {
-    final moduleStateAsync = ref.watch(moduleProvider);
+    final moduleStateAsync = _watchOrError(() => ref.watch(moduleProvider));
     final moduleState = moduleStateAsync.value;
-    final workspaceStateAsync = ref.watch(workspaceProvider);
+    final workspaceStateAsync = _watchOrError(
+      () => ref.watch(workspaceProvider),
+    );
     final workspaceState = workspaceStateAsync.value;
     final tokens = NmtkShellTokens.of(context);
     final currentServerKey =

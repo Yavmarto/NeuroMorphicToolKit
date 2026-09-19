@@ -137,6 +137,35 @@ Future<void> _openDeployPanel(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
+/// Opens the SC-NeuroCore FPGA configure dialog and the compiled-artifacts
+/// workspace from the Deploy hardware table.
+Future<void> _openCompiledArtifactsFromDeploy(WidgetTester tester) async {
+  final element = tester.element(find.byType(StudioScreen));
+  final notifier = ProviderScope.containerOf(element)
+      .read(workspaceProvider.notifier);
+  if (!ProviderScope.containerOf(element)
+      .read(workspaceProvider)
+      .selectedPlatforms
+      .contains('sc_neurocore_fpga')) {
+    notifier.togglePlatform('sc_neurocore_fpga');
+    await tester.pumpAndSettle();
+  }
+
+  final configureButton = find.byKey(
+    const Key('hardware-target-open-sc_neurocore_fpga'),
+  );
+  await tester.ensureVisible(configureButton);
+  await tester.pumpAndSettle();
+  await tester.tap(configureButton);
+  await tester.pumpAndSettle();
+
+  final nirButton = find.text('View NIR Artifact');
+  await tester.ensureVisible(nirButton);
+  await tester.pumpAndSettle();
+  await tester.tap(nirButton);
+  await tester.pumpAndSettle();
+}
+
 /// Opens the "Manage Targets" dialog for [targetId].
 ///
 /// After commit `41376fa8` ("remove Manage Targets (consolidated to Step
@@ -255,17 +284,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     await _seedTrainingHistoryAndExpandDeploy(tester);
-
-    // "View NIR Artifact" lives inside the SC-NeuroCore FPGA workspace page,
-    // which the redesigned Deploy step no longer auto-renders — open its
-    // dialog via the hardware table's Configure button first.
-    await tester.tap(
-      find.byKey(const Key('hardware-target-open-sc_neurocore_fpga')),
-    );
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('View NIR Artifact'));
-    await tester.pumpAndSettle();
+    await _openCompiledArtifactsFromDeploy(tester);
 
     expect(find.text('Compiled Artifacts'), findsWidgets);
     expect(find.text('roundtrip.cnl'), findsOneWidget);
@@ -2511,15 +2530,7 @@ void main() {
 
     await _pumpStudio(tester, container);
     await _seedTrainingHistoryAndExpandDeploy(tester);
-    // "View NIR Artifact" lives inside the SC-NeuroCore FPGA workspace page,
-    // reached via the hardware table's Configure button rather than
-    // rendered inline.
-    await tester.tap(
-      find.byKey(const Key('hardware-target-open-sc_neurocore_fpga')),
-    );
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('View NIR Artifact'));
-    await tester.pumpAndSettle();
+    await _openCompiledArtifactsFromDeploy(tester);
 
     expect(find.text('cached round-trip cnl'), findsOneWidget);
     expect(
@@ -2564,12 +2575,7 @@ void main() {
 
     await _pumpStudio(tester, container);
     await _seedTrainingHistoryAndExpandDeploy(tester);
-    await tester.tap(
-      find.byKey(const Key('hardware-target-open-sc_neurocore_fpga')),
-    );
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('View NIR Artifact'));
-    await tester.pumpAndSettle();
+    await _openCompiledArtifactsFromDeploy(tester);
 
     expect(container.read(workspaceProvider).activePanel, 'deploy');
     expect(find.text('Compiled Artifacts'), findsWidgets);
@@ -2612,12 +2618,7 @@ void main() {
     addTearDown(container.dispose);
     await _pumpStudio(tester, container);
     await _seedTrainingHistoryAndExpandDeploy(tester);
-    await tester.tap(
-      find.byKey(const Key('hardware-target-open-sc_neurocore_fpga')),
-    );
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('View NIR Artifact'));
-    await tester.pumpAndSettle();
+    await _openCompiledArtifactsFromDeploy(tester);
 
     expect(find.text('cached round-trip cnl'), findsOneWidget);
 
@@ -2869,6 +2870,8 @@ Future<void> _pumpStudio(
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
+        builder: (context, child) =>
+            NmtkNotificationCenter(child: child ?? const SizedBox.shrink()),
         home: Scaffold(
           body: StudioScreen(workspaceHeaderAction: workspaceHeaderAction),
         ),

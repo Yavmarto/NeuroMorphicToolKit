@@ -139,6 +139,8 @@ class BackendDeploymentNotifier extends _$BackendDeploymentNotifier {
     String containerEngine = 'docker',
     String kubeconfig = '',
     bool cleanInstall = false,
+    String releaseVersion = '',
+    bool schemaMigration = false,
   }) async {
     final job = await _service.deploy(
       _request(
@@ -158,6 +160,8 @@ class BackendDeploymentNotifier extends _$BackendDeploymentNotifier {
         containerEngine: containerEngine,
         kubeconfig: kubeconfig,
         cleanInstall: cleanInstall,
+        releaseVersion: releaseVersion,
+        schemaMigration: schemaMigration,
       ),
     );
     final current = state.value ?? const DeploymentState();
@@ -362,6 +366,8 @@ class BackendDeploymentNotifier extends _$BackendDeploymentNotifier {
     required String containerEngine,
     required String kubeconfig,
     bool cleanInstall = false,
+    String releaseVersion = '',
+    bool schemaMigration = false,
   }) {
     return DeploymentRequest(
       targetType: targetType,
@@ -380,6 +386,8 @@ class BackendDeploymentNotifier extends _$BackendDeploymentNotifier {
       containerEngine: containerEngine,
       kubeconfig: kubeconfig,
       cleanInstall: cleanInstall,
+      releaseVersion: releaseVersion,
+      schemaMigration: schemaMigration,
     );
   }
 

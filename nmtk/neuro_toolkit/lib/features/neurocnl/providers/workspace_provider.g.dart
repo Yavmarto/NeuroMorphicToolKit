@@ -90,7 +90,7 @@ final class WorkspaceControllerProvider
 }
 
 String _$workspaceControllerHash() =>
-    r'217182e62967f5146ee6f4959e98f3f5de2ba4a3';
+    r'b122d20181a957f010b9599f686013baf529ba50';
 
 abstract class _$WorkspaceController extends $Notifier<WorkspaceState> {
   WorkspaceState build();

@@ -42,7 +42,7 @@ final class StudioViewModeControllerProvider
 }
 
 String _$studioViewModeControllerHash() =>
-    r'fd937068747fe6d9c7f94353ce4a077cfc23ea40';
+    r'c4e62b983b9bf12af7fefaaf4ece5fde30f78cbe';
 
 abstract class _$StudioViewModeController extends $Notifier<StudioSyncState> {
   StudioSyncState build();

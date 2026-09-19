@@ -69,6 +69,48 @@ void main() {
       expect(update, isNull);
     });
 
+    test('offers nothing when the repository has no releases or tags yet', () async {
+      final service = UpdateService(
+        client: MockClient((http.Request request) async {
+          // A freshly published repository returns empty lists for both
+          // endpoints until the first release/tag lands.
+          return http.Response('[]', 200);
+        }),
+        packageInfoLoader: () async => PackageInfo(
+          appName: 'Neuro Toolkit',
+          packageName: 'neuro_toolkit',
+          version: '1.0.0',
+          buildNumber: '1',
+        ),
+      );
+
+      expect(await service.checkForLauncherUpdate(), isNull);
+    });
+
+    test('returns null for a module whose remote repository is not public', () async {
+      final service = UpdateService(
+        client: MockClient((http.Request request) async {
+          return http.Response('Not Found', 404);
+        }),
+        packageInfoLoader: () async => PackageInfo(
+          appName: 'Neuro Toolkit',
+          packageName: 'neuro_toolkit',
+          version: '1.0.0',
+          buildNumber: '1',
+        ),
+      );
+      final module = Module(
+        id: 'neurocnl',
+        name: 'NeuroCNL',
+        description: 'Remote module',
+        directory: 'neurocnl',
+        version: '1.0.0',
+        remoteUrl: 'https://api.github.com/repos/Yavmarto/neurocnl',
+      );
+
+      expect(await service.checkForModuleUpdate(module), isNull);
+    });
+
     test('skips pinned modules without performing a lookup', () async {
       var requestCount = 0;
       final service = UpdateService(

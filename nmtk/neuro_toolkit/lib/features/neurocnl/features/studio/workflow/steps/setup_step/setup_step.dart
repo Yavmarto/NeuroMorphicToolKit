@@ -16,6 +16,7 @@ import 'package:neuro_toolkit/features/neurocnl/features/studio/workflow/steps/s
 import 'package:neuro_toolkit/features/neurocnl/features/studio/workflow/steps/setup_step/platform_role_badge.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/workflow/steps/setup_step/reachability_dot.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/workflow/steps/setup_step/server_workspace_picker_dialog.dart';
+import 'package:neuro_toolkit/features/neurocnl/features/studio/workflow/steps/setup_step/setup_input_source_section.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/workflow/steps/setup_step/support.dart';
 
 class SetupStep extends ConsumerStatefulWidget {
@@ -142,6 +143,9 @@ class SetupStepState extends ConsumerState<SetupStep> {
                       _buildTargetMultiSelectDropdown(),
                       _buildSelectedPlatformsList(),
 
+                      const SizedBox(height: 24),
+
+                      const SetupInputSourceSection(),
                       const SizedBox(height: 24),
 
                       // ── 3. Dataset ──────────────────────────────────────────
@@ -576,6 +580,13 @@ class SetupStepState extends ConsumerState<SetupStep> {
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: _buildSelectedPlatformsList(),
               ),
+
+              sectionHeader('Input source'),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                child: SetupInputSourceSection(),
+              ),
+              const SizedBox(height: 8),
 
               // ── Section 4: Dataset ─────────────────────────────────────
               sectionHeader('Dataset'),

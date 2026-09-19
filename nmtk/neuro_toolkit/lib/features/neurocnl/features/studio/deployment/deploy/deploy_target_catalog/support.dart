@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:zeta_flutter/zeta_flutter.dart';
 
 import 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/deploy/deploy_target_catalog/deploy_target_data.dart';
+import 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/deploy/deploy_target_catalog/sensor_source_data.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/deploy_results_provider.dart';
 
 const List<DeployTargetData> deployTargets = [
@@ -88,7 +89,34 @@ const List<DeployTargetData> deployTargets = [
         .developer_board_sharp, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
     deployCapable: true,
   ),
+  DeployTargetData(
+    id: 'voyager_axelera',
+    label: 'Axelera Voyager (YOLOv8n)',
+    icon: Icons
+        .memory_outlined, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
+    deployCapable: true,
+  ),
 ];
+
+/// Live data-acquisition sources offered in Setup alongside (never merged
+/// into) [deployTargets] — see [SensorSourceData] for why they're kept out
+/// of the compute-target capability model.
+const List<SensorSourceData> liveSourceTargets = [
+  SensorSourceData(
+    id: 'neurosense',
+    label: 'NeuroSense (live sensor)',
+    icon: Icons.sensors_outlined, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
+  ),
+];
+
+SensorSourceData? sensorSourceForId(String targetId) {
+  for (final source in liveSourceTargets) {
+    if (source.id == targetId) {
+      return source;
+    }
+  }
+  return null;
+}
 
 DeployTargetData targetForId(String targetId) {
   for (final target in deployTargets) {

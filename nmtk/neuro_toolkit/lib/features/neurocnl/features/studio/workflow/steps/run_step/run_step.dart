@@ -398,8 +398,8 @@ class _RunStepState extends ConsumerState<RunStep> {
             top: viewSwitchTop,
             left: 12,
             right: 12,
-            child: Align(
-              alignment: Alignment.centerLeft,
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
               child: ResultsViewSwitch(
                 key: const Key('run-result-view-switch'),
                 view: widget.view,
@@ -463,17 +463,15 @@ class _RunStepState extends ConsumerState<RunStep> {
 
             Positioned(
               top: viewSwitchTop,
-              left: 32,
+              left: 12,
               right: 12,
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ResultsViewSwitch(
-                    key: const Key('run-result-view-switch'),
-                    view: widget.view,
-                    onChanged: widget.onViewChanged,
-                  ),
-                ],
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: ResultsViewSwitch(
+                  key: const Key('run-result-view-switch'),
+                  view: widget.view,
+                  onChanged: widget.onViewChanged,
+                ),
               ),
             ),
 

@@ -32,7 +32,6 @@ class ClientDeploymentService implements DeploymentService {
     'NMTK_CONTROL_API_PORT',
     defaultValue: 8090,
   );
-  static const String _releaseImageTag = 'latest';
 
   ClientDeploymentService({
     AssetBundle? assets,
@@ -360,7 +359,7 @@ fi
       logs: const [],
       bundleVersion: bundle.version,
       bundleManifestHash: bundle.manifestHash,
-      imageTag: _releaseImageTag,
+      imageTag: request.deploymentImageTag,
       updatedAt: DateTime.now(),
     );
     _registry.jobs[jobId] = job;

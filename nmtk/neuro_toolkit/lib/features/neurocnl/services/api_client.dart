@@ -1185,6 +1185,46 @@ class ApiClient extends BaseHttpClient {
     }
   }
 
+  // ── NeuroSense (suite API proxy) ───────────────────────────────
+
+  Future<dynamic> getNeurosenseJson(String segment) async {
+    final path = segment.startsWith('/') ? segment : '/$segment';
+    final uri = Uri.parse('$baseUrl/api/neurosense$path');
+    final headers = <String, String>{};
+    if (apiKey.isNotEmpty) {
+      headers['X-API-Key'] = apiKey;
+    }
+    final response = await rawHttpClient.get(uri, headers: headers);
+    if (response.statusCode != _httpOk) {
+      throw ApiException(response.statusCode, response.body);
+    }
+    return jsonDecode(response.body);
+  }
+
+  Future<dynamic> postNeurosenseJson(
+    String segment,
+    Map<String, dynamic> body,
+  ) async {
+    final path = segment.startsWith('/') ? segment : '/$segment';
+    final uri = Uri.parse('$baseUrl/api/neurosense$path');
+    final headers = <String, String>{'Content-Type': 'application/json'};
+    if (apiKey.isNotEmpty) {
+      headers['X-API-Key'] = apiKey;
+    }
+    final response = await rawHttpClient.post(
+      uri,
+      headers: headers,
+      body: jsonEncode(body),
+    );
+    if (response.statusCode != _httpOk && response.statusCode != 201) {
+      throw ApiException(response.statusCode, response.body);
+    }
+    if (response.body.isEmpty) {
+      return const <String, dynamic>{};
+    }
+    return jsonDecode(response.body);
+  }
+
   // ── Helpers ────────────────────────────────────────────────────
 
   Future<Map<String, dynamic>> _post(String path, Map<String, dynamic> body) =>

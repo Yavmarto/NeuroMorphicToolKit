@@ -10,8 +10,10 @@ import 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/deplo
 import 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/deploy/simulator_deploy_workspace/run_all_simulators_button.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/deploy/simulator_deploy_workspace/shared_simulator_settings_card.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/deploy/deploy_targets_overview/hardware_targets_table.dart';
+import 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/deploy/deploy_targets_overview/live_source_targets_table.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/deploy/deploy_targets_overview/simulator_targets_table.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/deploy/deploy_targets_overview/support.dart';
+import 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/deploy/neurosense_workspace/neurosense_source_provider.dart';
 
 class DeployTargetsOverview extends ConsumerWidget {
   const DeployTargetsOverview({
@@ -203,6 +205,25 @@ class DeployTargetsOverview extends ConsumerWidget {
           ],
           const SizedBox(height: 24),
         ],
+        // Live sensor sources (e.g. NeuroSense) get their own section: they
+        // aren't in `deployTargets`/`selectedPlatforms` at all — Setup's
+        // input-source picker turns them on independently — so there's no
+        // selection gate to apply here the way there is for the sections
+        // above.
+        Text(
+          'Live Sources',
+          style: textStyles.titleMedium.copyWith(fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 12),
+        LiveSourceTargetsTable(
+          targetIds: liveSourceTargets.map((s) => s.id).toList(growable: false),
+          isConfigured: (id) => switch (id) {
+            'neurosense' => ref.watch(neuroSenseSourceProvider) != null,
+            _ => false,
+          },
+          onOpenTarget: (id) => showLiveSourceDialog(context, id),
+        ),
+        const SizedBox(height: 24),
         if (hardwareIds.isNotEmpty) ...[
           Text(
             'Hardware Targets',

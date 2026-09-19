@@ -92,9 +92,11 @@ void main() {
       // (see `deploy_targets_overview.dart`) — it defaults to simulator mode,
       // so it isn't in the fixed hardware-targets table alongside Akida/PYNQ/
       // SC-NeuroCore FPGA. Hardware table + Lava's own table + simulator
-      // table = 3 `DataTable`s in total.
+      // table + the live-sources table = 4 `DataTable`s in total.
       expect(find.byKey(const Key('lava-hardware-table')), findsOneWidget);
-      expect(find.byType(DataTable), findsNWidgets(3));
+      expect(find.byKey(const Key('live-source-targets-table')), findsOneWidget);
+      expect(find.byKey(const Key('live-source-row-neurosense')), findsOneWidget);
+      expect(find.byType(DataTable), findsNWidgets(4));
 
       for (final id in ['akida', 'pynq', 'lava', 'sc_neurocore_fpga']) {
         expect(

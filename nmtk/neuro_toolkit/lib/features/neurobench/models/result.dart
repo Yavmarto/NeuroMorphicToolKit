@@ -41,9 +41,11 @@ class BenchmarkResult {
       params: Map<String, dynamic>.from(
         json['params'] as Map<dynamic, dynamic>,
       ),
-      metrics: (json['metrics'] as Map<String, dynamic>).map(
-        (key, value) => MapEntry(key, (value as num).toDouble()),
-      ),
+      metrics: {
+        for (final entry in (json['metrics'] as Map<String, dynamic>).entries)
+          if (entry.value is num)
+            entry.key: (entry.value as num).toDouble(),
+      },
       spikeData: json['spike_data'] as Map<String, dynamic>?,
       wallTimeSeconds: (json['wall_time_seconds'] as num).toDouble(),
       seed: json['seed'] as int,

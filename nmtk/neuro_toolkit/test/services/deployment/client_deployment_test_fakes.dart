@@ -61,10 +61,14 @@ class ManifestAssetBundle extends CachingAssetBundle {
     'migrate_legacy.py',
     'nmtk-stack.sh',
     'monitoring/alertmanager/alertmanager.yml',
+    'monitoring/alertmanager/entrypoint.sh',
     'monitoring/loki/loki-config.yml',
     'monitoring/prometheus/alert_rules.yml',
     'monitoring/prometheus/prometheus.yml',
     'monitoring/promtail/promtail-config.yml',
+    'monitoring/grafana/provisioning/datasources/ds.yml',
+    'monitoring/grafana/provisioning/dashboards/dashboards.yml',
+    'monitoring/grafana/dashboards/nmtk-overview.json',
   ];
 
   static List<int> _fileBytes(String relative) =>

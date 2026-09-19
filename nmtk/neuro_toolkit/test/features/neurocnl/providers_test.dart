@@ -571,6 +571,23 @@ void main() {
       expect(state.selectedDeployTarget, 'akida');
     });
 
+    test('deploy deep link accepts voyager_axelera target', () {
+      final container = ProviderContainer(
+        overrides: [
+          workspaceBootstrapProvider.overrideWithValue(
+            const WorkspaceBootstrap(
+              initialLocation: '/?panel=deploy&target=voyager_axelera',
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final state = container.read(workspaceProvider);
+      expect(state.activePanel, 'deploy');
+      expect(state.selectedDeployTarget, 'voyager_axelera');
+    });
+
     test(
       'legacy flat cached WorkspaceState (pre-canvas-section format) still restores',
       () async {

@@ -17,6 +17,11 @@ part of 'coactivation_provider.dart';
 /// [simulationProvider] exposes a stored playback, the provider switches to
 /// review mode and derives both a correlation snapshot and a replayable rate
 /// series. A later live sample returns it to live mode.
+///
+/// The initial state is also seeded from whatever already exists when the
+/// provider is first built (a live stream already running, or a playback that
+/// finished before the network view mounted), because the `ref.listen` hooks
+/// below only fire on *later* changes.
 
 @ProviderFor(CoactivationController)
 final coactivationControllerProvider = CoactivationControllerProvider._();
@@ -30,6 +35,11 @@ final coactivationControllerProvider = CoactivationControllerProvider._();
 /// [simulationProvider] exposes a stored playback, the provider switches to
 /// review mode and derives both a correlation snapshot and a replayable rate
 /// series. A later live sample returns it to live mode.
+///
+/// The initial state is also seeded from whatever already exists when the
+/// provider is first built (a live stream already running, or a playback that
+/// finished before the network view mounted), because the `ref.listen` hooks
+/// below only fire on *later* changes.
 final class CoactivationControllerProvider
     extends $NotifierProvider<CoactivationController, CoactivationState> {
   /// "Fire together, wire together" correlation over the per-layer spike rates
@@ -41,6 +51,11 @@ final class CoactivationControllerProvider
   /// [simulationProvider] exposes a stored playback, the provider switches to
   /// review mode and derives both a correlation snapshot and a replayable rate
   /// series. A later live sample returns it to live mode.
+  ///
+  /// The initial state is also seeded from whatever already exists when the
+  /// provider is first built (a live stream already running, or a playback that
+  /// finished before the network view mounted), because the `ref.listen` hooks
+  /// below only fire on *later* changes.
   CoactivationControllerProvider._()
     : super(
         from: null,
@@ -69,7 +84,7 @@ final class CoactivationControllerProvider
 }
 
 String _$coactivationControllerHash() =>
-    r'576398fc4627a421d57c9835bd357613662dc735';
+    r'e35f3290a088b38e1a5ecf1635db5cd7264f57ab';
 
 /// "Fire together, wire together" correlation over the per-layer spike rates
 /// already streaming through [trainingModeProvider] (live) or a stored
@@ -80,6 +95,11 @@ String _$coactivationControllerHash() =>
 /// [simulationProvider] exposes a stored playback, the provider switches to
 /// review mode and derives both a correlation snapshot and a replayable rate
 /// series. A later live sample returns it to live mode.
+///
+/// The initial state is also seeded from whatever already exists when the
+/// provider is first built (a live stream already running, or a playback that
+/// finished before the network view mounted), because the `ref.listen` hooks
+/// below only fire on *later* changes.
 
 abstract class _$CoactivationController extends $Notifier<CoactivationState> {
   CoactivationState build();
