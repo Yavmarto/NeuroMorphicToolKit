@@ -70,6 +70,7 @@ data
 .env
 .env.*
 !.env.example
+monitoring/alertmanager/secrets/
 .nmtk/deployment_secrets.json
 *.pem
 *.key
@@ -79,3 +80,9 @@ id_rsa
 id_ed25519
 .netrc
 2026 - cover letters
+
+# --- private / internal: never publish (added 2026-09-17, CEL-329) ---
+current tasks/
+nmtk/neuro_toolkit/deployment_state.json
+.nmtk/suite_api_env/
+.nmtk/**/venv/

@@ -107,8 +107,12 @@ fi
 # content (like a bundled Python) inside an existing .app from a
 # previous build. Remove it before building.
 PREV_APP="$TOOLKIT_DIR/build/macos/Build/Products/Release/neuro_toolkit.app"
-if [ -d "$PREV_APP/Contents/Frameworks/python" ]; then
+if [ -d "$PREV_APP/Contents/Resources/python" ]; then
   echo "==> Cleaning previous bundled Python from build output..."
+  rm -rf "$PREV_APP/Contents/Resources/python"
+fi
+if [ -d "$PREV_APP/Contents/Frameworks/python" ]; then
+  echo "==> Cleaning legacy bundled Python path from build output..."
   rm -rf "$PREV_APP/Contents/Frameworks/python"
 fi
 if [ -d "$PREV_APP/Contents/Resources/modules" ]; then
@@ -159,29 +163,33 @@ echo "==> App bundle: $APP_PATH"
 
 # --- Bundle Python into .app ---
 echo "==> Bundling Python into .app..."
-FRAMEWORKS_DIR="$APP_PATH/Contents/Frameworks/python"
-rm -rf "$FRAMEWORKS_DIR"
-mkdir -p "$FRAMEWORKS_DIR"
-cp -R "$PYTHON_ROOT"/* "$FRAMEWORKS_DIR/"
+# Resources, not Frameworks: versioned dirs like lib/python3.12 look like nested
+# bundles to codesign when parked under Contents/Frameworks (CEL-348).
+PYTHON_DIR="$APP_PATH/Contents/Resources/python"
+rm -rf "$PYTHON_DIR"
+mkdir -p "$PYTHON_DIR"
+cp -R "$PYTHON_ROOT"/* "$PYTHON_DIR/"
 
 # Slim down Python: remove test suites, idle, tkinter, Tcl/Tk to save space.
 # NOTE: Do NOT remove ensurepip or its bundled .whl files — they are needed
 # for `python -m venv` to bootstrap pip inside virtual environments.
 echo "==> Trimming Python bundle (using version $PYTHON_MAJ_MIN)..."
-rm -rf "$FRAMEWORKS_DIR/lib/python${PYTHON_MAJ_MIN}/test" \
-       "$FRAMEWORKS_DIR/lib/python${PYTHON_MAJ_MIN}/idlelib" \
-       "$FRAMEWORKS_DIR/lib/python${PYTHON_MAJ_MIN}/tkinter" \
-       "$FRAMEWORKS_DIR/lib/python${PYTHON_MAJ_MIN}/turtledemo" \
-       "$FRAMEWORKS_DIR/lib/tk"* \
-       "$FRAMEWORKS_DIR/lib/tcl"* \
-       "$FRAMEWORKS_DIR/lib/libtk"* \
-       "$FRAMEWORKS_DIR/lib/libtcl"* \
-       "$FRAMEWORKS_DIR/lib/Tix"* \
-       "$FRAMEWORKS_DIR/lib/itcl"* \
-       "$FRAMEWORKS_DIR/lib/tdbc"* \
-       "$FRAMEWORKS_DIR/lib/thread"* \
-       "$FRAMEWORKS_DIR/lib/python${PYTHON_MAJ_MIN}/lib-dynload/_tkinter"* \
-       "$FRAMEWORKS_DIR/share" 2>/dev/null || true
+# include/python3.12 looks like a nested bundle to codesign (CEL-348).
+rm -rf "$PYTHON_DIR/include" \
+       "$PYTHON_DIR/lib/python${PYTHON_MAJ_MIN}/test" \
+       "$PYTHON_DIR/lib/python${PYTHON_MAJ_MIN}/idlelib" \
+       "$PYTHON_DIR/lib/python${PYTHON_MAJ_MIN}/tkinter" \
+       "$PYTHON_DIR/lib/python${PYTHON_MAJ_MIN}/turtledemo" \
+       "$PYTHON_DIR/lib/tk"* \
+       "$PYTHON_DIR/lib/tcl"* \
+       "$PYTHON_DIR/lib/libtk"* \
+       "$PYTHON_DIR/lib/libtcl"* \
+       "$PYTHON_DIR/lib/Tix"* \
+       "$PYTHON_DIR/lib/itcl"* \
+       "$PYTHON_DIR/lib/tdbc"* \
+       "$PYTHON_DIR/lib/thread"* \
+       "$PYTHON_DIR/lib/python${PYTHON_MAJ_MIN}/lib-dynload/_tkinter"* \
+       "$PYTHON_DIR/share" 2>/dev/null || true
 
 # --- Bundle module source code ---
 echo "==> Bundling module source code..."
@@ -278,7 +286,7 @@ fi
 
 # --- Report bundle size ---
 echo "==> Bundle contents:"
-du -sh "$APP_PATH/Contents/Frameworks/python" | awk '{print "  Python: " $1}'
+du -sh "$APP_PATH/Contents/Resources/python" | awk '{print "  Python: " $1}'
 du -sh "$MODULES_DIR" | awk '{print "  Modules: " $1}'
 du -sh "$APP_PATH" | awk '{print "  Total .app: " $1}'
 
@@ -287,8 +295,7 @@ if [ -n "$SIGNING_IDENTITY" ]; then
   export MACOS_SIGNING_IDENTITY="$SIGNING_IDENTITY"
   bash "$SIGN_HELPER" sign-app "$APP_PATH"
 else
-  echo "==> Code signing (ad-hoc)..."
-  codesign --force --deep --sign - "$APP_PATH" 2>/dev/null || {
+  bash "$SIGN_HELPER" sign-app-adhoc "$APP_PATH" || {
     echo "  Warning: code signing failed (non-fatal for local testing)"
   }
 fi

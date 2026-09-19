@@ -9,16 +9,20 @@ FROM python:3.10-slim
 WORKDIR /app
 
 COPY workers/lava_backend/requirements.txt /app/workers/lava_backend/requirements.txt
-RUN pip install --no-cache-dir -r /app/workers/lava_backend/requirements.txt
+RUN pip install --no-cache-dir -r /app/workers/lava_backend/requirements.txt \
+ && pip install --no-cache-dir prometheus-client
 
 # Neurochip source + the shared nmtk_contracts package (a path dependency of
 # Neurochip that requires Python >=3.11, so it is resolved on PYTHONPATH here
 # instead of pip-installed into this 3.10 image).
 COPY Neurochip/neurochip /app/Neurochip/neurochip
 COPY nmtk_contracts/nmtk_contracts /app/nmtk_contracts/nmtk_contracts
+COPY nmtk/__init__.py /app/nmtk/__init__.py
+COPY nmtk/metrics_core.py /app/nmtk/metrics_core.py
+COPY nmtk/http_metrics.py /app/nmtk/http_metrics.py
 COPY workers/lava_backend /app/workers/lava_backend
 
-ENV PYTHONPATH="/app/Neurochip:/app/workers/lava_backend:/app/nmtk_contracts"
+ENV PYTHONPATH="/app/Neurochip:/app/workers/lava_backend:/app/nmtk_contracts:/app"
 
 RUN groupadd --system appgroup && useradd --system --gid appgroup appuser \
  && chown -R appuser:appgroup /app

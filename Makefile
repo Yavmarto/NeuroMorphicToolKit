@@ -1,4 +1,4 @@
-.PHONY: release help dev dev-a dev-i dev-web dev-native clean-all bump-version ci notices notices-check suite_api_dev check-devices docker docker-a docker-i docker-all docker-ex docker-ex-deploy docker-ex-m docker-ex-a docker-ex-i docker-ex-down docker-ex-all docker-ex-all-m docker-ex-all-a docker-ex-all-i secrets-init macos-signing-check build-macos-dmg-signed webtop-build webtop-up webtop-down webtop webtop-trust voyager-compile-spike voyager-aipu-spike qnn-cpu-spike qnn-fetch-qairt jetson-compile-spike coral-compile-spike
+.PHONY: release help dev dev-a dev-i dev-web dev-native clean-all bump-version ci notices notices-check suite_api_dev check-devices check-flutter-devices check-fleet rig-verify rig-provision docker docker-a docker-i docker-all docker-ex docker-ex-deploy docker-ex-m docker-ex-a docker-ex-i docker-ex-down docker-ex-all docker-ex-all-m docker-ex-all-a docker-ex-all-i secrets-init macos-signing-check build-macos-dmg-signed webtop-build webtop-up webtop-down webtop webtop-trust voyager-compile-spike voyager-aipu-spike qnn-cpu-spike qnn-fetch-qairt jetson-compile-spike coral-compile-spike monitoring-up monitoring-down monitoring-smoke monitoring-logs monitoring-urls
 
 # OS detection for Flutter device targeting
 OS := $(shell uname)
@@ -45,6 +45,10 @@ help:
 	@echo "  make dev-update               - Daily: test, sync to the dev backend, rebuild only what needs it"
 	@echo "  make restart-server           - Just restart suite_api on the dev backend (no sync/tests)"
 	@echo "  make check-server             - Check dev server health and restart any failed services"
+	@echo "  make check-devices            - Fleet health report for every edge test rig (ARGS='--json')"
+	@echo "  make check-fleet              - Alias for check-devices"
+	@echo "  make rig-verify RIG=<id>      - Read-only health report for one rig"
+	@echo "  make rig-provision RIG=<id>   - Sync, bring a rig up (overlays auto), then verify"
 	@echo "  make suite_api_dev            - Start unified suite_api backend on port 9000 (with reload)"
 	@echo "  make release-publish VERSION=x.y.z - Cut, push, watch CI and verify a full release"
 	@echo "  make release VERSION=x.y.z    - Tag a release locally only (release-publish calls this)"
@@ -59,6 +63,11 @@ help:
 	@echo "  make webtop-up                - Start the webtop container (auto-trusts the local CA on first run)"
 	@echo "  make webtop-trust             - Install the webtop mkcert CA into the host trust store"
 	@echo "  make webtop-down              - Stop the webtop container"
+	@echo "  make monitoring-up            - Start the opt-in observability stack (monitoring profile)"
+	@echo "  make monitoring-down          - Stop the observability stack"
+	@echo "  make monitoring-smoke         - Start the stack, verify readiness + Grafana provisioning, tear down"
+	@echo "  make monitoring-logs          - Follow logs from the observability stack"
+	@echo "  make monitoring-urls          - Print the local Grafana/Prometheus/Alertmanager/Loki URLs"
 	@echo "  make voyager-compile-spike    - Compile YOLOv8n to .axm via Voyager SDK (Ubuntu 22.04 Docker)"
 	@echo "  make voyager-aipu-spike       - Run .axm on Metis AIPU + CPU baseline (native Linux + board)"
 	@echo "  make qnn-fetch-qairt          - Download/extract QAIRT Community SDK (needs Qualcomm portal access)"
@@ -71,12 +80,12 @@ dev:
 	@./scripts/run_dev.sh --flutter-device "$(FLUTTER_DEVICE)"
 
 dev-a:
-	@$(MAKE) check-devices
+	@$(MAKE) check-flutter-devices
 	@echo "==> Using Android device: $(ANDROID_DEVICE)"
 	@./scripts/run_dev.sh --flutter-device "$(ANDROID_DEVICE)"
 
 dev-i:
-	@$(MAKE) check-devices
+	@$(MAKE) check-flutter-devices
 	@echo "==> Using iOS device: $(IOS_DEVICE)"
 	@./scripts/run_dev.sh --flutter-device "$(IOS_DEVICE)"
 
@@ -91,12 +100,12 @@ docker:
 	@./scripts/run_dev.sh --container-engine "$(CONTAINER_ENGINE)" --flutter-device "$(FLUTTER_DEVICE)"
 
 docker-a:
-	@$(MAKE) check-devices
+	@$(MAKE) check-flutter-devices
 	@echo "==> Using Android device: $(ANDROID_DEVICE)"
 	@./scripts/run_dev.sh --container-engine "$(CONTAINER_ENGINE)" --flutter-device "$(ANDROID_DEVICE)"
 
 docker-i:
-	@$(MAKE) check-devices
+	@$(MAKE) check-flutter-devices
 	@echo "==> Using iOS device: $(IOS_DEVICE)"
 	@./scripts/run_dev.sh --container-engine "$(CONTAINER_ENGINE)" --flutter-device "$(IOS_DEVICE)"
 
@@ -322,12 +331,12 @@ release-publish:
 	@bash scripts/release_publish.sh $(VERSION) $(ARGS)
 
 docker-ex-a: secrets-init docker-ex-deploy
-	@$(MAKE) check-devices
+	@$(MAKE) check-flutter-devices
 	@echo "==> Using Android device: $(ANDROID_DEVICE)"
 	@./scripts/run_dev.sh --flutter-device "$(ANDROID_DEVICE)" --remote-host "$$(echo $(REMOTE_HOST) | cut -d@ -f2)"
 
 docker-ex-i: secrets-init docker-ex-deploy
-	@$(MAKE) check-devices
+	@$(MAKE) check-flutter-devices
 	@echo "==> Using iOS device: $(IOS_DEVICE)"
 	@./scripts/run_dev.sh --flutter-device "$(IOS_DEVICE)" --remote-host "$$(echo $(REMOTE_HOST) | cut -d@ -f2)"
 
@@ -344,6 +353,32 @@ docker-ex-down:
 	fi
 	@echo "==> Stopping containers on $(REMOTE_HOST) via $(CONTAINER_ENGINE)..."
 	ssh $(SSH_OPTS) $(REMOTE_HOST) "cd $(DEPLOY_DIR) && $(CONTAINER_ENGINE) compose down"
+
+# ── Observability stack (opt-in `monitoring` profile) ─────────────────
+# See monitoring/README.md. Ports bind to 127.0.0.1 by default; set
+# MONITORING_BIND=0.0.0.0 for LAN access on a trusted host. Set
+# SLACK_WEBHOOK_URL to forward Alertmanager notifications to Slack.
+MONITORING_SERVICES := prometheus alertmanager loki grafana promtail
+
+monitoring-up:
+	docker compose --profile monitoring up -d --wait prometheus alertmanager loki grafana promtail
+	@$(MAKE) --no-print-directory monitoring-urls
+
+monitoring-down:
+	docker compose --profile monitoring down
+
+monitoring-smoke:
+	@bash scripts/monitoring_smoke.sh
+
+monitoring-logs:
+	docker compose --profile monitoring logs -f --tail=200
+
+monitoring-urls:
+	@echo "==> Observability endpoints (bind $${MONITORING_BIND:-127.0.0.1})"
+	@echo "  Grafana:      http://$${MONITORING_BIND:-127.0.0.1}:$${GRAFANA_PORT:-3000}  (admin / $${GRAFANA_ADMIN_PASSWORD:-admin})"
+	@echo "  Prometheus:   http://$${MONITORING_BIND:-127.0.0.1}:$${PROMETHEUS_PORT:-9090}"
+	@echo "  Alertmanager: http://$${MONITORING_BIND:-127.0.0.1}:$${ALERTMANAGER_PORT:-9093}"
+	@echo "  Loki:         http://$${MONITORING_BIND:-127.0.0.1}:$${LOKI_PORT:-3100}"
 
 suite_api_dev:
 	uvicorn suite_api.main:app --host 0.0.0.0 --port 9000 --reload
@@ -378,10 +413,38 @@ bump-version:
 	@chmod +x scripts/bump_all.py
 	@python3 scripts/bump_all.py $(VERSION)
 
+# Fleet health report for every edge test rig: reachability, Compose service
+# health, expected hardware, and the active overlay. Reads the single source of
+# truth in config/edge_test_rigs.json; see docs/edge-test-rigs.md.
+# Pass flags through with ARGS=, e.g. ARGS='--json', ARGS='--strict',
+# ARGS='--rig moosebun2'.
 check-devices:
+	@python3 scripts/fleet_health.py $(ARGS)
+
+# Alias kept for readability when the intent is the fleet, not the UI.
+check-fleet:
+	@python3 scripts/fleet_health.py $(ARGS)
+
+# Local Flutter device listing. Called by the dev-* / docker-* targets before
+# launching a UI; the fleet report above is a different concern.
+check-flutter-devices:
 	@echo "==> Checking for connected devices..."
 	@flutter devices | grep -E "connected device|wirelessly|•" || true
 	@echo ""
+
+# Read-only health report for one rig from the inventory.
+rig-verify:
+	@if [ -z "$(RIG)" ]; then echo "Error: RIG is not set. Use 'make rig-verify RIG=moosebun2'"; exit 1; fi
+	@python3 scripts/fleet_health.py --rig $(RIG) $(ARGS)
+
+# Idempotent provisioning entry point: resolve the rig's SSH target from the
+# inventory, sync and bring it up with the right overlays auto-detected, then
+# verify. QA and Engineer do not need the overlay matrix.
+rig-provision:
+	@if [ -z "$(RIG)" ]; then echo "Error: RIG is not set. Use 'make rig-provision RIG=moosebun2'"; exit 1; fi
+	@REMOTE_HOST=$$(python3 scripts/fleet_health.py --print-target $(RIG)) \
+		bash scripts/dev_update.sh $(ARGS)
+	@$(MAKE) --no-print-directory rig-verify RIG=$(RIG)
 
 macos-signing-check:
 	@bash nmtk/installer/macos/sign-and-notarize.sh --check

@@ -32,6 +32,7 @@ Usage: sign-and-notarize.sh [--check | --dry-run] <command> [args...]
 
 Commands:
   sign-app <path-to.app>     Sign an application bundle (hardened runtime)
+  sign-app-adhoc <path-to.app>  Ad-hoc sign for portable unsigned builds
   sign-dmg <path-to.dmg>     Sign a DMG installer
   notarize <path>            Submit artifact to Apple notary service and staple
 
@@ -102,6 +103,56 @@ macos_notarize_requested=$(should_notarize && echo true || echo false)
 EOF
 }
 
+# codesign --deep treats python/include/python3.12 as a nested bundle and fails
+# (CEL-348). Sign nested binaries bottom-up and skip the include tree.
+codesign_with_extra_args() {
+  local identity="$1"
+  local target="$2"
+  shift 2
+  if [ $# -gt 0 ]; then
+    run_cmd codesign --force "$@" --sign "$identity" "$target"
+  else
+    run_cmd codesign --force --sign "$identity" "$target"
+  fi
+}
+
+sign_app_bundle_nested() {
+  local app_path="$1"
+  local identity="$2"
+  shift 2
+
+  if [ "$DRY_RUN" = true ]; then
+    codesign_with_extra_args "$identity" "$app_path" "$@"
+    return 0
+  fi
+
+  while IFS= read -r -d '' item; do
+    codesign_with_extra_args "$identity" "$item" "$@"
+  done < <(find "$app_path/Contents" -type f \( -name '*.dylib' -o -name '*.so' \) \
+    ! -path '*/python/include/*' -print0)
+
+  while IFS= read -r -d '' item; do
+    codesign_with_extra_args "$identity" "$item" "$@"
+  done < <(find "$app_path/Contents/Frameworks" -maxdepth 1 -type d -name '*.framework' -print0 2>/dev/null)
+
+  if [ -d "$app_path/Contents/Resources/python" ]; then
+    while IFS= read -r -d '' item; do
+      codesign_with_extra_args "$identity" "$item" "$@"
+    done < <(find "$app_path/Contents/Resources/python" -type f \
+      ! -path '*/include/*' \( -name '*.dylib' -o -name '*.so' -o -path '*/bin/*' \) -print0)
+
+    while IFS= read -r -d '' item; do
+      codesign_with_extra_args "$identity" "$item" "$@"
+    done < <(find "$app_path/Contents/Resources/python/bin" \( -type f -o -type l \) -print0 2>/dev/null)
+  fi
+
+  while IFS= read -r -d '' item; do
+    codesign_with_extra_args "$identity" "$item" "$@"
+  done < <(find "$app_path/Contents/MacOS" -type f -perm -111 -print0 2>/dev/null)
+
+  codesign_with_extra_args "$identity" "$app_path" "$@"
+}
+
 sign_app_bundle() {
   local app_path="$1"
   local identity
@@ -117,12 +168,24 @@ sign_app_bundle() {
   fi
 
   echo "==> Code signing app bundle with identity: $identity"
-  run_cmd codesign --force --options runtime --timestamp --deep --sign "$identity" "$app_path"
+  sign_app_bundle_nested "$app_path" "$identity" --options runtime --timestamp
   if [ "$DRY_RUN" = false ]; then
     codesign --verify --deep --strict --verbose=2 "$app_path"
   else
     run_cmd codesign --verify --deep --strict --verbose=2 "$app_path"
   fi
+}
+
+sign_app_bundle_adhoc() {
+  local app_path="$1"
+
+  if [ ! -d "$app_path" ]; then
+    echo "Error: App bundle not found at $app_path" >&2
+    exit 1
+  fi
+
+  echo "==> Re-signing app ad-hoc for portability..."
+  sign_app_bundle_nested "$app_path" "-"
 }
 
 sign_dmg_file() {
@@ -214,6 +277,10 @@ case "$COMMAND" in
   sign-app)
     [ $# -eq 1 ] || { echo "Error: sign-app requires exactly one argument" >&2; exit 1; }
     sign_app_bundle "$1"
+    ;;
+  sign-app-adhoc)
+    [ $# -eq 1 ] || { echo "Error: sign-app-adhoc requires exactly one argument" >&2; exit 1; }
+    sign_app_bundle_adhoc "$1"
     ;;
   sign-dmg)
     [ $# -eq 1 ] || { echo "Error: sign-dmg requires exactly one argument" >&2; exit 1; }

@@ -33,6 +33,9 @@ Neurobench/frontend/
 nmtk/
 !nmtk/launcher_control/
 !nmtk/neuro_toolkit/
+!nmtk/__init__.py
+!nmtk/http_metrics.py
+!nmtk/metrics_core.py
 nmtk_ui_core/
 !nmtk_ui_core/
 # Webtop build needs the full Flutter project including path-dep packages.

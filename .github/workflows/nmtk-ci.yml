@@ -45,6 +45,10 @@ jobs:
           cd nmtk/neuro_toolkit
           flutter analyze
 
+      # Launcher E2E: do not re-add test/launcher_e2e_test.dart — it was deleted
+      # with ProcessManager in 30276bdf (SSH bootstrap + launcher-control API).
+      # Unit/widget coverage stays here; app-level launcher E2E is
+      # integration_test/ (integration-test-apple job below).
       - name: Run tests (neuro_toolkit)
         run: |
           cd nmtk/neuro_toolkit
@@ -113,6 +117,8 @@ jobs:
         run: |
           cd nmtk/neuro_toolkit
           flutter pub get
+      # Successor to the removed test/launcher_e2e_test.dart step (CEL-313/CEL-328).
+      # See nmtk/neuro_toolkit/integration_test/README.md and docs/ci-runners.md.
       - name: Run Integration Tests (macOS)
         run: |
           cd nmtk/neuro_toolkit

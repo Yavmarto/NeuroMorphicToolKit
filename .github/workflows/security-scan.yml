@@ -64,27 +64,7 @@ jobs:
           pip-audit "${IGNORE_ARGS[@]}"
           find . -name "requirements.txt" -exec pip-audit -r {} "${IGNORE_ARGS[@]}" \;
 
-  owasp-dependency-check:
-    runs-on: [self-hosted, Linux, X64]
-    steps:
-      - uses: actions/checkout@v4
-      - name: Dependency Check
-        uses: dependency-check/DependencyCheck_Action@v3
-        with:
-          project: 'NMTK'
-          path: '.'
-          format: 'HTML'
-          out: 'reports'
-          args: >
-            --enableRetired
-      - name: Upload Report
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: dependency-check-report
-          path: reports
-
-  dockerfile-scan:
+  trivy-scan:
     runs-on: [self-hosted, Linux, X64]
     steps:
       - uses: actions/checkout@v4
@@ -93,6 +73,15 @@ jobs:
         with:
           scan-type: 'config'
           scan-ref: '.'
+          trivyignores: '.trivyignore'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+      - name: Trivy filesystem scan (language dependencies)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          scanners: 'vuln'
           trivyignores: '.trivyignore'
           severity: 'CRITICAL,HIGH'
           exit-code: '1'

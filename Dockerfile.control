@@ -28,9 +28,12 @@ WORKDIR /app
 
 # packaging is used for version comparison in server.py.
 # bcrypt is used to check app-credential logins in launcher_auth.py.
-RUN pip install --no-cache-dir packaging bcrypt
+RUN pip install --no-cache-dir packaging bcrypt prometheus-client
 
 # Copy the launcher control package and its entry-point script.
+COPY nmtk/__init__.py nmtk/__init__.py
+COPY nmtk/metrics_core.py nmtk/metrics_core.py
+COPY nmtk/http_metrics.py nmtk/http_metrics.py
 COPY nmtk/launcher_control/ nmtk/launcher_control/
 COPY scripts/launcher_control_service.py scripts/launcher_control_service.py
 
