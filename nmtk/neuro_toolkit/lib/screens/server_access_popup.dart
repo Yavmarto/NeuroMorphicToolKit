@@ -99,7 +99,7 @@ class _ServerAccessFlowState extends ConsumerState<_ServerAccessFlow> {
     return Column(
       children: [
         if (widget.isSheet) ...[
-          const SizedBox(height: 8),
+          SizedBox(height: tokens.compactGap),
           Container(
             width: 36,
             height: 4,
@@ -108,7 +108,7 @@ class _ServerAccessFlowState extends ConsumerState<_ServerAccessFlow> {
               borderRadius: BorderRadius.circular(tokens.radiusSm),
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: tokens.compactGap),
         ],
         Padding(
           padding: EdgeInsets.symmetric(horizontal: tokens.sectionGap),
@@ -135,7 +135,7 @@ class _ServerAccessFlowState extends ConsumerState<_ServerAccessFlow> {
             ],
           ),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: tokens.compactGap),
         Expanded(
           child: SingleChildScrollView(
             padding: EdgeInsets.all(tokens.sectionGap * 1.5),

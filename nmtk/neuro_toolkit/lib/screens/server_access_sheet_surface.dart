@@ -11,15 +11,24 @@ class ServerAccessSheetSurface extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = NmtkShellTokens.of(context);
     final colors = Zeta.of(context).colors;
-    return ClipRRect(
-      borderRadius: BorderRadius.vertical(
-        top: Radius.circular(tokens.radiusLg),
-      ),
-      child: ColoredBox(
-        color: colors.surfaceDefault,
-        child: SizedBox(
-          height: MediaQuery.sizeOf(context).height * 0.94,
-          child: SafeArea(top: false, child: child),
+    final media = MediaQuery.of(context);
+    // CEL-421: the sheet holds the sign-in / setup text fields, so reserve the
+    // keyboard inset. The sheet body sizes to 94% of the space above the
+    // keyboard and the bottom padding keeps the fields clear of it.
+    final keyboardInset = media.viewInsets.bottom;
+    final height = (media.size.height - keyboardInset) * 0.94;
+    return Padding(
+      padding: EdgeInsets.only(bottom: keyboardInset),
+      child: ClipRRect(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(tokens.radiusLg),
+        ),
+        child: ColoredBox(
+          color: colors.surfaceDefault,
+          child: SizedBox(
+            height: height,
+            child: SafeArea(top: false, child: child),
+          ),
         ),
       ),
     );

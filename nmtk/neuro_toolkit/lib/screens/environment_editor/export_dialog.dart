@@ -9,12 +9,17 @@ class _ExportDialog extends ConsumerWidget {
     final exportAsync = ref.watch(environmentExportProvider(env.slug));
 
     return exportAsync.when(
-      loading: () => const NmtkContentDialog(
+      loading: () => NmtkContentDialog(
         title: 'Export environment',
-        content: SizedBox(
-          width: 420,
-          height: 420,
-          child: Center(child: ZetaProgressCircle(size: ZetaCircleSizes.s)),
+        // CEL-421: no fixed 420x420 box — size to the spinner so short phones
+        // do not reserve a large empty area above the keyboard.
+        content: Padding(
+          padding: EdgeInsets.symmetric(
+            vertical: context.nmtkTokens.sectionGap * 2,
+          ),
+          child: const Center(
+            child: ZetaProgressCircle(size: ZetaCircleSizes.s),
+          ),
         ),
       ),
       error: (e, _) => NmtkContentDialog(

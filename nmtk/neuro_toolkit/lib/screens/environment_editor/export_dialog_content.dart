@@ -35,11 +35,17 @@ class _ExportDialogContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // CEL-421: replace the fixed 420 px body with a viewport-relative cap so
+    // the code pane never forces clipping on an iPhone SE-class screen.
+    final bodyHeight = (MediaQuery.sizeOf(context).height * 0.5).clamp(
+      200.0,
+      420.0,
+    );
     return NmtkContentDialog(
       title: 'Export "${env.displayName}"',
       content: SizedBox(
         width: double.maxFinite,
-        height: 420,
+        height: bodyHeight,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -51,25 +57,29 @@ class _ExportDialogContent extends StatelessWidget {
                 ),
                 const Spacer(),
                 if (!env.immutable)
-                  SizedBox(
-                    width: 220,
-                    child: ZetaSelectInput<String>(
-                      initialValue: exportState.mode,
-                      disabled: exportState.loading,
-                      dropdownSemantics: 'Choose export contents',
-                      onChange: (value) {
-                        if (value != null) onModeChanged(value);
-                      },
-                      items: [
-                        ZetaDropdownItem(
-                          value: 'delta',
-                          label: 'Added packages only',
-                        ),
-                        ZetaDropdownItem(
-                          value: 'full',
-                          label: 'Full environment',
-                        ),
-                      ],
+                  Flexible(
+                    // CEL-421: Flexible so the 220 px select shrinks instead
+                    // of overflowing the near-full-width mobile dialog.
+                    child: SizedBox(
+                      width: 220,
+                      child: ZetaSelectInput<String>(
+                        initialValue: exportState.mode,
+                        disabled: exportState.loading,
+                        dropdownSemantics: 'Choose export contents',
+                        onChange: (value) {
+                          if (value != null) onModeChanged(value);
+                        },
+                        items: [
+                          ZetaDropdownItem(
+                            value: 'delta',
+                            label: 'Added packages only',
+                          ),
+                          ZetaDropdownItem(
+                            value: 'full',
+                            label: 'Full environment',
+                          ),
+                        ],
+                      ),
                     ),
                   ),
               ],

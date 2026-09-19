@@ -91,15 +91,22 @@ class ResultsSummaryCard extends ConsumerWidget {
                         showDialog<void>(
                           context: context,
                           builder: (context) => AlertDialog(
+                            // CEL-421: near-full-width with a small token
+                            // margin on phones; scrollable body so the guide
+                            // never clips on short viewports.
+                            scrollable: true,
+                            insetPadding: EdgeInsets.symmetric(
+                              horizontal: tokens.sectionGap,
+                              vertical: tokens.sectionGap * 1.5,
+                            ),
+                            constraints: const BoxConstraints(maxWidth: 560),
                             title: const Text('Result Interpretation Guide'),
-                            content: const SingleChildScrollView(
-                              child: Text(
-                                'NeuroBench metrics provide insights into the efficiency and accuracy of your SNN.\n\n'
-                                '• Primary Metrics: The main focus of the benchmark (e.g., accuracy for classification).\n'
-                                '• Latency: Lower is better for real-time applications.\n'
-                                '• Power/Memory: Crucial for edge deployment.\n'
-                                '• Assertions: Validate functional correctness of the neural dynamics.',
-                              ),
+                            content: const Text(
+                              'NeuroBench metrics provide insights into the efficiency and accuracy of your SNN.\n\n'
+                              '• Primary Metrics: The main focus of the benchmark (e.g., accuracy for classification).\n'
+                              '• Latency: Lower is better for real-time applications.\n'
+                              '• Power/Memory: Crucial for edge deployment.\n'
+                              '• Assertions: Validate functional correctness of the neural dynamics.',
                             ),
                             actions: [
                               ZetaButton.text(
