@@ -24,6 +24,8 @@ class BenchmarkHeaderCard extends ConsumerWidget {
       'Primary metric: ${benchmark.scoring.primaryMetric}',
     ].join('  •  ');
 
+    final tokens = NmtkShellTokens.of(context);
+
     return NmtkSection(
       title: benchmark.name,
       subtitle: subtitle,
@@ -31,29 +33,42 @@ class BenchmarkHeaderCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(benchmark.description),
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              _MetadataPill(
-                icon: benchmark.builtin ? ZetaIcons.verified : ZetaIcons.build,
-                label: benchmark.builtin
-                    ? 'Built-in benchmark'
-                    : 'Custom benchmark',
-              ),
-              _MetadataPill(
-                icon: Icons
-                    .rule_folder_outlined, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
-                label: '${benchmark.assertions.length} assertions',
-              ),
-              _MetadataPill(
-                icon: ZetaIcons.flag,
-                label:
-                    'Pass threshold ${benchmark.scoring.passThreshold.toStringAsFixed(2)}',
-              ),
-            ],
+          // Cap the blurb so a long description cannot push the tab strip off
+          // a short phone viewport (CEL-431). Full text remains in the catalog.
+          Text(
+            benchmark.description,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+          ),
+          SizedBox(height: tokens.compactGap),
+          // Pills scroll horizontally instead of wrapping into extra rows on
+          // narrow screens, keeping the header height bounded at 375 px.
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _MetadataPill(
+                  icon: benchmark.builtin
+                      ? ZetaIcons.verified
+                      : ZetaIcons.build,
+                  label: benchmark.builtin
+                      ? 'Built-in benchmark'
+                      : 'Custom benchmark',
+                ),
+                SizedBox(width: tokens.compactGap),
+                _MetadataPill(
+                  icon: Icons
+                      .rule_folder_outlined, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
+                  label: '${benchmark.assertions.length} assertions',
+                ),
+                SizedBox(width: tokens.compactGap),
+                _MetadataPill(
+                  icon: ZetaIcons.flag,
+                  label:
+                      'Pass threshold ${benchmark.scoring.passThreshold.toStringAsFixed(2)}',
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -77,7 +92,9 @@ class _HeaderMetricChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.secondaryContainer,
-        borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+        borderRadius: BorderRadius.circular(
+          NmtkShellTokens.of(context).radiusSm,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -113,13 +130,18 @@ class _MetadataPill extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusChip),
+        borderRadius: BorderRadius.circular(
+          NmtkShellTokens.of(context).radiusChip,
+        ),
         border: Border.all(color: theme.colorScheme.outlineVariant),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: theme.colorScheme.onSurfaceVariant),
+          // onSurface (not onSurfaceVariant) so the glyph clears the 3:1
+          // non-text floor on the pill fill in both themes (CEL-431 contrast
+          // sweep: onSurfaceVariant measured 2.35:1 in light).
+          Icon(icon, size: 16, color: theme.colorScheme.onSurface),
           const SizedBox(width: 8),
           Text(
             label,

@@ -139,9 +139,9 @@ class _WorkbenchShellScreenState extends ConsumerState<WorkbenchShellScreen> {
       if (previousJob?.status != nextJob?.status &&
           nextJob?.status == BenchmarkJobStatus.completed) {
         NmtkSnackBars.success(
-            context,
-            'Benchmark job ${nextJob?.id} completed.',
-          );
+          context,
+          'Benchmark job ${nextJob?.id} completed.',
+        );
         _goToRouteIfNeeded(
           _currentRouteState(
             tab: NeurobenchWorkbenchTab.results,
@@ -155,10 +155,7 @@ class _WorkbenchShellScreenState extends ConsumerState<WorkbenchShellScreen> {
 
       if (previousJob?.status != nextJob?.status &&
           nextJob?.status == BenchmarkJobStatus.failed) {
-        NmtkSnackBars.error(
-            context,
-            nextJob?.error ?? 'Benchmark job failed.',
-          );
+        NmtkSnackBars.error(context, nextJob?.error ?? 'Benchmark job failed.');
       }
 
       if (next.noticeMessage != null &&
@@ -277,9 +274,7 @@ class _WorkbenchShellScreenState extends ConsumerState<WorkbenchShellScreen> {
               ],
             )
           : null,
-      body: showShellChrome
-          ? SafeArea(bottom: false, child: body)
-          : SafeArea(bottom: false, child: body),
+      body: SafeArea(bottom: false, child: body),
       bottomNavigationBar: const ActiveJobsBar(),
     );
   }

@@ -12,6 +12,8 @@ class ComparisonScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final active = ref.watch(activeBenchmarkProvider);
+    final tokens = NmtkShellTokens.of(context);
+    final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -33,31 +35,54 @@ class ComparisonScreen extends ConsumerWidget {
         title: const Text('Benchmark Comparison'),
       ),
       body: active == null
-          ? const Center(
-              child: Text('Select a benchmark on the main screen first'),
+          ? const SafeArea(
+              child: Center(
+                child: Text('Select a benchmark on the main screen first'),
+              ),
             )
-          : Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Comparing Results for: ${active.name}',
-                          style: Theme.of(context).textTheme.headlineSmall,
+          : SafeArea(
+              child: Padding(
+                padding: EdgeInsets.all(tokens.sectionGap),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    // Phones stack the heading above the export actions; a
+                    // side-by-side row squeezes the heading until both it and
+                    // the buttons overflow (CEL-431).
+                    final compact =
+                        constraints.maxWidth <
+                        NmtkShellTokens.compactBreakpoint;
+                    final heading = Text(
+                      'Comparing Results for: ${active.name}',
+                      style: theme.textTheme.headlineSmall,
+                    );
+                    final actions = _ExportActions(activeId: active.id);
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (compact) ...[
+                          heading,
+                          SizedBox(height: tokens.sectionGap),
+                          actions,
+                        ] else
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(child: heading),
+                              SizedBox(width: tokens.sectionGap),
+                              actions,
+                            ],
+                          ),
+                        SizedBox(height: tokens.sectionGap),
+                        const Expanded(
+                          child: SingleChildScrollView(
+                            child: MetricDiffTable(),
+                          ),
                         ),
-                      ),
-                      _ExportActions(activeId: active.id),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  const Expanded(
-                    child: SingleChildScrollView(child: MetricDiffTable()),
-                  ),
-                ],
+                      ],
+                    );
+                  },
+                ),
               ),
             ),
     );
@@ -91,10 +116,10 @@ class _ExportActions extends ConsumerWidget {
 
       if (context.mounted) {
         NmtkSnackBars.success(
-            context,
-            'Export received (${content.length} bytes) — '
-            'file saving is not yet wired on this platform.',
-          );
+          context,
+          'Export received (${content.length} bytes) — '
+          'file saving is not yet wired on this platform.',
+        );
       }
     } catch (e) {
       if (context.mounted) {
@@ -105,14 +130,19 @@ class _ExportActions extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Row(
+    final tokens = NmtkShellTokens.of(context);
+
+    // Wrap so the two export buttons stack instead of clipping when the phone
+    // viewport is at its 375 px minimum (CEL-431).
+    return Wrap(
+      spacing: tokens.compactGap,
+      runSpacing: tokens.compactGap,
       children: [
         ZetaButton.primary(
           onPressed: () => _handleExport(context, ref, 'csv'),
           leadingIcon: ZetaIcons.download,
           label: 'Export CSV',
         ),
-        const SizedBox(width: 8),
         ZetaButton.outline(
           onPressed: () => _handleExport(context, ref, 'json'),
           leadingIcon: Icons.code, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
