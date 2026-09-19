@@ -13,8 +13,13 @@ The monitoring stack already defines alert rules for service down, high error ra
 
 ## Acceptance Criteria
 
-- [ ] Replace the placeholder `null-receiver` with at least one real notification target
-- [ ] Support environment-driven configuration for secrets or webhook URLs
-- [ ] Route critical alerts differently from warning-level alerts if needed
-- [ ] Verify a synthetic alert can be triggered and delivered end-to-end
-- [ ] Document how operators should configure notification channels locally and in production
+- [x] Replace the placeholder `null-receiver` with at least one real notification target
+- [x] Support environment-driven configuration for secrets or webhook URLs
+- [x] Route critical alerts differently from warning-level alerts if needed
+- [x] Verify a synthetic alert can be triggered and delivered end-to-end
+- [x] Document how operators should configure notification channels locally and in production
+
+Implemented in CEL-312. Routing goes to Slack #nmtk-alerts; the webhook URL comes
+from the `SLACK_WEBHOOK_URL` environment variable. See
+[`../alertmanager/README.md`](../alertmanager/README.md) and
+`scripts/verify_alertmanager_routing.sh`.

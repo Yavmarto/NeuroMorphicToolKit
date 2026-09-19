@@ -11,7 +11,12 @@ groups:
           description: "{{ $labels.instance }} of job {{ $labels.job }} has been down for more than 1 minute."
 
       - alert: HighErrorRate
-        expr: rate(fastapi_requests_total{status_code=~"5.*"}[5m]) > 0.05
+        expr: |
+          (
+            sum by (instance) (rate(http_requests_total{status_code=~"5.."}[5m]))
+            /
+            sum by (instance) (rate(http_requests_total[5m]))
+          ) > 0.05
         for: 2m
         labels:
           severity: warning
@@ -20,7 +25,7 @@ groups:
           description: "{{ $labels.instance }} is returning more than 5% 5xx errors."
 
       - alert: HighLatency
-        expr: histogram_quantile(0.95, sum(rate(fastapi_requests_duration_seconds_bucket[5m])) by (le, instance)) > 2
+        expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, instance)) > 2
         for: 2m
         labels:
           severity: warning

@@ -68,7 +68,7 @@ PENDING_STATE="$STATE_DIR/pending-update.state"
 # A local-only alias applied to every restored image, so a rollback does not
 # depend on the mutable tag or on a release still being published.
 ROLLBACK_TAG="nmtk-lastgood"
-SUITE_API_IMAGE="ghcr.io/completed-spoon-6/neuromorphictoolkit/suite-api"
+SUITE_API_IMAGE="ghcr.io/yavmarto/neuromorphictoolkit/suite-api"
 
 # Every step that talks to a container registry or to the container runtime gets
 # an upper bound. Without one, a stalled pull or a wedged runtime leaves the app

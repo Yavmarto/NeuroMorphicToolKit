@@ -266,6 +266,136 @@ services:
     networks:
       - backend-net
 
+  # ── Observability stack — started only with the `monitoring` profile ──
+  #
+  # Opt-in. Nothing here starts on a normal `docker compose up -d` or on an
+  # end-user deployment. Enable it explicitly with:
+  #
+  #   docker compose --profile monitoring up -d        (or: make monitoring-up)
+  #
+  # Ports bind to ${MONITORING_BIND:-127.0.0.1} so the stack is not exposed on
+  # the LAN by default. Override MONITORING_BIND=0.0.0.0 only on a trusted
+  # network. See monitoring/README.md for the operator workflow and the
+  # smoke test (make monitoring-smoke).
+
+  prometheus:
+    profiles: ["monitoring"]
+    image: prom/prometheus:v2.54.1
+    ports:
+      - "${MONITORING_BIND:-127.0.0.1}:${PROMETHEUS_PORT:-9090}:9090"
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-15d}"
+      - "--web.enable-lifecycle"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
+      - prometheus-data:/prometheus
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:9090/-/ready"]
+      start_period: 30s
+      <<: *default-healthcheck-params
+    restart: unless-stopped
+    networks:
+      - backend-net
+
+  alertmanager:
+    profiles: ["monitoring"]
+    image: prom/alertmanager:v0.28.1
+    # alertmanager.yml reads the Slack webhook from a file, and Alertmanager
+    # cannot expand environment variables, so entrypoint.sh materializes that
+    # file from SLACK_WEBHOOK_URL before exec'ing alertmanager.
+    entrypoint: ["/bin/sh", "/etc/alertmanager/entrypoint.sh"]
+    ports:
+      - "${MONITORING_BIND:-127.0.0.1}:${ALERTMANAGER_PORT:-9093}:9093"
+    environment:
+      # Default is a local no-op URL so the profile starts with no secrets set.
+      # Set SLACK_WEBHOOK_URL to the real #nmtk-alerts incoming webhook or no
+      # alert will reach Slack. See monitoring/README.md.
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-http://127.0.0.1:9093/slack}
+    volumes:
+      - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ./monitoring/alertmanager/entrypoint.sh:/etc/alertmanager/entrypoint.sh:ro
+      - alertmanager-data:/alertmanager
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:9093/-/healthy"]
+      start_period: 20s
+      <<: *default-healthcheck-params
+    restart: unless-stopped
+    networks:
+      - backend-net
+
+  loki:
+    profiles: ["monitoring"]
+    image: grafana/loki:3.1.1
+    ports:
+      - "${MONITORING_BIND:-127.0.0.1}:${LOKI_PORT:-3100}:3100"
+    command:
+      - "-config.file=/etc/loki/local-config.yaml"
+    volumes:
+      - ./monitoring/loki/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki-data:/loki
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:3100/ready"]
+      start_period: 60s
+      retries: 10
+      <<: *default-healthcheck-params
+    restart: unless-stopped
+    networks:
+      - backend-net
+
+  promtail:
+    profiles: ["monitoring"]
+    image: grafana/promtail:3.1.1
+    ports:
+      # Promtail's own API (log discovery status / readiness).
+      - "${MONITORING_BIND:-127.0.0.1}:${PROMTAIL_PORT:-9080}:9080"
+    command:
+      - "-config.file=/etc/promtail/config.yml"
+    environment:
+      # Rootless Podman exposes the API socket at a different path than Docker.
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    volumes:
+      - ./monitoring/promtail/promtail-config.yml:/etc/promtail/config.yml:ro
+      - ${DOCKER_SOCKET:-/var/run/docker.sock}:/var/run/docker.sock:ro
+      - promtail-positions:/tmp
+    depends_on:
+      loki:
+        condition: service_healthy
+        required: false
+    restart: unless-stopped
+    networks:
+      - backend-net
+
+  grafana:
+    profiles: ["monitoring"]
+    image: grafana/grafana:11.2.0
+    ports:
+      - "${MONITORING_BIND:-127.0.0.1}:${GRAFANA_PORT:-3000}:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_AUTH_ANONYMOUS_ENABLED=${GRAFANA_ANONYMOUS_ENABLED:-false}
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    healthcheck:
+      # First boot on a fresh volume runs ~600 SQLite migrations and can take
+      # several minutes under load; only then does /api/health answer.
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:3000/api/health"]
+      start_period: 180s
+      retries: 24
+      <<: *default-healthcheck-params
+    depends_on:
+      - prometheus
+      - loki
+    restart: unless-stopped
+    networks:
+      - backend-net
+
 networks:
   backend-net:
     driver: bridge
@@ -278,3 +408,8 @@ volumes:
   neurobench-data:
   neurochip-data:
   neurosense-recordings:
+  prometheus-data:
+  alertmanager-data:
+  loki-data:
+  promtail-positions:
+  grafana-data:

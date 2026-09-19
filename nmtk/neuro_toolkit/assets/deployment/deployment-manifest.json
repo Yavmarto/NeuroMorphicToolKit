@@ -1,16 +1,20 @@
 {
-  "bundleVersion": 15,
+  "bundleVersion": 16,
   "files": {
-    "docker-compose.prod.yml": "f199fe7232659a2e7d916358775872d5fc335473abd17644469a94c98f3622cc",
-    "docker-compose.remote.yml": "a7f912988e2e1e4385e9880785d1d5634d8fe28594f051107128273bc4726e2a",
-    "docker-compose.yml": "3498f70f4129aa6ffcadd9d4060915f93658ab2d8f7166bd24ceaae72aa9f631",
-    "install.sh": "3275774b8c4aa162fba77663357e93892b6e2c21bc2af2aafd754cd8c71c59b6",
+    "docker-compose.prod.yml": "1d5c2e8ef8c3112b3f20f3a72a5ce755b03f74f6c18656334784cc7da62c6e7e",
+    "docker-compose.remote.yml": "3aecc4f84764a50fcaeb31728d53c31304ea8dba39a25cacd7d023188883bfe5",
+    "docker-compose.yml": "be19f2be16809f99c0255eeec137c5cba6bde8020ade4019fa808dabe5758dd3",
+    "install.sh": "c38a7bea365979638712963713adf887ded2363a08e3a4bdd95595e09d1fc3e2",
     "migrate_legacy.py": "72bdf5f04fc5b85ef76d24956873bab54c617c478d901efb03c342bb59df6a3b",
-    "monitoring/alertmanager/alertmanager.yml": "5e37524bbb610300cc965e41488b3c9d11fa5886f55d1196e5949ccf21da9d0e",
-    "monitoring/loki/loki-config.yml": "414e3dadeb587963c52740adc3097af79710eb6d8bf7b5e7da648008469cd8c6",
-    "monitoring/prometheus/alert_rules.yml": "44becb4686525477082c3aeb8f46d5824db0c827b1c15b8bf2de05c60e6597fa",
-    "monitoring/prometheus/prometheus.yml": "518175682a0c76dd1862768d6b99bc3821248d2d57e094f01344fe557ee9ac1f",
-    "monitoring/promtail/promtail-config.yml": "5ea9a58984e2e3de3a5a337bb3b8245ed01d6c8be395a5aa506af8127b1d329b",
+    "monitoring/alertmanager/alertmanager.yml": "4c72a4cea00aa74bfeea197fd564fc5eda10ef098e86b0b29d31d8fc7851fd09",
+    "monitoring/alertmanager/entrypoint.sh": "1fa22eea09d33e96a7a904a340543389f4df84e505cba51e645a78ef99f7abd5",
+    "monitoring/grafana/dashboards/nmtk-overview.json": "cb8ef0c1bb469b1aae0da5a7fb4670bcc2716bf8d1eeb34db814e3288be7ea88",
+    "monitoring/grafana/provisioning/dashboards/dashboards.yml": "bb01061ad248bd6a76d0f3e5676e7c2f87d5f3930b674e88df4071289531de32",
+    "monitoring/grafana/provisioning/datasources/ds.yml": "36d32ec0f8c908358f58042aca32a6f018945f3da56512b2bd25b6792d14faf7",
+    "monitoring/loki/loki-config.yml": "1c3b1444ce594d226d9b773019ee9786459982aa1e3c1db8fcf729eb5f7f87c6",
+    "monitoring/prometheus/alert_rules.yml": "07c7eae6375a1d5ffd46882ad485b4a670c7c2aea12b1cd237f387d5e3d0da72",
+    "monitoring/prometheus/prometheus.yml": "e5518f0b16be1dce7a2d707f1a8675f0e4d08273fe66af378f1b0d6425e76390",
+    "monitoring/promtail/promtail-config.yml": "c918e4e00dee3e75415dc4072d3772dcea1b8966cbb68d21bf60b69cae68739b",
     "nmtk-stack.sh": "e9f2db847d2b7bb5880d0acc52928c5e6a58095ddaf17ec78f9e87e400b0e86a"
   }
 }

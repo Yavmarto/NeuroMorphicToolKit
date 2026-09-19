@@ -13,14 +13,19 @@ alerting:
 
 scrape_configs:
   - job_name: 'nmtk-services'
+    metrics_path: /metrics
     static_configs:
       - targets:
           - 'suite_api:9000'
-          # Optional worker services: uncomment or configure via service discovery if workers are enabled
-          # - 'neurosense-hw-worker:8004'
-          # - 'neurobench-runner-worker:8003'
-          # - 'neurochip-hw-worker:8002'
-          # - 'neurocnl-physics-worker:8006'
+          - 'launcher-control:8091'
+          - 'neurobench-runner-worker:8003'
+          - 'neurochip-hw-worker:8002'
+          - 'neurocnl-physics-worker:8006'
+          - 'lava-backend:8012'
+          - 'brian2-backend:8013'
+          - 'snn-mlir-compiler:8007'
+          - 'jupyter-server:8008'
+          - 'neurosense-hw-worker:8004'
     relabel_configs:
       - source_labels: [__address__]
         target_label: instance

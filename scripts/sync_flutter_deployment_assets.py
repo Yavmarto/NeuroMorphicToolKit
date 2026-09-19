@@ -17,13 +17,17 @@ SOURCES = (
     Path("docker-compose.prod.yml"),
     Path("docker-compose.remote.yml"),
     Path("monitoring/alertmanager/alertmanager.yml"),
+    Path("monitoring/alertmanager/entrypoint.sh"),
     Path("monitoring/loki/loki-config.yml"),
     Path("monitoring/prometheus/alert_rules.yml"),
     Path("monitoring/prometheus/prometheus.yml"),
     Path("monitoring/promtail/promtail-config.yml"),
+    Path("monitoring/grafana/provisioning/datasources/ds.yml"),
+    Path("monitoring/grafana/provisioning/dashboards/dashboards.yml"),
+    Path("monitoring/grafana/dashboards/nmtk-overview.json"),
 )
 MANIFEST = DESTINATION / "deployment-manifest.json"
-BUNDLE_VERSION = 15
+BUNDLE_VERSION = 16
 
 
 def _manifest_payload() -> dict[str, object]:

@@ -17,7 +17,11 @@ services:
     volumes:
       - ./credentials/admin-token:/app/credentials/admin-token:ro
     environment:
-      - NMTK_AUTH_REQUIRED=1
+      # Dev hosts can set NMTK_AUTH_REQUIRED=0 in the deployment .env so a
+      # debug build (which connects on a /health probe with an empty session
+      # token, see ConnectBuildPolicy) is not rejected with 401. Defaults to
+      # on, so a normal deploy is unchanged.
+      - NMTK_AUTH_REQUIRED=${NMTK_AUTH_REQUIRED:-1}
       - NMTK_ADMIN_TOKEN_FILE=/app/credentials/admin-token
 
   neurosense-hw-worker:
@@ -80,7 +84,11 @@ services:
       - ./credentials/admin-token:/app/credentials/admin-token:ro
       - ./credentials/app/users.json:/app/credentials/users.json
     environment:
-      - NMTK_AUTH_REQUIRED=1
+      # Dev hosts can set NMTK_AUTH_REQUIRED=0 in the deployment .env so a
+      # debug build (which connects on a /health probe with an empty session
+      # token, see ConnectBuildPolicy) is not rejected with 401. Defaults to
+      # on, so a normal deploy is unchanged.
+      - NMTK_AUTH_REQUIRED=${NMTK_AUTH_REQUIRED:-1}
       - NMTK_ADMIN_TOKEN_FILE=/app/credentials/admin-token
       - NMTK_APP_USERS_FILE=/app/credentials/users.json
 

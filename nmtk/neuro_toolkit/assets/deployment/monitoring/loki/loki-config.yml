@@ -6,11 +6,13 @@ server:
 
 common:
   instance_addr: 127.0.0.1
-  path_prefix: /tmp/loki
+  # /loki is owned by the loki user (10001) in the image, so a named volume
+  # mounted here inherits the right ownership and the store survives restarts.
+  path_prefix: /loki
   storage:
     filesystem:
-      chunks_directory: /tmp/loki/chunks
-      rules_directory: /tmp/loki/rules
+      chunks_directory: /loki/chunks
+      rules_directory: /loki/rules
   replication_factor: 1
   ring:
     kvstore:
@@ -28,7 +30,9 @@ schema_config:
     - from: 2020-10-24
       store: tsdb
       object_store: filesystem
-      schema: v12
+      # v13 is required by Loki 3.x for structured metadata / native OTLP.
+      # Safe here because the POC store starts empty.
+      schema: v13
       index:
         prefix: index_
         period: 24h
