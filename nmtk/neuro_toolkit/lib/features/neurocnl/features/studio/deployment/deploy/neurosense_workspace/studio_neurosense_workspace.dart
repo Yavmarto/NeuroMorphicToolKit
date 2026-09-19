@@ -34,16 +34,25 @@ class _StudioNeuroSenseWorkspaceState
     final result = await showDialog<NeuroSenseSensorConfig>(
       context: context,
       builder: (dialogContext) => Dialog(
-        insetPadding: const EdgeInsets.all(24),
-        shape: RoundedRectangleBorder(borderRadius: NmtkDesignTokens.dialogShape),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 480),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: NeurosenseSensorConfigForm(
-              initialConfig: current,
-              onCancel: () => Navigator.of(dialogContext).pop(),
-              onSave: (config) => Navigator.of(dialogContext).pop(config),
+        insetPadding: NmtkDialogSurface.insetPadding(dialogContext),
+        shape: RoundedRectangleBorder(
+          borderRadius: NmtkDesignTokens.dialogShape,
+        ),
+        child: SafeArea(
+          child: ConstrainedBox(
+            constraints: NmtkDialogSurface.constraints(
+              dialogContext,
+              maxWidth: 480,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: SingleChildScrollView(
+                child: NeurosenseSensorConfigForm(
+                  initialConfig: current,
+                  onCancel: () => Navigator.of(dialogContext).pop(),
+                  onSave: (config) => Navigator.of(dialogContext).pop(config),
+                ),
+              ),
             ),
           ),
         ),

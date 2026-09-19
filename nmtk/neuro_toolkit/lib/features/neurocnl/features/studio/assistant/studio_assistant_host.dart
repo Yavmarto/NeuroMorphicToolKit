@@ -26,12 +26,23 @@ class _StudioAssistantHostState extends State<StudioAssistantHost> {
         context: context,
         isScrollControlled: true,
         useSafeArea: true,
-        builder: (sheetContext) => SizedBox(
-          height: MediaQuery.sizeOf(sheetContext).height * 0.82,
-          child: StudioAssistantPanel(
-            onClose: () => Navigator.of(sheetContext).pop(),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(NmtkShellTokens.of(context).radiusLg),
           ),
         ),
+        builder: (sheetContext) {
+          final keyboardInset = MediaQuery.viewInsetsOf(sheetContext).bottom;
+          return Padding(
+            padding: EdgeInsets.only(bottom: keyboardInset),
+            child: SizedBox(
+              height: MediaQuery.sizeOf(sheetContext).height * 0.82,
+              child: StudioAssistantPanel(
+                onClose: () => Navigator.of(sheetContext).pop(),
+              ),
+            ),
+          );
+        },
       );
       return;
     }
@@ -60,7 +71,10 @@ class _StudioAssistantHostState extends State<StudioAssistantHost> {
             child: FloatingActionButton.extended(
               heroTag: 'studio-assistant-fab',
               onPressed: () => _openAssistant(context),
-              icon: const Icon(ZetaIcons.chat),
+              icon: Icon(
+                ZetaIcons.chat,
+                color: Theme.of(context).colorScheme.onPrimaryContainer,
+              ),
               label: const Text('Assistant'),
             ),
           ),

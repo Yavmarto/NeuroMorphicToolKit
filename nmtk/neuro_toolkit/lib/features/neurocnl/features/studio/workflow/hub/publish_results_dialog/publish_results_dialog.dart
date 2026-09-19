@@ -73,74 +73,97 @@ class _PublishResultsDialogState extends ConsumerState<PublishResultsDialog> {
   Widget build(BuildContext context) {
     final colors = Zeta.of(context).colors;
     final textStyles = Zeta.of(context).textStyles;
+    final isCompact = NmtkDialogSurface.isCompact(context);
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: NmtkDesignTokens.dialogShape),
-      insetPadding: const EdgeInsets.all(24),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 960, maxHeight: 640),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 20, 20, 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Publish to NeuroHub',
-                      style: textStyles.titleLarge.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  NmtkOutlinedButton(
-                    label: 'Close',
-                    icon: ZetaIcons.close,
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Divider(height: 1, color: colors.borderSubtle),
-              const SizedBox(height: 16),
-              const Expanded(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+      insetPadding: NmtkDialogSurface.insetPadding(context),
+      child: SafeArea(
+        child: ConstrainedBox(
+          constraints: NmtkDialogSurface.constraints(
+            context,
+            maxWidth: 960,
+            maxHeight: 640,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 20, 20, 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
                   children: [
                     Expanded(
-                      flex: 4,
-                      child: SingleChildScrollView(
-                        child: PublishResultSummary(),
+                      child: Text(
+                        'Publish to NeuroHub',
+                        style: textStyles.titleLarge.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
-                    SizedBox(width: 24),
-                    Expanded(flex: 5, child: WorkspaceCanvasPreview()),
+                    const SizedBox(width: 16),
+                    NmtkOutlinedButton(
+                      label: 'Close',
+                      icon: ZetaIcons.close,
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 16),
-              Divider(height: 1, color: colors.borderSubtle),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  ZetaCheckbox(
-                    value: _public,
-                    label: 'Public',
-                    onChanged: _isPublishing
-                        ? null
-                        : (value) => setState(() => _public = value),
-                  ),
-                  const SizedBox(width: 16),
-                  NmtkPrimaryButton(
-                    label: _isPublishing ? 'Publishing…' : 'Publish',
-                    icon: ZetaIcons.cloud_upload,
-                    onPressed: _isPublishing ? null : _publish,
-                  ),
-                ],
-              ),
-            ],
+                const SizedBox(height: 16),
+                Divider(height: 1, color: colors.borderSubtle),
+                const SizedBox(height: 16),
+                Expanded(
+                  child: isCompact
+                      ? const SingleChildScrollView(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              PublishResultSummary(),
+                              SizedBox(height: 16),
+                              SizedBox(
+                                height: 420,
+                                child: WorkspaceCanvasPreview(),
+                              ),
+                            ],
+                          ),
+                        )
+                      : const Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Expanded(
+                              flex: 4,
+                              child: SingleChildScrollView(
+                                child: PublishResultSummary(),
+                              ),
+                            ),
+                            SizedBox(width: 24),
+                            Expanded(flex: 5, child: WorkspaceCanvasPreview()),
+                          ],
+                        ),
+                ),
+                const SizedBox(height: 16),
+                Divider(height: 1, color: colors.borderSubtle),
+                const SizedBox(height: 16),
+                Wrap(
+                  alignment: WrapAlignment.end,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 16,
+                  runSpacing: 8,
+                  children: [
+                    ZetaCheckbox(
+                      value: _public,
+                      label: 'Public',
+                      onChanged: _isPublishing
+                          ? null
+                          : (value) => setState(() => _public = value),
+                    ),
+                    NmtkPrimaryButton(
+                      label: _isPublishing ? 'Publishing…' : 'Publish',
+                      icon: ZetaIcons.cloud_upload,
+                      onPressed: _isPublishing ? null : _publish,
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),

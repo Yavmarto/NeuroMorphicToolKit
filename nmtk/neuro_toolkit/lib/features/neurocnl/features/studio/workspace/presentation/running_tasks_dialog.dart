@@ -17,52 +17,60 @@ class RunningTasksDialog extends ConsumerWidget {
     final colors = Zeta.of(context).colors;
 
     return AlertDialog(
+      insetPadding: NmtkDialogSurface.insetPadding(context),
       title: const Text('Notebook Tasks'),
-      content: SizedBox(
-        width: 360,
-        child: tasks.isEmpty
-            ? const Padding(
-                padding: EdgeInsets.symmetric(vertical: 16),
-                child: Text('Nothing running right now.'),
-              )
-            : Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  for (final task in tasks)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Row(
-                        children: [
-                          Icon(
-                            task.isExecuting ? ZetaIcons.play : ZetaIcons.note,
-                            size: 16,
-                            color: task.isExecuting
-                                ? NmtkShellTokens.of(context).runningColor
-                                : colors.mainSubtle,
+      content: ConstrainedBox(
+        constraints: NmtkDialogSurface.constraints(context, maxWidth: 360),
+        child: SizedBox(
+          width: 360,
+          child: SingleChildScrollView(
+            child: tasks.isEmpty
+                ? const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    child: Text('Nothing running right now.'),
+                  )
+                : Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      for (final task in tasks)
+                        Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: Row(
+                            children: [
+                              Icon(
+                                task.isExecuting
+                                    ? ZetaIcons.play
+                                    : ZetaIcons.note,
+                                size: 16,
+                                color: task.isExecuting
+                                    ? NmtkShellTokens.of(context).runningColor
+                                    : colors.mainSubtle,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  task.isExecuting
+                                      ? task.label
+                                      : '${task.label} (open, not running)',
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              Tooltip(
+                                message: 'Stop',
+                                child: ZetaIconButton.negative(
+                                  icon: ZetaIcons.stop,
+                                  size: ZetaWidgetSize.small,
+                                  semanticLabel: 'Stop',
+                                  onPressed: () => onCancel(task),
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              task.isExecuting
-                                  ? task.label
-                                  : '${task.label} (open, not running)',
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          Tooltip(
-                            message: 'Stop',
-                            child: ZetaIconButton.negative(
-                              icon: ZetaIcons.stop,
-                              size: ZetaWidgetSize.small,
-                              semanticLabel: 'Stop',
-                              onPressed: () => onCancel(task),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                ],
-              ),
+                        ),
+                    ],
+                  ),
+          ),
+        ),
       ),
       actions: [
         ZetaButton.text(

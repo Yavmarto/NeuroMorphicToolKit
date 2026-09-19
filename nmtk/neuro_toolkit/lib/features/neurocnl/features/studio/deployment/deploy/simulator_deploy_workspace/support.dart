@@ -15,11 +15,19 @@ void showSimulatorTargetSettings(BuildContext context, String backend) {
     context: context,
     builder: (dialogContext) => Dialog(
       shape: RoundedRectangleBorder(borderRadius: NmtkDesignTokens.dialogShape),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 420),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: SimulatorTargetSettingsDialogContent(backend: backend),
+      insetPadding: NmtkDialogSurface.insetPadding(dialogContext),
+      child: SafeArea(
+        child: ConstrainedBox(
+          constraints: NmtkDialogSurface.constraints(
+            dialogContext,
+            maxWidth: 420,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: SingleChildScrollView(
+              child: SimulatorTargetSettingsDialogContent(backend: backend),
+            ),
+          ),
         ),
       ),
     ),

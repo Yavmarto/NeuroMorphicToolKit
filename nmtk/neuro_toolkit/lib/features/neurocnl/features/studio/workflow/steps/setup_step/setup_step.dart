@@ -245,7 +245,11 @@ class SetupStepState extends ConsumerState<SetupStep> {
             leading: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(targetForId(id).icon, size: 18),
+                Icon(
+                  targetForId(id).icon,
+                  size: 18,
+                  color: Zeta.of(context).colors.mainDefault,
+                ),
                 const SizedBox(width: 4),
                 ReachabilityDot(key: Key('reachability-dot-$id'), targetId: id),
               ],
@@ -313,55 +317,62 @@ class SetupStepState extends ConsumerState<SetupStep> {
         builder: (builderContext, setDialogState) {
           final warningColor = Zeta.of(context).colors.mainWarning;
           return AlertDialog(
+            insetPadding: NmtkDialogSurface.insetPadding(context),
             title: const Text('Select targets'),
-            content: SizedBox(
-              width: 400,
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    for (final target in deployTargets)
-                      CheckboxListTile(
-                        dense: true,
-                        secondary: Icon(
-                          (availability[target.id] ?? true)
-                              ? target.icon
-                              : Icons
-                                    .download, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
-                          size: 18,
-                          color: (availability[target.id] ?? true)
-                              ? null
-                              : warningColor,
-                        ),
-                        title: Row(
-                          children: [
-                            Flexible(
-                              child: Text(
-                                target.label,
-                                overflow: TextOverflow.ellipsis,
+            content: ConstrainedBox(
+              constraints: NmtkDialogSurface.constraints(
+                context,
+                maxWidth: 400,
+              ),
+              child: SizedBox(
+                width: 400,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      for (final target in deployTargets)
+                        CheckboxListTile(
+                          dense: true,
+                          secondary: Icon(
+                            (availability[target.id] ?? true)
+                                ? target.icon
+                                : Icons
+                                      .download, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
+                            size: 18,
+                            color: (availability[target.id] ?? true)
+                                ? null
+                                : warningColor,
+                          ),
+                          title: Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  target.label,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 8),
-                            PlatformRoleBadge(targetId: target.id),
-                            const SizedBox(width: 4),
-                            NeurocnlInfoButton(
-                              title: target.label,
-                              message: platformRoleDescription(target.id),
-                            ),
-                          ],
+                              const SizedBox(width: 8),
+                              PlatformRoleBadge(targetId: target.id),
+                              const SizedBox(width: 4),
+                              NeurocnlInfoButton(
+                                title: target.label,
+                                message: platformRoleDescription(target.id),
+                              ),
+                            ],
+                          ),
+                          value: localSelected.contains(target.id),
+                          onChanged: (_) {
+                            setDialogState(() {
+                              if (localSelected.contains(target.id)) {
+                                localSelected.remove(target.id);
+                              } else {
+                                localSelected.add(target.id);
+                              }
+                            });
+                          },
                         ),
-                        value: localSelected.contains(target.id),
-                        onChanged: (_) {
-                          setDialogState(() {
-                            if (localSelected.contains(target.id)) {
-                              localSelected.remove(target.id);
-                            } else {
-                              localSelected.add(target.id);
-                            }
-                          });
-                        },
-                      ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -401,35 +412,44 @@ class SetupStepState extends ConsumerState<SetupStep> {
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
+        insetPadding: NmtkDialogSurface.insetPadding(ctx),
         title: const Text('Example datasets'),
-        content: SizedBox(
-          width: 640,
-          height: 500,
-          child: catalogAsync.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) =>
-                Center(child: Text('Could not load datasets: ${e.toString()}')),
-            data: (catalog) {
-              if (catalog.folders.isEmpty) {
-                return const Center(
-                  child: Text('No example datasets available.'),
+        content: ConstrainedBox(
+          constraints: NmtkDialogSurface.constraints(
+            ctx,
+            maxWidth: 640,
+            maxHeight: 500,
+          ),
+          child: SizedBox(
+            width: 640,
+            height: 500,
+            child: catalogAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(
+                child: Text('Could not load datasets: ${e.toString()}'),
+              ),
+              data: (catalog) {
+                if (catalog.folders.isEmpty) {
+                  return const Center(
+                    child: Text('No example datasets available.'),
+                  );
+                }
+                final selectedId = ref.read(workspaceProvider).selectedDataset;
+                return ListView(
+                  children: [
+                    for (final folder in catalog.folders)
+                      DatasetFolderSection(
+                        folder: folder,
+                        selectedDatasetId: selectedId,
+                        onFileTapped: (entry) {
+                          _onDatasetTapped(entry);
+                          Navigator.of(ctx).pop();
+                        },
+                      ),
+                  ],
                 );
-              }
-              final selectedId = ref.read(workspaceProvider).selectedDataset;
-              return ListView(
-                children: [
-                  for (final folder in catalog.folders)
-                    DatasetFolderSection(
-                      folder: folder,
-                      selectedDatasetId: selectedId,
-                      onFileTapped: (entry) {
-                        _onDatasetTapped(entry);
-                        Navigator.of(ctx).pop();
-                      },
-                    ),
-                ],
-              );
-            },
+              },
+            ),
           ),
         ),
         actions: [
@@ -496,7 +516,11 @@ class SetupStepState extends ConsumerState<SetupStep> {
                   color: zetaColors.mainDefault,
                 ),
                 title: const Text('Load Workspace'),
-                trailing: const Icon(ZetaIcons.chevron_right, size: 18),
+                trailing: Icon(
+                  ZetaIcons.chevron_right,
+                  size: 18,
+                  color: zetaColors.mainSubtle,
+                ),
                 onTap: loadWorkspaceFromDevice,
               ),
               ZetaListItem(
@@ -506,7 +530,11 @@ class SetupStepState extends ConsumerState<SetupStep> {
                   color: zetaColors.mainDefault,
                 ),
                 title: const Text('Load from Hub'),
-                trailing: const Icon(ZetaIcons.chevron_right, size: 18),
+                trailing: Icon(
+                  ZetaIcons.chevron_right,
+                  size: 18,
+                  color: zetaColors.mainSubtle,
+                ),
                 onTap: openWorkspaceFromHub,
               ),
               ZetaListItem(
@@ -516,7 +544,11 @@ class SetupStepState extends ConsumerState<SetupStep> {
                   color: zetaColors.mainDefault,
                 ),
                 title: const Text('Load from server'),
-                trailing: const Icon(ZetaIcons.chevron_right, size: 18),
+                trailing: Icon(
+                  ZetaIcons.chevron_right,
+                  size: 18,
+                  color: zetaColors.mainSubtle,
+                ),
                 onTap: openWorkspaceFromServer,
               ),
               Padding(
@@ -545,7 +577,11 @@ class SetupStepState extends ConsumerState<SetupStep> {
                       ),
                     ),
                     const SizedBox(width: 4),
-                    const Icon(ZetaIcons.chevron_right, size: 18),
+                    Icon(
+                      ZetaIcons.chevron_right,
+                      size: 18,
+                      color: zetaColors.mainSubtle,
+                    ),
                   ],
                 ),
                 onTap: () => _showMobileBenchmarkSheet(context),
@@ -565,7 +601,11 @@ class SetupStepState extends ConsumerState<SetupStep> {
                       ),
                     ),
                     const SizedBox(width: 4),
-                    const Icon(ZetaIcons.chevron_right, size: 18),
+                    Icon(
+                      ZetaIcons.chevron_right,
+                      size: 18,
+                      color: zetaColors.mainSubtle,
+                    ),
                   ],
                 ),
                 onTap: () => _showMobileFrameworksSheet(context),
@@ -598,7 +638,11 @@ class SetupStepState extends ConsumerState<SetupStep> {
                 ),
                 primaryText: 'Download dataset',
                 secondaryText: datasetSubtitle,
-                trailing: const Icon(ZetaIcons.chevron_right, size: 18),
+                trailing: Icon(
+                  ZetaIcons.chevron_right,
+                  size: 18,
+                  color: zetaColors.mainSubtle,
+                ),
                 onTap: () => _showMobileDatasetSheet(context, catalogAsync),
               ),
               ZetaListItem(
@@ -1159,10 +1203,7 @@ class SetupStepState extends ConsumerState<SetupStep> {
           'restored.',
         );
       } else {
-        NmtkSnackBars.success(
-          context,
-          'Opened ${choice.name} from server.',
-        );
+        NmtkSnackBars.success(context, 'Opened ${choice.name} from server.');
       }
     } catch (error) {
       if (!mounted) return;

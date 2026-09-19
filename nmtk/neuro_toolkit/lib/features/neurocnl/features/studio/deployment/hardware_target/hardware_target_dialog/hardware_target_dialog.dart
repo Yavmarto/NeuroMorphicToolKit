@@ -168,172 +168,179 @@ class _HardwareTargetDialogState extends State<HardwareTargetDialog> {
   @override
   Widget build(BuildContext context) {
     final showForm = _activeFormEntry != null;
-    return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: NmtkDesignTokens.dialogShape),
-      backgroundColor: AppTheme.surface,
-      title: Text(
-        showForm
-            ? (_activeFormEntry!.id.isEmpty
-                  ? 'Add ${targetLabel(widget.data.targetType)} target'
-                  : 'Edit ${targetLabel(widget.data.targetType)} target')
-            : 'Manage ${targetLabel(widget.data.targetType)} targets',
-      ),
-      content: SizedBox(
-        width: 560,
-        child: showForm
-            ? AddHardwareTargetForm(
-                targetType: widget.data.targetType,
-                initialEntry: _activeFormEntry,
-                errorMessage: _saveErrorMessage,
-                statusMessage: _statusMessage,
-                isSaving: _isSaving,
-                onCancel: () => setState(() {
-                  _activeFormEntry = null;
-                  _saveErrorMessage = null;
-                  _statusMessage = null;
-                }),
-                onSave: (form) {
-                  // Resolved before the first await so the closure never reaches
-                  // for `context` across an async gap.
-                  final navigator = Navigator.of(context);
-                  return _runBusy(() async {
-                    final result = await widget.onSaveTarget(form);
-                    await _reloadEntries();
-                    if (!mounted) return;
-                    if (result.selected) {
-                      navigator.pop();
-                      return;
-                    }
-                    setState(() {
-                      _activeFormEntry = result.entry;
-                      _statusMessage =
-                          'Saved. It could not be made the active target — it '
-                          'is stored and can be selected from this list.';
-                    });
-                  });
-                },
-                onSaveAndTest: widget.onTestTarget == null
-                    ? null
-                    : (form) => _runBusy(() async {
-                        // Save first: the connectivity-test route is keyed by
-                        // host id, which a host being created does not have yet.
+    return SafeArea(
+      child: AlertDialog(
+        insetPadding: NmtkDialogSurface.insetPadding(context),
+        shape: RoundedRectangleBorder(
+          borderRadius: NmtkDesignTokens.dialogShape,
+        ),
+        backgroundColor: AppTheme.surface,
+        title: Text(
+          showForm
+              ? (_activeFormEntry!.id.isEmpty
+                    ? 'Add ${targetLabel(widget.data.targetType)} target'
+                    : 'Edit ${targetLabel(widget.data.targetType)} target')
+              : 'Manage ${targetLabel(widget.data.targetType)} targets',
+        ),
+        content: ConstrainedBox(
+          constraints: NmtkDialogSurface.constraints(context, maxWidth: 560),
+          child: SizedBox(
+            width: 560,
+            child: showForm
+                ? AddHardwareTargetForm(
+                    targetType: widget.data.targetType,
+                    initialEntry: _activeFormEntry,
+                    errorMessage: _saveErrorMessage,
+                    statusMessage: _statusMessage,
+                    isSaving: _isSaving,
+                    onCancel: () => setState(() {
+                      _activeFormEntry = null;
+                      _saveErrorMessage = null;
+                      _statusMessage = null;
+                    }),
+                    onSave: (form) {
+                      // Resolved before the first await so the closure never reaches
+                      // for `context` across an async gap.
+                      final navigator = Navigator.of(context);
+                      return _runBusy(() async {
                         final result = await widget.onSaveTarget(form);
                         await _reloadEntries();
-                        final verdict = await widget.onTestTarget!(
-                          result.entry.id,
-                        );
                         if (!mounted) return;
+                        if (result.selected) {
+                          navigator.pop();
+                          return;
+                        }
                         setState(() {
                           _activeFormEntry = result.entry;
-                          _statusMessage = verdict;
+                          _statusMessage =
+                              'Saved. It could not be made the active target — it '
+                              'is stored and can be selected from this list.';
                         });
-                      }),
-              )
-            : Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (widget.data.loadErrorMessage != null) ...[
-                    NmtkStatusBanner(
-                      title: widget.data.loadErrorMessage!,
-                      tone: NmtkTone.warning,
-                      icon: ZetaIcons.warning_outline,
-                    ),
-                    const SizedBox(height: 12),
-                  ],
-                  Text(
-                    'Saved targets',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      color: AppTheme.textPrimary,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  if (_currentEntries.isEmpty)
-                    Text(
-                      'No saved ${targetLabel(widget.data.targetType).toLowerCase()} devices yet.',
-                      style: Zeta.of(context).textStyles.bodySmall.copyWith(
-                        color: AppTheme.textSecondary,
-                        fontSize: 13,
-                      ),
-                    )
-                  else
-                    Flexible(
-                      child: SingleChildScrollView(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            for (final entry in _currentEntries) ...[
-                              DialogTargetTile(
-                                entry: entry,
-                                selected: entry.id == widget.selectedEntryId,
-                                testing: _testingEntryId == entry.id,
-                                onTap: () => widget.onSelectTarget(entry),
-                                onEdit: () => setState(() {
-                                  _activeFormEntry = entry;
-                                  _saveErrorMessage = null;
-                                  _statusMessage = null;
-                                }),
-                                onTest: widget.onTestTarget == null
-                                    ? null
-                                    : () => _testEntry(entry.id),
-                              ),
-                              const SizedBox(height: 8),
-                            ],
-                          ],
+                      });
+                    },
+                    onSaveAndTest: widget.onTestTarget == null
+                        ? null
+                        : (form) => _runBusy(() async {
+                            // Save first: the connectivity-test route is keyed by
+                            // host id, which a host being created does not have yet.
+                            final result = await widget.onSaveTarget(form);
+                            await _reloadEntries();
+                            final verdict = await widget.onTestTarget!(
+                              result.entry.id,
+                            );
+                            if (!mounted) return;
+                            setState(() {
+                              _activeFormEntry = result.entry;
+                              _statusMessage = verdict;
+                            });
+                          }),
+                  )
+                : Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (widget.data.loadErrorMessage != null) ...[
+                        NmtkStatusBanner(
+                          title: widget.data.loadErrorMessage!,
+                          tone: NmtkTone.warning,
+                          icon: ZetaIcons.warning_outline,
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+                      Text(
+                        'Saved targets',
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          color: AppTheme.textPrimary,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
-                    ),
-                  if (_statusMessage != null) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      _statusMessage!,
-                      key: const Key('hardware-target-list-status'),
-                      style: Zeta.of(context).textStyles.bodyXSmall.copyWith(
-                        color: AppTheme.textSecondary,
-                      ),
-                    ),
-                  ],
-                  if (_saveErrorMessage != null) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      _saveErrorMessage!,
-                      style: Zeta.of(
-                        context,
-                      ).textStyles.bodyXSmall.copyWith(color: AppTheme.error),
-                    ),
-                  ],
-                ],
-              ),
+                      const SizedBox(height: 12),
+                      if (_currentEntries.isEmpty)
+                        Text(
+                          'No saved ${targetLabel(widget.data.targetType).toLowerCase()} devices yet.',
+                          style: Zeta.of(context).textStyles.bodySmall.copyWith(
+                            color: AppTheme.textSecondary,
+                            fontSize: 13,
+                          ),
+                        )
+                      else
+                        Flexible(
+                          child: SingleChildScrollView(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                for (final entry in _currentEntries) ...[
+                                  DialogTargetTile(
+                                    entry: entry,
+                                    selected:
+                                        entry.id == widget.selectedEntryId,
+                                    testing: _testingEntryId == entry.id,
+                                    onTap: () => widget.onSelectTarget(entry),
+                                    onEdit: () => setState(() {
+                                      _activeFormEntry = entry;
+                                      _saveErrorMessage = null;
+                                      _statusMessage = null;
+                                    }),
+                                    onTest: widget.onTestTarget == null
+                                        ? null
+                                        : () => _testEntry(entry.id),
+                                  ),
+                                  const SizedBox(height: 8),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+                      if (_statusMessage != null) ...[
+                        const SizedBox(height: 12),
+                        Text(
+                          _statusMessage!,
+                          key: const Key('hardware-target-list-status'),
+                          style: Zeta.of(context).textStyles.bodyXSmall
+                              .copyWith(color: AppTheme.textSecondary),
+                        ),
+                      ],
+                      if (_saveErrorMessage != null) ...[
+                        const SizedBox(height: 12),
+                        Text(
+                          _saveErrorMessage!,
+                          style: Zeta.of(context).textStyles.bodyXSmall
+                              .copyWith(color: AppTheme.error),
+                        ),
+                      ],
+                    ],
+                  ),
+          ),
+        ),
+        actions: [
+          if (!showForm && widget.onScanHardware != null)
+            ZetaButton.text(
+              key: const Key('hardware-scan-button'),
+              onPressed: _scanningHardware
+                  ? null
+                  : () => unawaited(_scanHardware()),
+              label: _scanningHardware
+                  ? 'Scanning for hardware…'
+                  : 'Scan for hardware',
+            ),
+          if (!showForm)
+            ZetaButton.text(
+              onPressed: () => setState(() {
+                _activeFormEntry = SavedHardwareTargetEntry(
+                  id: '',
+                  title: '',
+                  targetType: widget.data.targetType,
+                );
+              }),
+              label: 'Add new target',
+            ),
+          if (!showForm)
+            ZetaButton.text(
+              onPressed: () => Navigator.of(context).pop(),
+              label: 'Close',
+            ),
+        ],
       ),
-      actions: [
-        if (!showForm && widget.onScanHardware != null)
-          ZetaButton.text(
-            key: const Key('hardware-scan-button'),
-            onPressed: _scanningHardware
-                ? null
-                : () => unawaited(_scanHardware()),
-            label: _scanningHardware
-                ? 'Scanning for hardware…'
-                : 'Scan for hardware',
-          ),
-        if (!showForm)
-          ZetaButton.text(
-            onPressed: () => setState(() {
-              _activeFormEntry = SavedHardwareTargetEntry(
-                id: '',
-                title: '',
-                targetType: widget.data.targetType,
-              );
-            }),
-            label: 'Add new target',
-          ),
-        if (!showForm)
-          ZetaButton.text(
-            onPressed: () => Navigator.of(context).pop(),
-            label: 'Close',
-          ),
-      ],
     );
   }
 }

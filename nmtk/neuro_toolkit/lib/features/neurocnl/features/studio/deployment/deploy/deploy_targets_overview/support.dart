@@ -46,66 +46,72 @@ void showHardwareTargetDialog(
   showDialog<void>(
     context: context,
     builder: (dialogContext) => Dialog(
-      insetPadding: const EdgeInsets.all(24),
+      insetPadding: NmtkDialogSurface.insetPadding(dialogContext),
       shape: RoundedRectangleBorder(borderRadius: NmtkDesignTokens.dialogShape),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 1100, maxHeight: 780),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 14, 8, 0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      targetLabel(targetId),
-                      style: Zeta.of(dialogContext).textStyles.titleMedium
-                          .copyWith(fontWeight: FontWeight.w700),
+      child: SafeArea(
+        child: ConstrainedBox(
+          constraints: NmtkDialogSurface.constraints(
+            dialogContext,
+            maxWidth: 1100,
+            maxHeight: 780,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 14, 8, 0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        targetLabel(targetId),
+                        style: Zeta.of(dialogContext).textStyles.titleMedium
+                            .copyWith(fontWeight: FontWeight.w700),
+                      ),
                     ),
-                  ),
-                  Tooltip(
-                    message: 'Close',
-                    child: ZetaIconButton.text(
-                      icon: ZetaIcons.close,
-                      semanticLabel: 'Close',
-                      onPressed: () => Navigator.of(dialogContext).pop(),
+                    Tooltip(
+                      message: 'Close',
+                      child: ZetaIconButton.text(
+                        icon: ZetaIcons.close,
+                        semanticLabel: 'Close',
+                        onPressed: () => Navigator.of(dialogContext).pop(),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            const Divider(height: 1),
-            Flexible(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: switch (targetId) {
-                  'akida' => StudioAkidaWorkspace(
-                    selectedDeviceLabel: deviceLabel,
-                    selectedDeviceData: deviceData,
-                    isCompact: false,
-                    onManageHardwareTarget: onManageHardwareTarget,
-                  ),
-                  'pynq' => StudioPynqWorkspace(
-                    selectedDeviceLabel: deviceLabel,
-                    selectedDeviceData: deviceData,
-                    isCompact: false,
-                    onManageHardwareTarget: onManageHardwareTarget,
-                  ),
-                  'lava' => const StudioLavaWorkspace(isCompact: false),
-                  'sc_neurocore_fpga' => StudioScNeuroCoreFpgaWorkspace(
-                    selectedDeviceLabel: deviceLabel,
-                    selectedDeviceData: deviceData,
-                  ),
-                  'voyager_axelera' => StudioVoyagerWorkspace(
-                    isCompact: false,
-                  ),
-                  _ => const SizedBox.shrink(),
-                },
+              const Divider(height: 1),
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  child: switch (targetId) {
+                    'akida' => StudioAkidaWorkspace(
+                      selectedDeviceLabel: deviceLabel,
+                      selectedDeviceData: deviceData,
+                      isCompact: false,
+                      onManageHardwareTarget: onManageHardwareTarget,
+                    ),
+                    'pynq' => StudioPynqWorkspace(
+                      selectedDeviceLabel: deviceLabel,
+                      selectedDeviceData: deviceData,
+                      isCompact: false,
+                      onManageHardwareTarget: onManageHardwareTarget,
+                    ),
+                    'lava' => const StudioLavaWorkspace(isCompact: false),
+                    'sc_neurocore_fpga' => StudioScNeuroCoreFpgaWorkspace(
+                      selectedDeviceLabel: deviceLabel,
+                      selectedDeviceData: deviceData,
+                    ),
+                    'voyager_axelera' => const StudioVoyagerWorkspace(
+                      isCompact: false,
+                    ),
+                    _ => const SizedBox.shrink(),
+                  },
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     ),
@@ -119,47 +125,53 @@ void showLiveSourceDialog(BuildContext context, String targetId) {
   showDialog<void>(
     context: context,
     builder: (dialogContext) => Dialog(
-      insetPadding: const EdgeInsets.all(24),
+      insetPadding: NmtkDialogSurface.insetPadding(dialogContext),
       shape: RoundedRectangleBorder(borderRadius: NmtkDesignTokens.dialogShape),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 1100, maxHeight: 780),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 14, 8, 0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      sensorSourceForId(targetId)?.label ?? targetId,
-                      style: Zeta.of(dialogContext).textStyles.titleMedium
-                          .copyWith(fontWeight: FontWeight.w700),
+      child: SafeArea(
+        child: ConstrainedBox(
+          constraints: NmtkDialogSurface.constraints(
+            dialogContext,
+            maxWidth: 1100,
+            maxHeight: 780,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 14, 8, 0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        sensorSourceForId(targetId)?.label ?? targetId,
+                        style: Zeta.of(dialogContext).textStyles.titleMedium
+                            .copyWith(fontWeight: FontWeight.w700),
+                      ),
                     ),
-                  ),
-                  Tooltip(
-                    message: 'Close',
-                    child: ZetaIconButton.text(
-                      icon: ZetaIcons.close,
-                      semanticLabel: 'Close',
-                      onPressed: () => Navigator.of(dialogContext).pop(),
+                    Tooltip(
+                      message: 'Close',
+                      child: ZetaIconButton.text(
+                        icon: ZetaIcons.close,
+                        semanticLabel: 'Close',
+                        onPressed: () => Navigator.of(dialogContext).pop(),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            const Divider(height: 1),
-            Flexible(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: switch (targetId) {
-                  'neurosense' => const StudioNeuroSenseWorkspace(),
-                  _ => const SizedBox.shrink(),
-                },
+              const Divider(height: 1),
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  child: switch (targetId) {
+                    'neurosense' => const StudioNeuroSenseWorkspace(),
+                    _ => const SizedBox.shrink(),
+                  },
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     ),
@@ -172,47 +184,53 @@ void showCodegenTargetDialog(BuildContext context, String targetId) {
   showDialog<void>(
     context: context,
     builder: (dialogContext) => Dialog(
-      insetPadding: const EdgeInsets.all(24),
+      insetPadding: NmtkDialogSurface.insetPadding(dialogContext),
       shape: RoundedRectangleBorder(borderRadius: NmtkDesignTokens.dialogShape),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 1100, maxHeight: 780),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 14, 8, 0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      '${targetLabel(targetId)} code',
-                      style: Zeta.of(dialogContext).textStyles.titleMedium
-                          .copyWith(fontWeight: FontWeight.w700),
+      child: SafeArea(
+        child: ConstrainedBox(
+          constraints: NmtkDialogSurface.constraints(
+            dialogContext,
+            maxWidth: 1100,
+            maxHeight: 780,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 14, 8, 0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '${targetLabel(targetId)} code',
+                        style: Zeta.of(dialogContext).textStyles.titleMedium
+                            .copyWith(fontWeight: FontWeight.w700),
+                      ),
                     ),
-                  ),
-                  Tooltip(
-                    message: 'Close',
-                    child: ZetaIconButton.text(
-                      icon: ZetaIcons.close,
-                      semanticLabel: 'Close',
-                      onPressed: () => Navigator.of(dialogContext).pop(),
+                    Tooltip(
+                      message: 'Close',
+                      child: ZetaIconButton.text(
+                        icon: ZetaIcons.close,
+                        semanticLabel: 'Close',
+                        onPressed: () => Navigator.of(dialogContext).pop(),
+                      ),
                     ),
-                  ),
-                ],
-              ),
-            ),
-            const Divider(height: 1),
-            Flexible(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: CodegenPreviewPanel(
-                  key: ValueKey('codegen-$targetId'),
-                  target: targetId,
+                  ],
                 ),
               ),
-            ),
-          ],
+              const Divider(height: 1),
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  child: CodegenPreviewPanel(
+                    key: ValueKey('codegen-$targetId'),
+                    target: targetId,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     ),
