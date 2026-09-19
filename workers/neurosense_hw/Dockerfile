@@ -8,7 +8,8 @@ WORKDIR /repo
 # Pre-install Neurosense deps before copying source — brainflow, scipy and h5py
 # have large wheels; cached here, they only re-run when requirements change.
 COPY docker/neurosense-pip-requirements.txt /tmp/neurosense-pip-requirements.txt
-RUN pip install --no-cache-dir -r /tmp/neurosense-pip-requirements.txt
+RUN pip install --no-cache-dir -r /tmp/neurosense-pip-requirements.txt \
+ && pip install --no-cache-dir prometheus-client
 
 # Neurosense depends on nmtk-contracts @ file:../nmtk_contracts — a relative
 # `file:` URL is invalid per PEP 508 and pip rejects it outright, so install
@@ -19,6 +20,9 @@ RUN pip install --no-cache-dir /repo/nmtk_contracts
 # WORKDIR is /repo so __file__ = /repo/workers/neurosense_hw/main.py
 # and Path(__file__).parents[2] == /repo  ← required by main.py sys.path logic
 COPY workers/neurosense_hw/ workers/neurosense_hw/
+COPY nmtk/__init__.py nmtk/__init__.py
+COPY nmtk/metrics_core.py nmtk/metrics_core.py
+COPY nmtk/http_metrics.py nmtk/http_metrics.py
 COPY Neurosense/ /repo/Neurosense/
 RUN pip install --no-cache-dir --no-build-isolation --no-deps /repo/Neurosense
 

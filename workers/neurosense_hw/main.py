@@ -26,6 +26,8 @@ if str(_NEUROSENSE_PATH) not in sys.path:
 
 from neurosense.app.routers import devices, export, recording, sessions, stream
 
+from nmtk.http_metrics import attach_fastapi_metrics
+
 logger = logging.getLogger("neurosense_hw_worker")
 
 app = FastAPI(
@@ -33,6 +35,7 @@ app = FastAPI(
     version="0.1.0",
     description="Hardware I/O worker — BrainFlow, Prophesee, PYNQ. Profile: hardware.",
 )
+attach_fastapi_metrics(app)
 
 # Core hardware routers
 app.include_router(devices.router, prefix="/api/neurosense/devices")
