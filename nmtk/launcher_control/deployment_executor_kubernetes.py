@@ -56,7 +56,7 @@ class KubernetesDeploymentExecutor(DeploymentExecutor):
         manifests = render_manifests(
             target,
             app_name="nmtk-suite-api",
-            image="ghcr.io/completed-spoon-6/neurocnl",
+            image="ghcr.io/yavmarto/neurocnl",
             health_path="/api/suite/health",
             container_port=9000,
             replicas=1,

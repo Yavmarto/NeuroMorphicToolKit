@@ -23,6 +23,9 @@ RUN pip install --no-cache-dir \
 # WORKDIR is /repo so __file__ = /repo/workers/neurocnl_physics/main.py
 # and Path(__file__).parents[2] == /repo  ← required by main.py sys.path logic
 WORKDIR /repo
+COPY nmtk/__init__.py nmtk/__init__.py
+COPY nmtk/metrics_core.py nmtk/metrics_core.py
+COPY nmtk/http_metrics.py nmtk/http_metrics.py
 COPY workers/neurocnl_physics/ workers/neurocnl_physics/
 COPY neurocnl/ /repo/neurocnl/
 RUN pip install --no-cache-dir --no-deps /repo/neurocnl

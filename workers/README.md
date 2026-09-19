@@ -14,6 +14,8 @@ Isolated processes for hardware I/O and long-running compute. Everything not lis
 
 `neurosense-hw-worker` is the only profile-gated service, in both `docker-compose.yml` and `docker-compose.prod.yml`. Every other worker starts on a plain `docker compose up`, including the hardware workers whose hardware is usually absent — they come up and report unavailable rather than being skipped.
 
+The hw worker image is built on Prophesee's `prophesee/metavision` Ubuntu base so Metavision SDK imports succeed (amd64 only; proprietary EULA — see `THIRD_PARTY_NOTICES.md`).
+
 Proxied routes return HTTP 503 while their worker is not running. See the [root README](../README.md#architecture) for how the workers sit relative to `suite_api`.
 
 ## Notes on individual workers

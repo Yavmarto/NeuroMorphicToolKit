@@ -44,4 +44,4 @@ c.Application.log_level = "INFO"
 # Server extension exposing /nmtk-envs/api/* for cloning the immutable
 # NeuroStudio kernel into customisable environments. See workers/jupyter_server/
 # nmtk_env_manager/.
-c.ServerApp.jpserver_extensions = {"nmtk_env_manager": True}
+c.ServerApp.jpserver_extensions = {"nmtk_env_manager": True, "nmtk_metrics": True}

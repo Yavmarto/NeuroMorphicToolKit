@@ -33,7 +33,10 @@ from .manager import EnvironmentError_, EnvironmentManager
 # activity at all for this many seconds — trips it.
 # Must stay >= kernel_runner.py's _WORKER_EXECUTION_TIMEOUT_SECONDS (the outer
 # per-job stall budget), which resets on the same "new output" signal.
-_CELL_EXECUTION_TIMEOUT_SECONDS = 30 * 60
+# ponytail: N-MNIST full-epoch CPU runs can exceed 30 min before the first
+# _nmtk_emit; 3 h covers one epoch with headroom. Upgrade path: batch heartbeats
+# in notebook_dag_lowering (see notebook codegen).
+_CELL_EXECUTION_TIMEOUT_SECONDS = 3 * 60 * 60
 _CELL_POLL_INTERVAL_SECONDS = 1
 
 

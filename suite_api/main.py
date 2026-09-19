@@ -25,6 +25,7 @@ from suite_api.domains.neurohub.router import router as neurohub_router
 from suite_api.domains.neurosense.router import router as neurosense_router
 from suite_api.domains.neurosim.router import router as neurosim_router
 from suite_api.errors import error_response
+from nmtk.http_metrics import attach_fastapi_metrics
 from suite_api.middleware import attach_middleware
 from suite_api.routers import health
 from suite_api.routers.studio_agent import router as studio_agent_router
@@ -47,6 +48,7 @@ app = FastAPI(
 )
 
 attach_middleware(app)
+attach_fastapi_metrics(app)
 
 _logger = logging.getLogger("suite_api")
 

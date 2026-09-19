@@ -24,7 +24,7 @@ class TestLauncherDeploymentK8s(LauncherControlServiceTestBase):
         manifests = render_manifests(
             target,
             app_name="nmtk-suite-api",
-            image="ghcr.io/completed-spoon-6/neurocnl",
+            image="ghcr.io/yavmarto/neurocnl",
             env={"LOG_LEVEL": "info"},
             secret_env={"API_KEY": "secret-value"},
         )
@@ -43,7 +43,7 @@ class TestLauncherDeploymentK8s(LauncherControlServiceTestBase):
         self.assertIn("LOG_LEVEL: info", manifests["01-configmap.yaml"])
         self.assertIn("API_KEY: secret-value", manifests["02-secret.yaml"])
         self.assertIn(
-            "image: ghcr.io/completed-spoon-6/neurocnl:v1.2.3",
+            "image: ghcr.io/yavmarto/neurocnl:v1.2.3",
             manifests["03-deployment.yaml"],
         )
         self.assertIn("imagePullPolicy: IfNotPresent", manifests["03-deployment.yaml"])

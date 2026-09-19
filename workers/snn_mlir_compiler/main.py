@@ -25,6 +25,8 @@ from pydantic import BaseModel
 
 from workers.snn_mlir_compiler.codegen import emit_c_artifacts
 
+from nmtk.http_metrics import attach_fastapi_metrics
+
 logger = logging.getLogger("snn_mlir_compiler_worker")
 
 SNN_OPT_PATH = os.environ.get("NMTK_SNN_OPT_PATH", "/usr/local/bin/snn-opt")
@@ -34,6 +36,7 @@ app = FastAPI(
     version="0.1.0",
     description="Lowers .nir graphs to bare-metal C via snn-opt. Feedforward, fully-connected networks only.",
 )
+attach_fastapi_metrics(app)
 
 
 @app.get("/health")

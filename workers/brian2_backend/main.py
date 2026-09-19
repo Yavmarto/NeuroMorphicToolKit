@@ -4,10 +4,34 @@ from __future__ import annotations
 
 import importlib.util
 import logging
+from pathlib import Path
 
 from fastapi import APIRouter, Body, FastAPI, HTTPException
 
-from neurocnl.converter.brian2_runtime import Brian2Backend, Brian2BackendError
+
+def _load_brian2_runtime() -> object:
+    # ponytail: file import avoids neurocnl/__init__.py, which pulls nengo and other
+    # training-stack deps this worker image deliberately omits (--no-deps install).
+    runtime_path = (
+        Path(__file__).resolve().parents[2]
+        / "neurocnl"
+        / "neurocnl"
+        / "converter"
+        / "brian2_runtime.py"
+    )
+    spec = importlib.util.spec_from_file_location("_brian2_runtime_isolated", runtime_path)
+    if spec is None or spec.loader is None or not runtime_path.is_file():
+        raise ImportError(f"Brian2 runtime module missing at {runtime_path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+_runtime = _load_brian2_runtime()
+Brian2Backend = _runtime.Brian2Backend
+Brian2BackendError = _runtime.Brian2BackendError
+
+from nmtk.http_metrics import attach_fastapi_metrics  # noqa: E402
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/neurocnl/brian2", tags=["brian2"])
@@ -18,6 +42,7 @@ app = FastAPI(
     version="0.1.0",
     description="Isolated Brian2 simulator worker for NeuroCNL runtime requests.",
 )
+attach_fastapi_metrics(app)
 app.include_router(router)
 
 

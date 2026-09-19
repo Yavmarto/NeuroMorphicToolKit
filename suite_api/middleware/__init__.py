@@ -199,7 +199,8 @@ def attach_middleware(app: FastAPI) -> None:
         request: Request, call_next: RequestResponseEndpoint
     ) -> Response:
         protected = (
-            request.url.path != "/api/suite/health" and request.method != "OPTIONS"
+            request.url.path not in {"/api/suite/health", "/metrics"}
+            and request.method != "OPTIONS"
         )
         required = os.getenv("NMTK_AUTH_REQUIRED", "").strip().lower() in {
             "1",

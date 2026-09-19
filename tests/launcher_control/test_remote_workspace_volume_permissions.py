@@ -86,7 +86,12 @@ def test_remote_public_ports_are_loopback_only_and_authenticated() -> None:
         "127.0.0.1:${JUPYTER_PORT:-8008}:8008",
     ):
         assert binding in remote_override
-    assert remote_override.count("NMTK_AUTH_REQUIRED=1") == 2
+    # Authenticated by default; a dev host may opt out with
+    # NMTK_AUTH_REQUIRED=0 in the deployment .env, but the default must stay
+    # on. Both services must set it, so neither can answer unauthenticated.
+    assert (
+        remote_override.count("NMTK_AUTH_REQUIRED=${NMTK_AUTH_REQUIRED:-1}") == 2
+    )
     # Both services must end up with a token file they can actually read, or
     # they answer 401 to every request and the app reads them as broken.
     #

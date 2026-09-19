@@ -31,6 +31,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from neurochip.app.routers import lava
 
+from nmtk.http_metrics import attach_fastapi_metrics
+
 logger = logging.getLogger(__name__)
 
 
@@ -87,6 +89,7 @@ app = FastAPI(
     description="Isolated Lava simulator worker for Neurochip runtime requests.",
     lifespan=lifespan,
 )
+attach_fastapi_metrics(app)
 app.include_router(lava.router)
 
 

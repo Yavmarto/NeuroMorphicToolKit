@@ -20,6 +20,8 @@ from typing import Any
 
 from fastapi import FastAPI
 
+from nmtk.http_metrics import attach_fastapi_metrics
+
 logger = logging.getLogger("neurochip_hw_worker")
 
 app = FastAPI(
@@ -27,6 +29,7 @@ app = FastAPI(
     version="0.1.0",
     description="Hardware deployment worker — Akida, Lava, Speck, PYNQ, serial flash. Profile: hardware.",
 )
+attach_fastapi_metrics(app)
 
 # Mount hardware routers — each guarded for machines without the SDK
 for _name, _module, _prefix in [

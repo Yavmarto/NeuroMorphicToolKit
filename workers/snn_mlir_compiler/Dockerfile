@@ -51,11 +51,15 @@ RUN pip install --no-cache-dir \
     "fastapi>=0.109.0" \
     "uvicorn[standard]>=0.27.0" \
     "pydantic>=2.5.0" \
-    "snn-mlir"
+    "snn-mlir" \
+    "prometheus-client>=0.19.0"
 
 COPY --from=llvm-builder /build/snn-mlir/build/bin/snn-opt /usr/local/bin/snn-opt
 
 WORKDIR /repo
+COPY nmtk/__init__.py nmtk/__init__.py
+COPY nmtk/metrics_core.py nmtk/metrics_core.py
+COPY nmtk/http_metrics.py nmtk/http_metrics.py
 COPY workers/snn_mlir_compiler/ workers/snn_mlir_compiler/
 ENV NMTK_SNN_OPT_PATH=/usr/local/bin/snn-opt
 

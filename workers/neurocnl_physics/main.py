@@ -24,6 +24,8 @@ _BACKEND_PATH = Path(__file__).parents[2] / "neurocnl"
 if str(_BACKEND_PATH) not in sys.path:
     sys.path.insert(0, str(_BACKEND_PATH))
 
+from nmtk.http_metrics import attach_fastapi_metrics  # noqa: E402
+
 logger = logging.getLogger("neurocnl_physics_worker")
 
 
@@ -45,6 +47,7 @@ app = FastAPI(
     description="MuJoCo physics co-simulation worker. Profile: physics.",
     lifespan=lifespan,
 )
+attach_fastapi_metrics(app)
 
 # Mount the prosthetic simulate router (the only one that needs MuJoCo)
 try:

@@ -7,6 +7,7 @@ import json
 import logging
 import os
 import threading
+import time
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
@@ -22,6 +23,7 @@ from .http_transport import (
 )
 from .launcher_auth import CredentialStoreError, InvalidCredentialsError
 from .runtime_errors import RuntimeRequestError
+from nmtk.metrics_core import metrics_body, metrics_content_type, record_http_request
 
 LOGGER = logging.getLogger(__name__)
 
@@ -56,11 +58,14 @@ class LauncherControlHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         path = parsed.path.rstrip("/") or "/"
         query = parse_qs(parsed.query)
+        started = time.perf_counter()
+        self._metrics_status = 500
         try:
             if (
                 path
                 not in {
                     "/health",
+                    "/metrics",
                     "/api/launcher/auth/login",
                     "/api/launcher/auth/introspect",
                 }
@@ -80,6 +85,16 @@ class LauncherControlHandler(BaseHTTPRequestHandler):
                         "status": "ok",
                     },
                 )
+                return
+
+            if method == "GET" and path == "/metrics":
+                payload = metrics_body()
+                self.send_response(HTTPStatus.OK)
+                self.send_header("Content-Type", metrics_content_type())
+                self.send_header("Content-Length", str(len(payload)))
+                self.end_headers()
+                self.wfile.write(payload)
+                self._metrics_status = HTTPStatus.OK
                 return
 
             if method == "GET" and path == "/api/launcher/modules":
@@ -780,6 +795,13 @@ class LauncherControlHandler(BaseHTTPRequestHandler):
                 code="internal_error",
                 message="An internal launcher error occurred.",
             )
+        finally:
+            record_http_request(
+                method=method,
+                endpoint=path,
+                status_code=int(getattr(self, "_metrics_status", 500)),
+                latency_seconds=time.perf_counter() - started,
+            )
 
     def _read_body(self) -> dict[str, Any] | None:
         return read_json_body(self)
@@ -810,6 +832,7 @@ class LauncherControlHandler(BaseHTTPRequestHandler):
         return bool(expected and provided and hmac.compare_digest(expected, provided))
 
     def _send_json(self, status: HTTPStatus, payload: Any) -> None:
+        self._metrics_status = status.value
         send_json(self, status, payload)
 
     def _send_error(

@@ -157,6 +157,15 @@ COPY workers/jupyter_server/nmtk_env_manager/ /tmp/nmtk_env_manager/
 RUN pip install --no-cache-dir --no-build-isolation /tmp/nmtk_env_manager \
  && rm -rf /tmp/nmtk_env_manager
 
+COPY workers/jupyter_server/nmtk_metrics/ /tmp/nmtk_metrics/
+RUN pip install --no-cache-dir /tmp/nmtk_metrics \
+ && rm -rf /tmp/nmtk_metrics
+
+COPY nmtk/__init__.py /repo/nmtk/__init__.py
+COPY nmtk/metrics_core.py /repo/nmtk/metrics_core.py
+COPY nmtk/http_metrics.py /repo/nmtk/http_metrics.py
+RUN pip install --no-cache-dir prometheus-client
+
 # NMTK notebook client — thin wrappers for lava-backend and suite_api.
 COPY workers/jupyter_server/nmtk_client/ /tmp/nmtk_client/
 RUN pip install --no-cache-dir /tmp/nmtk_client \
@@ -179,6 +188,7 @@ COPY workers/jupyter_server/jupyter_server_config.py /app/jupyter_server_config.
 # standard JupyterLab behaviour.  Override JUPYTER_NOTEBOOK_DIR at runtime
 # (e.g. via a Docker volume mount) to persist notebooks outside the container.
 ENV JUPYTER_NOTEBOOK_DIR=/home/appuser
+ENV PYTHONPATH=/repo
 
 # UID/GID pinned, not `useradd --system`. Two reasons, both already load-bearing:
 #   1. /home/appuser is a PERSISTED named volume (jupyter_notebooks). Docker only

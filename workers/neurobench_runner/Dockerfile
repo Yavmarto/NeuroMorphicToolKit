@@ -18,7 +18,8 @@ RUN pip install --no-cache-dir \
     "pandas>=3.0.0" \
     "slowapi>=0.1.9" \
     "jinja2>=3.1.0" \
-    "httpx>=0.27.0"
+    "httpx>=0.27.0" \
+    "prometheus-client>=0.19.0"
 
 # neurocnl's base (non-extra) deps include torch/snntorch/sc-neurocore. Pull
 # CPU-only torch first (matches suite_api/Dockerfile) so the neurocnl install
@@ -51,6 +52,9 @@ RUN pip install --no-cache-dir --no-deps ./neurocnl
 # --build-arg NEUROBENCH_INSTALL_TARGET='Neurobench/neurobench[executor]'
 # to opt into upstream NeuroBench executor dependencies.
 COPY workers/neurobench_runner/ workers/neurobench_runner/
+COPY nmtk/__init__.py nmtk/__init__.py
+COPY nmtk/metrics_core.py nmtk/metrics_core.py
+COPY nmtk/http_metrics.py nmtk/http_metrics.py
 COPY Neurobench/neurobench/ Neurobench/neurobench/
 RUN pip install --no-cache-dir "${NEUROBENCH_INSTALL_TARGET}"
 CMD ["uvicorn", "workers.neurobench_runner.main:app", "--host", "0.0.0.0", "--port", "8003"]

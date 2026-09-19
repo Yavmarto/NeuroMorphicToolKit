@@ -24,8 +24,8 @@ INSTALL_SCRIPT = (
 )
 STACK_SCRIPT = INSTALL_SCRIPT.with_name("nmtk-stack.sh")
 
-SUITE_API = "ghcr.io/completed-spoon-6/neuromorphictoolkit/suite-api"
-LAUNCHER = "ghcr.io/completed-spoon-6/neuromorphictoolkit/launcher-control"
+SUITE_API = "ghcr.io/yavmarto/neuromorphictoolkit/suite-api"
+LAUNCHER = "ghcr.io/yavmarto/neuromorphictoolkit/launcher-control"
 GOOD_DIGEST = "sha256:" + "1" * 64
 
 FAKE_ENGINE = """#!/usr/bin/env bash

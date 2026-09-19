@@ -63,6 +63,9 @@ RUN pip install --no-cache-dir Neurobench/neurobench/ \
 
 # ── suite_api ─────────────────────────────────────────────────────────────────
 COPY tools/nmtk_mcp_server/ tools/nmtk_mcp_server/
+COPY nmtk/__init__.py nmtk/__init__.py
+COPY nmtk/metrics_core.py nmtk/metrics_core.py
+COPY nmtk/http_metrics.py nmtk/http_metrics.py
 COPY suite_api/ suite_api/
 RUN pip install --no-cache-dir suite_api/ \
  && python -c "import suite_api.main"
