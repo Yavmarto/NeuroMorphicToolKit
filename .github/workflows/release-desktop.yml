@@ -28,7 +28,7 @@ jobs:
       version: ${{ steps.resolve.outputs.version }}
       prerelease: ${{ steps.resolve.outputs.prerelease }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Resolve version
         id: resolve
@@ -70,7 +70,7 @@ jobs:
         run: |
           if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
           token: ${{ secrets.NMTK_SUBMODULE_TOKEN || github.token }}
@@ -129,7 +129,7 @@ jobs:
       APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
       APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
           token: ${{ secrets.NMTK_SUBMODULE_TOKEN || github.token }}
@@ -169,7 +169,7 @@ jobs:
     needs: version
     runs-on: ${{ vars.RELEASE_RUNNER_LINUX || 'ubuntu-latest' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
           token: ${{ secrets.NMTK_SUBMODULE_TOKEN || github.token }}
@@ -205,7 +205,7 @@ jobs:
     needs: version
     runs-on: ${{ vars.RELEASE_RUNNER_LINUX || 'ubuntu-latest' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-python@v5
         with:

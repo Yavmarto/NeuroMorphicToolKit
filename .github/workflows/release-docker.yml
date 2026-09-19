@@ -71,7 +71,7 @@ jobs:
             /usr/local/share/boost "$AGENT_TOOLSDIRECTORY" || true
           df -h /
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
           # GITHUB_TOKEN cannot read sibling private repositories. This
