@@ -183,10 +183,10 @@ That RSNN reaches ~10% in 50 epochs on dev (vs ~80% paper baseline) — useful f
 
 | Step | Status | Date |
 |---|---|---|
-| CNL template + export contract | ✅ `test_guide_shd_topology_is_exportable` | 2026-08-26 |
+| CNL template + export contract | ✅ `test_guide_shd_topology_is_exportable` (re-passed) | 2026-09-19 |
 | `generate-v2` for SHD feedforward | ✅ | 2026-08-26 |
 | Akida software-sim export | ✅ (mechanism verified on MNIST; SHD numbers vary by training) | 2026-08-26 |
-| Physical card deploy | ✅ on dev rig with native Akida service | 2026-08-14 |
-| Measured SHD Akida accuracy table | ⏸ record after your training run | — |
+| Physical card deploy | ✅ on dev rig with native Akida service (**needs hardware**) | 2026-08-14 |
+| Measured SHD Akida accuracy table | ⏸ record after your training run (train/export path is **works** without a card) | — |
 
 Canvas-level detail: [`current tasks/2026-08-25/GUIDE-shd-akida-studio.md`](../../current%20tasks/2026-08-25/GUIDE-shd-akida-studio.md).

@@ -140,7 +140,8 @@ The generated notebook includes a **NIR Exporter** node when the pipeline reques
 | Step | Status | Date |
 |---|---|---|
 | CNL compile (local) | ✅ 15-node CNN graph | 2026-09-15 |
-| `generate-v2` → `support: exact` | ✅ on dev backend | 2026-09-15 |
-| 20-epoch training to paper accuracy | ⏸ pending host reachability | 2026-09-17 |
+| `generate-v2` → `support: exact` | ✅ on dev backend (requires `NMTK_ADMIN_TOKEN` when auth is on) | 2026-09-15 |
+| Contract / topology regression | ✅ `test_guide_mnist_topology_is_exportable` | 2026-09-19 |
+| 20-epoch training to paper accuracy | ⏸ optional extended verify (~30–90 min GPU); smoke-generate above is the fast path | 2026-09-19 |
 
 See [`current tasks/2026-09-15/CEL-263-nmnist-e2e-findings.md`](../../current%20tasks/2026-09-15/CEL-263-nmnist-e2e-findings.md) for the full engineering log.
