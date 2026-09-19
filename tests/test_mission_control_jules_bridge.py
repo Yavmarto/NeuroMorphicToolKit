@@ -243,8 +243,8 @@ def write_guide(tmp_path: Path) -> Path:
 
 
 def resolved_source(
-    name: str = "sources/github-completed-spoon-6-NeuroMorphicToolKit",
-    repo_identifier: str = "Completed-Spoon-6/NeuroMorphicToolKit",
+    name: str = "sources/github-yavmarto-NeuroMorphicToolKit",
+    repo_identifier: str = "Yavmarto/NeuroMorphicToolKit",
     default_branch: str = "main",
     branches: tuple[str, ...] = ("main", "dev"),
 ) -> jules_api.ResolvedSource:
@@ -272,10 +272,10 @@ def test_jules_client_resolves_source_from_repo_and_validates_branch() -> None:
             {
                 "sources": [
                     {
-                        "name": "sources/github-completed-spoon-6-Neurocnl",
-                        "id": "github-completed-spoon-6-Neurocnl",
+                        "name": "sources/github-yavmarto-Neurocnl",
+                        "id": "github-yavmarto-Neurocnl",
                         "githubRepo": {
-                            "owner": "Completed-Spoon-6",
+                            "owner": "Yavmarto",
                             "repo": "Neurocnl",
                             "defaultBranch": {"displayName": "main"},
                             "branches": [
@@ -292,8 +292,8 @@ def test_jules_client_resolves_source_from_repo_and_validates_branch() -> None:
 
     resolved = client.resolve_source(repo_identifier="Yavmarto/neurocnl")
 
-    assert resolved.name == "sources/github-completed-spoon-6-Neurocnl"
-    assert resolved.repo_identifier == "Completed-Spoon-6/Neurocnl"
+    assert resolved.name == "sources/github-yavmarto-Neurocnl"
+    assert resolved.repo_identifier == "Yavmarto/Neurocnl"
     assert client.validate_branch(resolved, "dev") == "dev"
     with pytest.raises(jules_api.JulesApiError):
         client.validate_branch(resolved, "missing")
@@ -339,8 +339,8 @@ def test_worker_creates_session_from_task_source_metadata(tmp_path: Path) -> Non
         "metadata": {
             "mission_control_jules": {
                 "request": {
-                    "source": "sources/github-completed-spoon-6-NeuroMorphicToolKit",
-                    "repo": "Completed-Spoon-6/NeuroMorphicToolKit",
+                    "source": "sources/github-yavmarto-NeuroMorphicToolKit",
+                    "repo": "Yavmarto/NeuroMorphicToolKit",
                     "branch": "main",
                 }
             }
@@ -349,7 +349,7 @@ def test_worker_creates_session_from_task_source_metadata(tmp_path: Path) -> Non
     session = FakeMissionControlSession(tasks={task_id: task})
     session.queue_responses.append({"reason": "assigned", "task": {"id": task_id}})
     client = FakeJulesClient()
-    client.sources_by_name["sources/github-completed-spoon-6-NeuroMorphicToolKit"] = resolved_source()
+    client.sources_by_name["sources/github-yavmarto-NeuroMorphicToolKit"] = resolved_source()
     client.create_side_effects.append(
         {
             "name": "sessions/123",
@@ -371,8 +371,8 @@ def test_worker_creates_session_from_task_source_metadata(tmp_path: Path) -> Non
     worker.register_agent()
     worker.tick()
 
-    assert client.resolve_calls[0]["source_name"] == "sources/github-completed-spoon-6-NeuroMorphicToolKit"
-    assert client.create_calls[0]["source_name"] == "sources/github-completed-spoon-6-NeuroMorphicToolKit"
+    assert client.resolve_calls[0]["source_name"] == "sources/github-yavmarto-NeuroMorphicToolKit"
+    assert client.create_calls[0]["source_name"] == "sources/github-yavmarto-NeuroMorphicToolKit"
     assert "Mission Control task title: Add tests" in client.create_calls[0]["prompt"]
 
     queue_headers = call_payloads(session, "get", "/api/tasks/queue")[0]["kwargs"]["headers"]
@@ -382,8 +382,8 @@ def test_worker_creates_session_from_task_source_metadata(tmp_path: Path) -> Non
     assert update_payload["status"] == "in_progress"
     runtime = update_payload["metadata"]["mission_control_jules"]["runtime"]
     assert runtime["sessionName"] == "sessions/123"
-    assert runtime["source"] == "sources/github-completed-spoon-6-NeuroMorphicToolKit"
-    assert runtime["repo"] == "Completed-Spoon-6/NeuroMorphicToolKit"
+    assert runtime["source"] == "sources/github-yavmarto-NeuroMorphicToolKit"
+    assert runtime["repo"] == "Yavmarto/NeuroMorphicToolKit"
     assert runtime["branch"] == "main"
 
     assert len(session.comments) == 1
@@ -400,7 +400,7 @@ def test_worker_recovers_existing_session_without_duplicate_creation(tmp_path: P
         "assigned_to": "jules-worker",
         "metadata": {
             "mission_control_jules": {
-                "request": {"repo": "Completed-Spoon-6/NeuroMorphicToolKit", "branch": "main"},
+                "request": {"repo": "Yavmarto/NeuroMorphicToolKit", "branch": "main"},
                 "runtime": {
                     "sessionName": "sessions/55",
                     "sessionUrl": "https://jules.google.com/session/55",
@@ -456,7 +456,7 @@ def test_worker_deduplicates_plan_comments_by_activity_name(tmp_path: Path) -> N
         "assigned_to": "jules-worker",
         "metadata": {
             "mission_control_jules": {
-                "request": {"repo": "Completed-Spoon-6/NeuroMorphicToolKit", "branch": "main"},
+                "request": {"repo": "Yavmarto/NeuroMorphicToolKit", "branch": "main"},
                 "runtime": {
                     "sessionName": "sessions/66",
                     "state": "PLANNING",
@@ -518,7 +518,7 @@ def test_worker_marks_completed_sessions_done_with_pr_metadata(tmp_path: Path) -
         "assigned_to": "jules-worker",
         "metadata": {
             "mission_control_jules": {
-                "request": {"repo": "Completed-Spoon-6/NeuroMorphicToolKit", "branch": "main"},
+                "request": {"repo": "Yavmarto/NeuroMorphicToolKit", "branch": "main"},
                 "runtime": {"sessionName": "sessions/77", "terminal": False},
             }
         },
@@ -575,7 +575,7 @@ def test_worker_marks_failed_sessions_quality_review_with_reason(tmp_path: Path)
         "assigned_to": "jules-worker",
         "metadata": {
             "mission_control_jules": {
-                "request": {"repo": "Completed-Spoon-6/NeuroMorphicToolKit", "branch": "main"},
+                "request": {"repo": "Yavmarto/NeuroMorphicToolKit", "branch": "main"},
                 "runtime": {"sessionName": "sessions/78", "terminal": False},
             }
         },
@@ -625,14 +625,14 @@ def test_worker_retries_transient_create_without_repolling_queue(tmp_path: Path)
         "status": "assigned",
         "metadata": {
             "mission_control_jules": {
-                "request": {"repo": "Completed-Spoon-6/NeuroMorphicToolKit", "branch": "main"}
+                "request": {"repo": "Yavmarto/NeuroMorphicToolKit", "branch": "main"}
             }
         },
     }
     session = FakeMissionControlSession(tasks={task_id: task})
     session.queue_responses.append({"reason": "assigned", "task": {"id": task_id}})
     client = FakeJulesClient()
-    client.sources_by_repo["Completed-Spoon-6/NeuroMorphicToolKit"] = resolved_source()
+    client.sources_by_repo["Yavmarto/NeuroMorphicToolKit"] = resolved_source()
     client.create_side_effects.extend(
         [
             jules_api.JulesApiError("rate limited", status_code=429),
@@ -685,7 +685,7 @@ def test_create_task_includes_jules_metadata_contract(tmp_path: Path) -> None:
         agent_name="jules-worker",
         jules_repo="Yavmarto/neurocnl",
         jules_branch="dev",
-        jules_source="sources/github-completed-spoon-6-Neurocnl",
+        jules_source="sources/github-yavmarto-Neurocnl",
         jules_require_plan_approval=True,
         session=session,
         server_url="https://mc.example",
@@ -697,8 +697,8 @@ def test_create_task_includes_jules_metadata_contract(tmp_path: Path) -> None:
     create_call = call_payloads(session, "post", "/api/tasks")[0]["kwargs"]["json"]
     request = create_call["metadata"]["mission_control_jules"]["request"]
     assert request == {
-        "repo": "Completed-Spoon-6/Neurocnl",
+        "repo": "Yavmarto/Neurocnl",
         "branch": "dev",
-        "source": "sources/github-completed-spoon-6-Neurocnl",
+        "source": "sources/github-yavmarto-Neurocnl",
         "requirePlanApproval": True,
     }

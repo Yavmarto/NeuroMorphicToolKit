@@ -1,26 +1,81 @@
 # NeuroMorphicToolkit (NMTK)
 
-> **Unifying Neuromorphic Engineering, Neuroscience, and Software Development.**
+> **Build, train, benchmark, and deploy spiking neural networks to real neuromorphic hardware — from one desktop app, without assembling SDKs, Python environments, or Docker infrastructure yourself.**
 
-NMTK is a cross platform app (macOS, Windows, Linux, Android, iOS) plus a backend suite. It lets you author a spiking neural network in controlled English, validate it, simulate it, and hand it off to neuromorphic hardware — without assembling SDK toolchains, Python environments, or Docker infrastructure yourself.
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](./LICENSE)
+
+Commercial neuromorphic hardware revenue was an estimated **~USD 50M in 2025**, projected to **~USD 185M by 2030**; software and tooling is the fastest-growing slice. NMTK is the neutral interoperability layer on a **CNL → IR → NIR** compiler spine — with published `works` / `needs hardware` / `not implemented` status and per-target `faithful` / `approximate` / `unsupported` fidelity, not demo hype.
 
 ---
 
-## The problem it solves
+## The wedge
+
+- **Authoring** — controlled-English specs and a visual canvas for researchers who should not need every SDK toolchain memorized.
+- **NIR interoperability** — one trained network, many backends (snnTorch, Brian2, Lava, Nengo, PyNN, Sinabs, Rockpool, Akida/PYNQ paths).
+- **Zero-infrastructure start** — the desktop app installs or connects to a backend in one step; end users never touch a terminal.
+- **Honesty** — capability and fidelity are documented in the table below and in module READMEs, not hidden behind marketing copy.
+
+NMTK does **not** install physical hardware, shipped images do **not** bundle vendor SDKs, and we do **not** advertise mobile app stores or Kubernetes (both `not implemented` today).
+
+---
+
+## What works today
+
+| Capability | Status | NIR fidelity |
+|---|---|---|
+| NeuroStudio — CNL → NIR compile | `works` | `faithful` |
+| snnTorch train & simulate | `works` | `faithful` |
+| Brian2 / Lava simulation | `works` | `approximate` |
+| JupyterLab (nine kernels) | `works` | — |
+| NeuroBench workflow | `works` | — |
+| Neurohub registry | `works` | — |
+| [N-MNIST demo](./docs/guides/GUIDE-nmnist-snntorch.md) | `works` | `faithful` |
+| [SHD demo](./docs/guides/GUIDE-shd-akida.md) — train/export | `works` | `approximate` |
+| Akida / PYNQ / Teensy / Speck deploy | `needs hardware` | `approximate`–`unsupported` |
+| Neurosense live sensors | `needs hardware` | — |
+| Loihi hardware, Lava on-chip | `not implemented` | `unsupported` |
+
+Measured round-trip leaderboard: [docs/hardware/support-matrix.md](./docs/hardware/support-matrix.md). Full primitive matrix: [neurocnl/docs/support_matrix.md](./neurocnl/docs/support_matrix.md).
+
+---
+
+## Download and install
+
+**Desktop app (macOS, Windows, Linux):** [GitHub Releases](https://github.com/Yavmarto/NeuroMorphicToolKit/releases) → open the app → **Backend Setup** installs or connects to a backend in one step.
+
+**Self-host backend** (Docker required):
+
+```bash
+git clone https://github.com/Yavmarto/NeuroMorphicToolKit.git
+cd NeuroMorphicToolKit
+docker compose up -d
+```
+
+Then point the app at `http://<host>:9000` via **Sign in to your server**.
+
+**Demo walkthroughs:** [docs/guides/README.md](./docs/guides/README.md) (N-MNIST simulation, SHD on Akida). **Docs site:** [yavmarto.github.io/NeuroMorphicToolKit](https://yavmarto.github.io/NeuroMorphicToolKit/) (MkDocs home: [docs/index.md](./docs/index.md)).
+
+**License:** [AGPL-3.0-or-later](./LICENSE) · third-party notices: [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md)
+
+---
+
+## Platform reference
+
+NMTK is a **desktop app** (macOS, Windows, Linux) plus a backend suite. It lets you author a spiking neural network in controlled English, validate it, simulate it, and hand it off to neuromorphic hardware.
+
+### The problem it solves
 
 Neuromorphic computing is multidisciplinary, but its tooling is fragmented, SDK-specific, and assumes deep expertise at every layer. NMTK is built for people who want to work with SNNs and neuromorphic hardware without being experts in all of it: students and early-stage researchers, computational neuroscientists who know the biology but not the toolchains, ML engineers entering the field, and applied teams where one person maintains the hardware backend and everyone else connects to it remotely.
 
 Download the app, install the backend in one step or connect to an existing one, and the suite is available.
 
----
+### Getting Started (detail)
 
-## Getting Started
-
-### 1. Download the app
+#### 1. Download the app
 
 Grab the latest NMTK desktop app from the [Releases page](https://github.com/Yavmarto/NeuroMorphicToolKit/releases) for macOS, Windows, or Linux.
 
-### 2. Install the backend — or connect to one
+#### 2. Install the backend — or connect to one
 
 On first launch the app walks you through a one-time backend setup:
 
@@ -30,7 +85,7 @@ On first launch the app walks you through a one-time backend setup:
 | **Docker** | Containerised services on your machine or a lab server. |
 | **Connect to existing** | A teammate already set up a backend. Enter the server URL. |
 
-### 3. Start working
+#### 3. Start working
 
 The app opens onto NeuroStudio, which is where nearly all of the suite's functionality lives. See [Architecture](#architecture) for what that means concretely.
 
@@ -72,7 +127,7 @@ neurocnl additionally uses a `faithful` / `approximate` / `unsupported` scale. T
 
 **One app.** NMTK ships a single Flutter application, `nmtk/neuro_toolkit`. It fetches the module manifest from `launcher-control` and mounts exactly one module surface, full-window. The host renders **no navigation of its own** — chrome, nav, and workspace switching all belong to whichever module surface is mounted.
 
-In practice that surface is almost always **NeuroStudio** (`neurocnl`), embedded through `NeurocnlShellAdapter`. **Neurobench** is the one other real native surface; it is nav-eligible on desktop and hidden on mobile. Everything else a user sees — the canvas, hardware deployment, the artifact registry — is a step or a modal *inside* NeuroStudio, not a separate app. Neurosense and the Lava backend have no UI at all.
+In practice that surface is almost always **NeuroStudio** (`neurocnl`), embedded through `NeurocnlShellAdapter`. **Neurobench** is the one other real native surface; it is nav-eligible on desktop. Everything else a user sees — the canvas, hardware deployment, the artifact registry — is a step or a modal *inside* NeuroStudio, not a separate app. Neurosense and the Lava backend have no UI at all.
 
 `nmtk_ui_core` is the shared Flutter design system, consumed by three projects: the launcher, `neurocnl/frontend`, and `Neurobench/frontend`.
 
@@ -104,6 +159,7 @@ No one needs a terminal, a Python environment, or knowledge of the infrastructur
 
 ## Documentation
 
+- **[Landing page](./docs/index.md)** — one-page public overview (also the MkDocs home).
 - **[Demo guides](./docs/guides/README.md)** — reproducible N-MNIST (simulation) and SHD-on-Akida walkthroughs.
 - **[NIR Round-Trip Fidelity Leaderboard](./docs/hardware/support-matrix.md)** — per-target `faithful`/`approximate`/`unsupported` ratings and measured accuracy, reproducible from committed scripts.
 - **[AGENTS.md](./AGENTS.md)** — repository conventions and developer paths.

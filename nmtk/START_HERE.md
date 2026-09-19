@@ -2,7 +2,7 @@
 
 ## 📄 Four Reference Documents Created
 
-All in `/Users/yoshimartodihardjo/Neuro-space/`:
+All in `$HOME/Neuro-space/`:
 
 ### 1. **neurocnl_complete_reference.md** - FULL TECHNICAL DETAILS
 - Complete specification of all 13 concepts with exact regex patterns
@@ -106,7 +106,7 @@ Gets you:
 
 ### Core Module
 ```
-/Users/yoshimartodihardjo/Neuro-space/neurocnl/neurocnl/
+$HOME/Neuro-space/neurocnl/neurocnl/
 ├── __init__.py              - Public API exports
 ├── pipeline.py              - run_pipeline() orchestrator
 ├── cnl/cnl_parser.py        - 13 concept regex patterns
@@ -118,7 +118,7 @@ Gets you:
 
 ### Examples
 ```
-/Users/yoshimartodihardjo/Neuro-space/neurocnl/examples/
+$HOME/Neuro-space/neurocnl/examples/
 ├── 01_parse_spec.py
 ├── 02_validate_spec.py
 ├── 03_generate_network.py
@@ -128,7 +128,7 @@ Gets you:
 
 ### Demo
 ```
-/Users/yoshimartodihardjo/Neuro-space/neurocnl/demos/gripper_reflex/
+$HOME/Neuro-space/neurocnl/demos/gripper_reflex/
 ├── gripper_reflex.cnl       - 4-line CNL spec
 └── README.md                - Hardware wiring + architecture
 ```

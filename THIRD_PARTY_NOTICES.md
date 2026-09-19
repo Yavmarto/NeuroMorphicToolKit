@@ -21,19 +21,15 @@ Entries marked _optional_ come from optional dependency groups/extras and are no
 | --- | --- | --- | --- |
 | `boto3` | `>=1.34.0` | no | https://github.com/boto/boto3 |
 | `coverage` | `^7.13.5` | yes | https://github.com/nedbat/coveragepy |
-| `ffmpeg-python` | `>=0.2.0` | yes | https://github.com/kkroening/ffmpeg-python |
-| `mediapy` | `>=1.2.0` | yes | https://github.com/google/mediapy |
-| `mujoco` | `>=3.1.0,<4.0.0` | yes | https://mujoco.org/ |
+| `mujoco` | `>=3.0` | yes | https://mujoco.org/ |
 | `neurobench` | `>=1.0.0` | yes | https://github.com/NeuroBench/neurobench |
-| `nuitka` | `(any)` | yes | https://nuitka.net/ |
 | `prometheus-client` | `>=0.19.0` | no | https://github.com/prometheus/client_python |
-| `pytest-asyncio` | `>=0.23.0` | yes | https://github.com/pytest-dev/pytest-asyncio |
+| `pytest-asyncio` | `>=0.23` | yes | https://github.com/pytest-dev/pytest-asyncio |
 | `python-multipart` | `^0.0.22` | no | https://github.com/Kludex/python-multipart |
 | `requests` | `>=2.0` | no | https://requests.readthedocs.io/ |
 | `responses` | `>=0.23` | yes | https://github.com/getsentry/responses |
 | `syrupy` | `>=4.0` | yes | https://github.com/syrupy-project/syrupy |
 | `tensorflow` | `==2.19.*` | yes | https://www.tensorflow.org/ |
-| `types-PyYAML` | `(any)` | yes | https://github.com/python/typeshed |
 | `watchdog` | `>=3.0` | no | https://github.com/gorakhargosh/watchdog |
 
 ### BrainChip Akida proprietary EULA
@@ -49,28 +45,26 @@ Entries marked _optional_ come from optional dependency groups/extras and are no
 | Package | Version constraint | Optional | Homepage |
 | --- | --- | --- | --- |
 | `mkdocs` | `(any)` | yes | https://www.mkdocs.org/ |
-| `pytest-benchmark` | `(any)` | yes | https://github.com/ionelmc/pytest-benchmark |
 | `python-json-logger` | `>=2.0` | no | https://github.com/madzak/python-json-logger |
 
 ### BSD-3-Clause
 
 | Package | Version constraint | Optional | Homepage |
 | --- | --- | --- | --- |
-| `h5py` | `>=3.8.0,<4.0.0` | no | https://www.h5py.org/ |
-| `httpx` | `>=0.27.0` | no | https://github.com/encode/httpx |
+| `h5py` | `>=3.10.0` | no | https://www.h5py.org/ |
+| `httpx` | `==0.27.0` | no | https://github.com/encode/httpx |
 | `ipykernel` | `>=6.0` | no | https://ipython.org/ |
-| `jinja2` | `^3.1.6` | no | https://github.com/pallets/jinja/ |
+| `jinja2` | `==3.1.6` | no | https://github.com/pallets/jinja/ |
 | `jupyter_server` | `>=2.0,<3.0` | no | https://jupyter-server.readthedocs.io/ |
 | `lxml` | `>=4.9.0` | yes | https://lxml.de/ |
 | `nir` | `>=1.0.0` | no | https://github.com/neuromorphs/NIR |
-| `numpy` | `>=1.24.0,<3.0.0` | no | https://numpy.org/ |
+| `numpy` | `>=1.24` | no | https://numpy.org/ |
 | `pandas` | `^3.0.1` | no | https://pandas.pydata.org/ |
-| `passlib` | `>=1.7.4` | no | https://passlib.readthedocs.io/ |
-| `pyserial` | `>=3.5` | no | https://github.com/pyserial/pyserial |
-| `scipy` | `>=1.10.0,<2.0.0` | no | https://scipy.org/ |
+| `pyserial` | `^3.5` | no | https://github.com/pyserial/pyserial |
+| `scipy` | `^1.15.1` | no | https://scipy.org/ |
 | `sse-starlette` | `>=1.8.0` | no | https://github.com/sysid/sse-starlette |
 | `torch` | `>=2.0.0` | no | https://pytorch.org/ |
-| `uvicorn` | `>=0.27.0` | no | https://www.uvicorn.org/ |
+| `uvicorn` | `>=0.29` | no | https://www.uvicorn.org/ |
 | `weasyprint` | `^68.1` | yes | https://weasyprint.org/ |
 
 ### BSD-3-Clause (with proprietary AMD/Xilinx overlays)
@@ -97,7 +91,6 @@ Entries marked _optional_ come from optional dependency groups/extras and are no
 | Package | Version constraint | Optional | Homepage |
 | --- | --- | --- | --- |
 | `mkdocstrings` | `(any)` | yes | https://mkdocstrings.github.io/ |
-| `mkdocstrings-python` | `(any)` | yes | https://mkdocstrings.github.io/python/ |
 
 ### LGPL-3.0
 
@@ -116,38 +109,36 @@ Entries marked _optional_ come from optional dependency groups/extras and are no
 
 | Package | Version constraint | Optional | Homepage |
 | --- | --- | --- | --- |
-| `matplotlib` | `>=3.7.0,<4.0.0` | no | https://matplotlib.org/ |
+| `matplotlib` | `^3.10.8` | no | https://matplotlib.org/ |
 
 ### MIT
 
 | Package | Version constraint | Optional | Homepage |
 | --- | --- | --- | --- |
-| `aiosqlite` | `>=0.20.0` | no | https://github.com/omnilib/aiosqlite |
-| `alembic` | `>=1.13.1` | no | https://alembic.sqlalchemy.org/ |
+| `aiosqlite` | `>=0.20` | no | https://github.com/omnilib/aiosqlite |
+| `alembic` | `>=1.13` | no | https://alembic.sqlalchemy.org/ |
 | `anyio` | `>=4.0` | yes | https://github.com/agronholm/anyio |
 | `black` | `>=24.2.0` | yes | https://github.com/psf/black |
-| `brainflow` | `>=5.0.0` | no | https://github.com/brainflow-dev/brainflow |
-| `fastapi` | `>=0.109.0` | no | https://github.com/fastapi/fastapi |
-| `gymnasium` | `>=1.0.0` | yes | https://github.com/Farama-Foundation/Gymnasium |
+| `brainflow` | `>=5.0` | no | https://github.com/brainflow-dev/brainflow |
+| `fastapi` | `>=0.111` | no | https://github.com/fastapi/fastapi |
 | `isort` | `>=5.13.0` | yes | https://pycqa.github.io/isort/ |
 | `meilisearch` | `>=0.31.0` | no | https://github.com/meilisearch/meilisearch-python |
 | `mkdocs-material` | `(any)` | yes | https://squidfunk.github.io/mkdocs-material/ |
-| `mypy` | `>=1.19.1,<2.0.0` | yes | https://www.mypy-lang.org/ |
+| `mypy` | `==1.10.0` | yes | https://www.mypy-lang.org/ |
 | `pdfkit` | `^1.0.0` | yes | https://github.com/JazzCore/python-pdfkit |
 | `pre-commit` | `>=3.6.0` | yes | https://pre-commit.com/ |
-| `pydantic` | `>=2.0.0` | no | https://github.com/pydantic/pydantic |
-| `pydantic-settings` | `>=2.0.0` | no | https://github.com/pydantic/pydantic-settings |
-| `pytest` | `>=9.0.2,<10.0.0` | yes | https://docs.pytest.org/ |
+| `pydantic` | `>=2.7` | no | https://github.com/pydantic/pydantic |
+| `pydantic-settings` | `>=2.2` | no | https://github.com/pydantic/pydantic-settings |
+| `pytest` | `==8.2.2` | yes | https://docs.pytest.org/ |
 | `pytest-cov` | `>=7.0.0,<8.0.0` | yes | https://github.com/pytest-dev/pytest-cov |
 | `pytest-mock` | `==3.14.0` | yes | https://github.com/pytest-dev/pytest-mock |
 | `python-jose` | `>=3.3.0` | no | https://github.com/mpdavis/python-jose |
-| `PyYAML` | `>=6.0.0` | no | https://pyyaml.org/ |
 | `redis` | `>=5.0.0` | no | https://github.com/redis/redis-py |
-| `ruff` | `>=0.15.6,<0.16.0` | yes | https://docs.astral.sh/ruff/ |
-| `slowapi` | `^0.1.9` | no | https://github.com/laurents/slowapi |
+| `ruff` | `==0.4.4` | yes | https://docs.astral.sh/ruff/ |
+| `slowapi` | `>=0.1.9` | no | https://github.com/laurents/slowapi |
 | `snntorch` | `>=0.9.0` | no | https://snntorch.readthedocs.io/ |
-| `sqlalchemy` | `>=2.0.0` | no | https://www.sqlalchemy.org/ |
-| `typer` | `==0.12.3` | no | https://github.com/fastapi/typer |
+| `sqlalchemy` | `>=2.0` | no | https://www.sqlalchemy.org/ |
+| `typer` | `==0.26.8` | no | https://github.com/fastapi/typer |
 | `vcrpy` | `(any)` | yes | https://github.com/kevin1024/vcrpy |
 
 ### MIT OR Apache-2.0
@@ -160,19 +151,13 @@ Entries marked _optional_ come from optional dependency groups/extras and are no
 
 | Package | Version constraint | Optional | Homepage |
 | --- | --- | --- | --- |
-| `hypothesis` | `>=6.151.9,<7.0.0` | yes | https://hypothesis.works/ |
-
-### MPL-2.0 AND MIT
-
-| Package | Version constraint | Optional | Homepage |
-| --- | --- | --- | --- |
-| `tqdm` | `(any)` | no | https://tqdm.github.io/ |
+| `hypothesis` | `==6.112.1` | yes | https://hypothesis.works/ |
 
 ### Nengo License (free for non-commercial; commercial restricted)
 
 | Package | Version constraint | Optional | Homepage |
 | --- | --- | --- | --- |
-| `nengo` | `>=4.0.0,<5.0.0` | no | https://www.nengo.ai/ |
+| `nengo` | `>=3.2` | no | https://www.nengo.ai/ |
 | `nengo-loihi` | `>=1.0.0` | yes | https://www.nengo.ai/nengo-loihi/ |
 
 ### Prophesee Metavision proprietary EULA
@@ -186,6 +171,23 @@ Entries marked _optional_ come from optional dependency groups/extras and are no
 | Package | Version constraint | Optional | Homepage |
 | --- | --- | --- | --- |
 | `samna` | `(any)` | yes | https://synsense-sys-int.gitlab.io/samna/ |
+
+### UNKNOWN
+
+| Package | Version constraint | Optional | Homepage |
+| --- | --- | --- | --- |
+| `nmtk_contracts` | `>=0.1.0` | no | https://pypi.org/project/nmtk_contracts/ |
+
+### UNKNOWN (not installed)
+
+| Package | Version constraint | Optional | Homepage |
+| --- | --- | --- | --- |
+| `bcrypt` | `>=4.0.1,<5` | no | https://pypi.org/project/bcrypt/ |
+| `onnx` | `>=1.17,<2` | yes | https://pypi.org/project/onnx/ |
+| `pytest-xdist` | `==3.6.1` | yes | https://pypi.org/project/pytest-xdist/ |
+| `quantizeml` | `==1.2.4` | yes | https://pypi.org/project/quantizeml/ |
+| `snn-mlir` | `(any)` | yes | https://pypi.org/project/snn-mlir/ |
+| `websockets` | `>=12.0` | no | https://pypi.org/project/websockets/ |
 
 ### Unlicense
 
@@ -205,30 +207,42 @@ Entries marked _optional_ come from optional dependency groups/extras and are no
 
 | Package | Version constraint | Optional | Homepage |
 | --- | --- | --- | --- |
-| `crypto` | `^3.0.7` | no | https://pub.dev/packages/crypto |
-| `go_router` | `^14.7.2` | no | https://pub.dev/packages/go_router |
+| `animations` | `^2.0.11` | no | https://pub.dev/packages/animations |
+| `crypto` | `^3.0.6` | no | https://pub.dev/packages/crypto |
+| `flutter_animate` | `^4.5.0` | no | https://pub.dev/packages/flutter_animate |
+| `flutter_secure_storage` | `^10.0.0` | no | https://pub.dev/packages/flutter_secure_storage |
+| `go_router` | `^14.0.0` | no | https://pub.dev/packages/go_router |
 | `http` | `^1.2.0` | no | https://pub.dev/packages/http |
 | `intl` | `^0.20.2` | no | https://pub.dev/packages/intl |
-| `json_annotation` | `^4.9.0` | no | https://pub.dev/packages/json_annotation |
+| `json_annotation` | `^4.11.0` | no | https://pub.dev/packages/json_annotation |
 | `package_info_plus` | `^9.0.1` | no | https://pub.dev/packages/package_info_plus |
 | `path` | `^1.9.0` | no | https://pub.dev/packages/path |
 | `path_provider` | `^2.1.2` | no | https://pub.dev/packages/path_provider |
-| `shared_preferences` | `^2.5.5` | no | https://pub.dev/packages/shared_preferences |
+| `shared_preferences` | `^2.2.3` | no | https://pub.dev/packages/shared_preferences |
 | `shimmer` | `^3.0.0` | no | https://pub.dev/packages/shimmer |
 | `url_launcher` | `^6.3.0` | no | https://pub.dev/packages/url_launcher |
 | `web_socket_channel` | `^3.0.3` | no | https://pub.dev/packages/web_socket_channel |
+| `webview_flutter` | `^4.9.0` | no | https://pub.dev/packages/webview_flutter |
 
 ### MIT
 
 | Package | Version constraint | Optional | Homepage |
 | --- | --- | --- | --- |
+| `archive` | `^4.0.9` | no | https://pub.dev/packages/archive |
 | `cupertino_icons` | `^1.0.8` | no | https://pub.dev/packages/cupertino_icons |
+| `dartssh2` | `^2.22.3` | no | https://pub.dev/packages/dartssh2 |
 | `desktop_webview_window` | `^0.2.3` | no | https://pub.dev/packages/desktop_webview_window |
 | `file_picker` | `^11.0.2` | no | https://pub.dev/packages/file_picker |
-| `flutter_riverpod` | `^2.4.9` | no | https://pub.dev/packages/flutter_riverpod |
-| `riverpod_annotation` | `^2.3.3` | no | https://pub.dev/packages/riverpod_annotation |
-| `uuid` | `^4.2.0` | no | https://pub.dev/packages/uuid |
+| `fl_chart` | `^1.2.0` | no | https://pub.dev/packages/fl_chart |
+| `flutter_floating_bottom_bar` | `^2.0.0` | no | https://pub.dev/packages/flutter_floating_bottom_bar |
+| `flutter_riverpod` | `^3.3.1` | no | https://pub.dev/packages/flutter_riverpod |
+| `freezed_annotation` | `^3.1.0` | no | https://pub.dev/packages/freezed_annotation |
+| `re_editor` | `^0.10.0` | no | https://pub.dev/packages/re_editor |
+| `re_highlight` | `^0.0.3` | no | https://pub.dev/packages/re_highlight |
+| `riverpod_annotation` | `^4.0.2` | no | https://pub.dev/packages/riverpod_annotation |
+| `yaml` | `^3.1.3` | no | https://pub.dev/packages/yaml |
 | `zeta_flutter` | `any` | no | https://pub.dev/packages/zeta_flutter |
+| `zeta_icons` | `1.9.3` | no | https://pub.dev/packages/zeta_icons |
 
 ## Compliance Notes
 

@@ -35,19 +35,19 @@ This plan covers **P0 #6 (Neurobench)** only. Two related P1 items are deferred 
 
 **Read before editing:**
 ```bash
-cat /Users/yoshimartodihardjo/NeuroMorphicToolKit/CODING_STYLE_GUIDE.md
-cat /Users/yoshimartodihardjo/NeuroMorphicToolKit/Neurobench/AGENTS.md
+cat $HOME/NeuroMorphicToolKit/CODING_STYLE_GUIDE.md
+cat $HOME/NeuroMorphicToolKit/Neurobench/AGENTS.md
 ```
 
 **Verification after every Python change:**
 ```bash
-cd /Users/yoshimartodihardjo/NeuroMorphicToolKit/Neurobench && \
+cd $HOME/NeuroMorphicToolKit/Neurobench && \
   poetry run pytest -v --tb=short tests/ 2>&1 | tail -20
 ```
 
 **Verification after Flutter changes:**
 ```bash
-cd /Users/yoshimartodihardjo/NeuroMorphicToolKit/Neurobench/frontend && \
+cd $HOME/NeuroMorphicToolKit/Neurobench/frontend && \
   flutter test --no-pub 2>&1 | tail -8
 ```
 
@@ -63,8 +63,8 @@ cd /Users/yoshimartodihardjo/NeuroMorphicToolKit/Neurobench/frontend && \
 - [ ] **Step 1: Read CODING_STYLE_GUIDE.md and Neurobench/AGENTS.md**
 
 ```bash
-cat /Users/yoshimartodihardjo/NeuroMorphicToolKit/CODING_STYLE_GUIDE.md
-cat /Users/yoshimartodihardjo/NeuroMorphicToolKit/Neurobench/AGENTS.md
+cat $HOME/NeuroMorphicToolKit/CODING_STYLE_GUIDE.md
+cat $HOME/NeuroMorphicToolKit/Neurobench/AGENTS.md
 ```
 
 - [ ] **Step 2: Write two failing tests in `test_contracts.py`**
@@ -107,7 +107,7 @@ def test_provenance_from_target_id_classifies_correctly() -> None:
 - [ ] **Step 3: Run the failing tests**
 
 ```bash
-cd /Users/yoshimartodihardjo/NeuroMorphicToolKit/Neurobench && \
+cd $HOME/NeuroMorphicToolKit/Neurobench && \
   poetry run pytest tests/test_contracts.py::test_benchmark_result_requires_metric_provenance \
     tests/test_contracts.py::test_provenance_from_target_id_classifies_correctly -v 2>&1 | tail -15
 ```
@@ -175,7 +175,7 @@ The default `CPU_ESTIMATED` keeps existing callers that don't pass the field val
 - [ ] **Step 5: Run the failing tests — expect PASS**
 
 ```bash
-cd /Users/yoshimartodihardjo/NeuroMorphicToolKit/Neurobench && \
+cd $HOME/NeuroMorphicToolKit/Neurobench && \
   poetry run pytest tests/test_contracts.py::test_benchmark_result_requires_metric_provenance \
     tests/test_contracts.py::test_provenance_from_target_id_classifies_correctly -v 2>&1 | tail -10
 ```
@@ -205,7 +205,7 @@ def benchmark_result_dict() -> dict[str, Any]:
 - [ ] **Step 7: Run full contract tests — no regressions**
 
 ```bash
-cd /Users/yoshimartodihardjo/NeuroMorphicToolKit/Neurobench && \
+cd $HOME/NeuroMorphicToolKit/Neurobench && \
   poetry run pytest tests/test_contracts.py -v 2>&1 | tail -15
 ```
 
@@ -237,7 +237,7 @@ so existing callers compile without changes. Tests added for both."
 Find the result store tests in `Neurobench/neurobench/tests/`. Check:
 ```bash
 grep -rn "result_store\|ResultStore\|save_result" \
-  /Users/yoshimartodihardjo/NeuroMorphicToolKit/Neurobench/neurobench/tests/ | head -10
+  $HOME/NeuroMorphicToolKit/Neurobench/neurobench/tests/ | head -10
 ```
 
 Then add to the appropriate test file (or create `tests/test_result_store.py` if none exists):
@@ -308,7 +308,7 @@ def test_result_store_defaults_cpu_estimated_for_legacy_rows(tmp_path) -> None:
 - [ ] **Step 2: Run the failing tests**
 
 ```bash
-cd /Users/yoshimartodihardjo/NeuroMorphicToolKit/Neurobench && \
+cd $HOME/NeuroMorphicToolKit/Neurobench && \
   poetry run pytest tests/ -k "roundtrips_metric_provenance or legacy_rows" -v 2>&1 | tail -15
 ```
 
@@ -418,7 +418,7 @@ cursor.execute(
 - [ ] **Step 7: Run the two new tests — expect PASS**
 
 ```bash
-cd /Users/yoshimartodihardjo/NeuroMorphicToolKit/Neurobench && \
+cd $HOME/NeuroMorphicToolKit/Neurobench && \
   poetry run pytest tests/ -k "roundtrips_metric_provenance or legacy_rows" -v 2>&1 | tail -10
 ```
 
@@ -427,7 +427,7 @@ Expected: both PASS.
 - [ ] **Step 8: Run full test suite — no regressions**
 
 ```bash
-cd /Users/yoshimartodihardjo/NeuroMorphicToolKit/Neurobench && \
+cd $HOME/NeuroMorphicToolKit/Neurobench && \
   poetry run pytest -v --tb=short tests/ 2>&1 | tail -20
 ```
 
@@ -459,7 +459,7 @@ to include the new column. Legacy rows without the column default to cpu_estimat
 
 ```bash
 grep -rn "BenchmarkResult(" \
-  /Users/yoshimartodihardjo/NeuroMorphicToolKit/Neurobench/neurobench/app/ | grep -v "__pycache__"
+  $HOME/NeuroMorphicToolKit/Neurobench/neurobench/app/ | grep -v "__pycache__"
 ```
 
 Note each file and line number.
@@ -490,7 +490,7 @@ def test_provenance_helper_covers_all_runner_target_ids() -> None:
 Run it — expect FAIL before Task 1 is complete, PASS after:
 
 ```bash
-cd /Users/yoshimartodihardjo/NeuroMorphicToolKit/Neurobench && \
+cd $HOME/NeuroMorphicToolKit/Neurobench && \
   poetry run pytest tests/test_contracts.py::test_provenance_helper_covers_all_runner_target_ids -v 2>&1 | tail -8
 ```
 
@@ -571,7 +571,7 @@ from neurobench.contracts.benchmark_contracts import BenchmarkResult, MetricProv
 - [ ] **Step 7: Run full test suite — no regressions**
 
 ```bash
-cd /Users/yoshimartodihardjo/NeuroMorphicToolKit/Neurobench && \
+cd $HOME/NeuroMorphicToolKit/Neurobench && \
   poetry run pytest -v --tb=short tests/ 2>&1 | tail -20
 ```
 
@@ -602,16 +602,16 @@ simulation (cpu_estimated), hardware runners — spinnaker2/synsense/pynq
 - [ ] **Step 1: Read the current Dart model and widget**
 
 ```bash
-cat /Users/yoshimartodihardjo/NeuroMorphicToolKit/Neurobench/frontend/lib/models/result.dart
+cat $HOME/NeuroMorphicToolKit/Neurobench/frontend/lib/models/result.dart
 grep -n "targetId\|metricProvenance\|_SummaryStatusChip" \
-  /Users/yoshimartodihardjo/NeuroMorphicToolKit/Neurobench/frontend/lib/widgets/results_summary_card.dart
+  $HOME/NeuroMorphicToolKit/Neurobench/frontend/lib/widgets/results_summary_card.dart
 ```
 
 - [ ] **Step 2: Write a failing Flutter test**
 
 Find the Flutter test directory:
 ```bash
-ls /Users/yoshimartodihardjo/NeuroMorphicToolKit/Neurobench/frontend/test/
+ls $HOME/NeuroMorphicToolKit/Neurobench/frontend/test/
 ```
 
 Create or update a test file (e.g., `test/widgets/results_summary_card_test.dart`):
@@ -659,7 +659,7 @@ void main() {
 - [ ] **Step 3: Run the failing test**
 
 ```bash
-cd /Users/yoshimartodihardjo/NeuroMorphicToolKit/Neurobench/frontend && \
+cd $HOME/NeuroMorphicToolKit/Neurobench/frontend && \
   flutter test --no-pub 2>&1 | tail -12
 ```
 
@@ -727,7 +727,7 @@ class BenchmarkResult {
 - [ ] **Step 5: Run the model tests — expect PASS**
 
 ```bash
-cd /Users/yoshimartodihardjo/NeuroMorphicToolKit/Neurobench/frontend && \
+cd $HOME/NeuroMorphicToolKit/Neurobench/frontend && \
   flutter test --no-pub 2>&1 | tail -10
 ```
 
@@ -786,7 +786,7 @@ class _SummaryStatusChip extends StatelessWidget {
 - [ ] **Step 7: Run full Flutter test suite — no regressions**
 
 ```bash
-cd /Users/yoshimartodihardjo/NeuroMorphicToolKit/Neurobench/frontend && \
+cd $HOME/NeuroMorphicToolKit/Neurobench/frontend && \
   flutter test --no-pub 2>&1 | tail -10
 ```
 

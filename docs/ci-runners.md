@@ -43,6 +43,27 @@ label groups the fleet must provide:
 | `[self-hosted, macOS, ARM64]` | `ci.yml` macOS jobs (the same Mac) |
 | `[self-hosted, Windows, X64]` | `ci.yml` Windows jobs |
 
+## Launcher E2E coverage (`nmtk-ci.yml`)
+
+`test/launcher_e2e_test.dart` was removed in commit `30276bdf` together with the
+embedded `ProcessManager` (local subprocess install/start/recovery). The launcher
+now connects to a remote **launcher-control** API over SSH bootstrap; module
+lifecycle is owned by the Python control plane, not a Dart subprocess manager.
+
+Do **not** re-add `test/launcher_e2e_test.dart` or a `FORCE_E2E` step in the
+`test` job. Coverage is split as follows:
+
+| Layer | Where | CI job |
+| --- | --- | --- |
+| App boot, server connect, workspace navigation | `nmtk/neuro_toolkit/integration_test/` (`cel91`, `cel108`, `cel232`, `example_test`, …) | `integration-test-apple` (`flutter test integration_test` on macOS + iOS simulator) |
+| Studio golden paths (mocked HTTP) | `nmtk/neuro_toolkit/test/features/neurocnl/golden_paths/` | `test` (`flutter test --coverage`) |
+| Launcher-control bootstrap client | `nmtk/neuro_toolkit/test/launcher_control_bootstrap_service_test.dart`, `control_api_service_test.dart` | `test` |
+| Remote module install/start/stop contracts | `tests/launcher_control/`, `scripts/run_launcher_guardrails.sh` | `ci.yml` (`ci-passed` gate), not `nmtk-ci.yml` |
+
+Live-backend integration tests (`cel108`, optional `cel261`) need env vars on the
+`nmtk-mac` runner (`NMTK_E2E_SERVER_*`, `NMTK_GOLDEN_PATHS_LIVE`). See
+[`nmtk/neuro_toolkit/integration_test/README.md`](../nmtk/neuro_toolkit/integration_test/README.md).
+
 A runner registered without `nmtk-linux` or `nmtk-mac` never picks up the
 `nmtk-ci.yml` jobs, even if it is otherwise a Linux or macOS runner. The
 scheduled health check below watches both label styles.
@@ -88,7 +109,7 @@ Then write `/etc/nmtk-runner-wake.conf` (`chmod 600`, owned by `nmtk-ci` — it
 holds a token):
 
 ```bash
-GITHUB_REPO="Completed-Spoon-6/NeuroMorphicToolKit"
+GITHUB_REPO="Yavmarto/NeuroMorphicToolKit"
 GITHUB_TOKEN="github_pat_..."       # fine-grained, Actions: read-only
 RUNNER_MAC="a4:bb:6d:11:22:33"      # wired NIC of the sleeping PC
 RUNNER_HOST="192.168.2.91"          # to test whether it is already awake
@@ -123,7 +144,7 @@ out to Windows.
 
    ```bash
    cd ~/actions-runner
-   ./config.sh --url https://github.com/Completed-Spoon-6/NeuroMorphicToolKit --labels nmtk-linux
+   ./config.sh --url https://github.com/Yavmarto/NeuroMorphicToolKit --labels nmtk-linux
    sudo ./svc.sh install && sudo ./svc.sh start
    ```
 
@@ -204,7 +225,7 @@ The scheduled copy exists because a broken `ci.yml` cannot lint itself.
 Test the check with no writes:
 
 ```bash
-GITHUB_REPOSITORY=Completed-Spoon-6/NeuroMorphicToolKit \
+GITHUB_REPOSITORY=Yavmarto/NeuroMorphicToolKit \
 GITHUB_TOKEN=... RUNNER_ADMIN_TOKEN=... \
 python3 scripts/ci/runner_health_check.py --dry-run
 ```
@@ -217,7 +238,7 @@ python3 scripts/ci/runner_health_check.py --dry-run
 2. **Look at the fleet.** Needs a token with Administration: read.
 
    ```bash
-   gh api repos/Completed-Spoon-6/NeuroMorphicToolKit/actions/runners \
+   gh api repos/Yavmarto/NeuroMorphicToolKit/actions/runners \
      --jq '.runners[] | "\(.name)\t\(.status)\t\(.busy)\t\([.labels[].name] | join(","))"'
    gh run list --status queued --limit 20
    ```
@@ -239,7 +260,7 @@ python3 scripts/ci/runner_health_check.py --dry-run
      ```bash
      cd ~/actions-runner
      ./config.sh remove --token <remove-token>
-     ./config.sh --url https://github.com/Completed-Spoon-6/NeuroMorphicToolKit --labels nmtk-linux
+     ./config.sh --url https://github.com/Yavmarto/NeuroMorphicToolKit --labels nmtk-linux
      sudo ./svc.sh stop && sudo ./svc.sh start
      ```
 

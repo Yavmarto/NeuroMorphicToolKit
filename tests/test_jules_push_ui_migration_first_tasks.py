@@ -20,7 +20,7 @@ def test_build_prompt_scopes_work_to_single_repo(tmp_path: Path) -> None:
         module_name="Neurochip",
         repo_path=tmp_path,
         brief_path=brief_path,
-        repo_identifier="Completed-Spoon-6/Neurochip",
+        repo_identifier="Yavmarto/Neurochip",
         branch="dev",
     )
 
@@ -43,7 +43,7 @@ def test_discover_module_tasks_uses_current_branch_and_repo_identifier(
 
     monkeypatch.setattr(
         "scripts.jules_push_ui_migration_first_tasks.get_repo_identifier",
-        lambda _repo_path: "Completed-Spoon-6/Neurohub",
+        lambda _repo_path: "Yavmarto/Neurohub",
     )
     monkeypatch.setattr(
         "scripts.jules_push_ui_migration_first_tasks.current_branch",
@@ -57,7 +57,7 @@ def test_discover_module_tasks_uses_current_branch_and_repo_identifier(
             module_name="Neurohub",
             repo_path=module_path,
             brief_path=module_path / "UI migration.md",
-            repo_identifier="Completed-Spoon-6/Neurohub",
+            repo_identifier="Yavmarto/Neurohub",
             branch="dev",
         )
     ]
@@ -73,7 +73,7 @@ def test_discover_module_tasks_honors_branch_override(
 
     monkeypatch.setattr(
         "scripts.jules_push_ui_migration_first_tasks.get_repo_identifier",
-        lambda _repo_path: "Completed-Spoon-6/Neurosense",
+        lambda _repo_path: "Yavmarto/Neurosense",
     )
     monkeypatch.setattr(
         "scripts.jules_push_ui_migration_first_tasks.current_branch",

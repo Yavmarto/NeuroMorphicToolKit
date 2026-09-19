@@ -85,7 +85,7 @@ class TestConfigPaths(unittest.TestCase):
 - [ ] **Step 2: Run the test to confirm it fails**
 
 ```bash
-cd /Users/yoshimartodihardjo/NeuroMorphicToolKit
+cd $HOME/NeuroMorphicToolKit
 python -m pytest tests/test_launcher_control_service.py::TestConfigPaths -v
 ```
 
@@ -215,7 +215,7 @@ A minimal Python 3.12-slim image that runs the launcher control service. It incl
 
 - [ ] **Step 1: Create the Dockerfile**
 
-Create `/Users/yoshimartodihardjo/NeuroMorphicToolKit/Dockerfile.control`:
+Create `$HOME/NeuroMorphicToolKit/Dockerfile.control`:
 
 ```dockerfile
 # Launcher control service — orchestrates module state, workspace, and
@@ -257,7 +257,7 @@ CMD ["python", "scripts/launcher_control_service.py", \
 - [ ] **Step 2: Build the image to confirm it compiles**
 
 ```bash
-cd /Users/yoshimartodihardjo/NeuroMorphicToolKit
+cd $HOME/NeuroMorphicToolKit
 docker build -f Dockerfile.control -t nmtk-control-test .
 ```
 
@@ -350,7 +350,7 @@ volumes:
 - [ ] **Step 3: Validate the compose file**
 
 ```bash
-cd /Users/yoshimartodihardjo/NeuroMorphicToolKit
+cd $HOME/NeuroMorphicToolKit
 docker compose config --quiet
 ```
 
@@ -416,7 +416,7 @@ services:
 - [ ] **Step 2: Validate the merged compose config**
 
 ```bash
-cd /Users/yoshimartodihardjo/NeuroMorphicToolKit
+cd $HOME/NeuroMorphicToolKit
 docker compose -f docker-compose.yml -f docker-compose.dev.yml config --quiet
 ```
 
@@ -580,7 +580,7 @@ flutter "${flutter_args[@]}"
 - [ ] **Step 4: Verify the script has no syntax errors**
 
 ```bash
-bash -n /Users/yoshimartodihardjo/NeuroMorphicToolKit/scripts/run_dev.sh
+bash -n $HOME/NeuroMorphicToolKit/scripts/run_dev.sh
 ```
 
 Expected: exits 0 with no output.
@@ -605,7 +605,7 @@ This verifies the complete flow: Docker starts all containers including `launche
 - [ ] **Step 1: Start the full Docker stack**
 
 ```bash
-cd /Users/yoshimartodihardjo/NeuroMorphicToolKit
+cd $HOME/NeuroMorphicToolKit
 docker compose up --build -d
 ```
 

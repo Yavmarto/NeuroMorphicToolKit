@@ -4,7 +4,7 @@
 
 Complete codebase analysis of the neurocnl neuromorphic specification framework located at:
 ```
-/Users/yoshimartodihardjo/Neuro-space/neurocnl/
+$HOME/Neuro-space/neurocnl/
 ```
 
 ## Documents Created
@@ -83,7 +83,7 @@ Contents:
 
 ### Core Module
 ```
-/Users/yoshimartodihardjo/Neuro-space/neurocnl/neurocnl/
+$HOME/Neuro-space/neurocnl/neurocnl/
 ├── __init__.py                           (60 lines)  - Module exports
 ├── pipeline.py                          (268 lines) - Main orchestrator
 ├── utils.py                              (27 lines) - extract_numeric()
@@ -110,7 +110,7 @@ Contents:
 
 ### Examples
 ```
-/Users/yoshimartodihardjo/Neuro-space/neurocnl/examples/
+$HOME/Neuro-space/neurocnl/examples/
 ├── 01_parse_spec.py         - Parsing demo
 ├── 02_validate_spec.py      - Validation demo
 ├── 03_generate_network.py   - Network generation demo
@@ -120,7 +120,7 @@ Contents:
 
 ### Demo Project
 ```
-/Users/yoshimartodihardjo/Neuro-space/neurocnl/demos/gripper_reflex/
+$HOME/Neuro-space/neurocnl/demos/gripper_reflex/
 ├── gripper_reflex.cnl       - 4-line CNL specification
 └── README.md                - Hardware wiring + architecture
 ```
@@ -281,16 +281,16 @@ FSR Signal → Rate Encoding → 50 Sensory LIF Neurons
 
 **Complete Implementation Available At**:
 ```
-/Users/yoshimartodihardjo/Neuro-space/neurocnl/demos/gripper_reflex/gripper_reflex.cnl
-/Users/yoshimartodihardjo/Neuro-space/neurocnl/demos/gripper_reflex/README.md
+$HOME/Neuro-space/neurocnl/demos/gripper_reflex/gripper_reflex.cnl
+$HOME/Neuro-space/neurocnl/demos/gripper_reflex/README.md
 ```
 
 ## Files You Should Have
 
-✓ `/Users/yoshimartodihardjo/Neuro-space/neurocnl_complete_reference.md` (1011 lines)
-✓ `/Users/yoshimartodihardjo/Neuro-space/QUICK_START_GUIDE.md` (359 lines)
-✓ `/Users/yoshimartodihardjo/Neuro-space/NEUROCNL_EXPLORATION_SUMMARY.txt` (344 lines)
-✓ `/Users/yoshimartodihardjo/Neuro-space/README_EXPLORATION_RESULTS.md` (THIS FILE)
+✓ `$HOME/Neuro-space/neurocnl_complete_reference.md` (1011 lines)
+✓ `$HOME/Neuro-space/QUICK_START_GUIDE.md` (359 lines)
+✓ `$HOME/Neuro-space/NEUROCNL_EXPLORATION_SUMMARY.txt` (344 lines)
+✓ `$HOME/Neuro-space/README_EXPLORATION_RESULTS.md` (THIS FILE)
 
 ## How to Use These Documents
 

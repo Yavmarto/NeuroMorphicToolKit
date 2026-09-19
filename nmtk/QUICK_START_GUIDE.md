@@ -305,27 +305,27 @@ Servo Output
 ## File Locations (Absolute Paths)
 
 ### Source Code
-- `/Users/yoshimartodihardjo/Neuro-space/neurocnl/neurocnl/__init__.py` - Module exports
-- `/Users/yoshimartodihardjo/Neuro-space/neurocnl/neurocnl/pipeline.py` - Main orchestration
-- `/Users/yoshimartodihardjo/Neuro-space/neurocnl/neurocnl/cnl/cnl_parser.py` - Parser (13 concepts)
-- `/Users/yoshimartodihardjo/Neuro-space/neurocnl/neurocnl/layers/layer1_validator.py` - Invariant checking
-- `/Users/yoshimartodihardjo/Neuro-space/neurocnl/neurocnl/layers/layer1_invariants.py` - 18 invariants
-- `/Users/yoshimartodihardjo/Neuro-space/neurocnl/neurocnl/layers/layer2_validator.py` - Cross-sentence checks
-- `/Users/yoshimartodihardjo/Neuro-space/neurocnl/neurocnl/generation/nengo_generator.py` - Network generation
-- `/Users/yoshimartodihardjo/Neuro-space/neurocnl/neurocnl/generation/assertion_generator.py` - Test generation
-- `/Users/yoshimartodihardjo/Neuro-space/neurocnl/neurocnl/export/__init__.py` - Export dispatcher
-- `/Users/yoshimartodihardjo/Neuro-space/neurocnl/neurocnl/export/c_header_exporter.py` - Microcontroller export
+- `$HOME/Neuro-space/neurocnl/neurocnl/__init__.py` - Module exports
+- `$HOME/Neuro-space/neurocnl/neurocnl/pipeline.py` - Main orchestration
+- `$HOME/Neuro-space/neurocnl/neurocnl/cnl/cnl_parser.py` - Parser (13 concepts)
+- `$HOME/Neuro-space/neurocnl/neurocnl/layers/layer1_validator.py` - Invariant checking
+- `$HOME/Neuro-space/neurocnl/neurocnl/layers/layer1_invariants.py` - 18 invariants
+- `$HOME/Neuro-space/neurocnl/neurocnl/layers/layer2_validator.py` - Cross-sentence checks
+- `$HOME/Neuro-space/neurocnl/neurocnl/generation/nengo_generator.py` - Network generation
+- `$HOME/Neuro-space/neurocnl/neurocnl/generation/assertion_generator.py` - Test generation
+- `$HOME/Neuro-space/neurocnl/neurocnl/export/__init__.py` - Export dispatcher
+- `$HOME/Neuro-space/neurocnl/neurocnl/export/c_header_exporter.py` - Microcontroller export
 
 ### Examples
-- `/Users/yoshimartodihardjo/Neuro-space/neurocnl/examples/01_parse_spec.py`
-- `/Users/yoshimartodihardjo/Neuro-space/neurocnl/examples/02_validate_spec.py`
-- `/Users/yoshimartodihardjo/Neuro-space/neurocnl/examples/03_generate_network.py`
-- `/Users/yoshimartodihardjo/Neuro-space/neurocnl/examples/04_full_pipeline.py`
-- `/Users/yoshimartodihardjo/Neuro-space/neurocnl/examples/05_demo_simulations.py`
+- `$HOME/Neuro-space/neurocnl/examples/01_parse_spec.py`
+- `$HOME/Neuro-space/neurocnl/examples/02_validate_spec.py`
+- `$HOME/Neuro-space/neurocnl/examples/03_generate_network.py`
+- `$HOME/Neuro-space/neurocnl/examples/04_full_pipeline.py`
+- `$HOME/Neuro-space/neurocnl/examples/05_demo_simulations.py`
 
 ### Demo
-- `/Users/yoshimartodihardjo/Neuro-space/neurocnl/demos/gripper_reflex/gripper_reflex.cnl`
-- `/Users/yoshimartodihardjo/Neuro-space/neurocnl/demos/gripper_reflex/README.md`
+- `$HOME/Neuro-space/neurocnl/demos/gripper_reflex/gripper_reflex.cnl`
+- `$HOME/Neuro-space/neurocnl/demos/gripper_reflex/README.md`
 
 ---
 
@@ -341,7 +341,7 @@ r"^The\s+connection\s+from\s+(.+?)\s+to\s+(.+?)\s+MUST(?:\s+NOT)?\s+(?:have|tran
 # Concept 6: STDP Learning
 r"^(?:The|A)\s+connection\s+from\s+(...)\s+to\s+(...)\s+MUST(?:\s+NOT)?\s+adapt\s+WITH\s+(?:STDP|BCM|Oja)\s+learning(?:\s+rate\s+of\s+(\d+(?:\.\d+)?))"
 
-# All patterns in: /Users/yoshimartodihardjo/Neuro-space/neurocnl/neurocnl/cnl/cnl_parser.py (lines 19-302)
+# All patterns in: $HOME/Neuro-space/neurocnl/neurocnl/cnl/cnl_parser.py (lines 19-302)
 ```
 
 ---

@@ -59,15 +59,15 @@ cd nmtk/neuro_toolkit && flutter test
 - [ ] **Step 1: Read CODING_STYLE_GUIDE.md and nmtk/AGENTS.md**
 
 ```bash
-cat /Users/yoshimartodihardjo/NeuroMorphicToolKit/CODING_STYLE_GUIDE.md
-cat /Users/yoshimartodihardjo/NeuroMorphicToolKit/nmtk/AGENTS.md
+cat $HOME/NeuroMorphicToolKit/CODING_STYLE_GUIDE.md
+cat $HOME/NeuroMorphicToolKit/nmtk/AGENTS.md
 ```
 
 - [ ] **Step 2: Find the line numbers of `update_module()` and `_repair_sync` area**
 
 ```bash
 grep -n "def update_module\|def _update_sync\|def uninstall_module" \
-  /Users/yoshimartodihardjo/NeuroMorphicToolKit/nmtk/launcher_control/server.py
+  $HOME/NeuroMorphicToolKit/nmtk/launcher_control/server.py
 ```
 
 This locates where to insert the new methods (place them after `update_module` / before `uninstall_module`).
@@ -146,7 +146,7 @@ Find the module route handler section (around line 6510 — the block of `if len
 - [ ] **Step 5: Run the doctor to verify no regressions**
 
 ```bash
-cd /Users/yoshimartodihardjo/NeuroMorphicToolKit && \
+cd $HOME/NeuroMorphicToolKit && \
   python3 scripts/launcher_control_service.py --doctor --json 2>&1 | python3 -m json.tool | head -20
 ```
 
@@ -175,7 +175,7 @@ install_module() and update_module()."
 
 ```bash
 grep -n "def test_\|class Launcher" \
-  /Users/yoshimartodihardjo/NeuroMorphicToolKit/tests/test_launcher_control_service.py | tail -20
+  $HOME/NeuroMorphicToolKit/tests/test_launcher_control_service.py | tail -20
 ```
 
 This shows where to append new tests.
@@ -241,7 +241,7 @@ def test_repair_module_sets_error_when_preflight_fails(self) -> None:
 - [ ] **Step 3: Run the new tests — expect FAIL**
 
 ```bash
-cd /Users/yoshimartodihardjo/NeuroMorphicToolKit && \
+cd $HOME/NeuroMorphicToolKit && \
   python3 -m unittest \
     tests.test_launcher_control_service.LauncherControlServiceTest.test_repair_module_returns_installing_state_immediately \
     tests.test_launcher_control_service.LauncherControlServiceTest.test_repair_module_sets_installed_when_preflight_ok \
@@ -254,7 +254,7 @@ Expected: FAIL (`AttributeError: 'LauncherControlState' object has no attribute 
 - [ ] **Step 4: Run all launcher unit tests — no regressions**
 
 ```bash
-cd /Users/yoshimartodihardjo/NeuroMorphicToolKit && \
+cd $HOME/NeuroMorphicToolKit && \
   python3 -m unittest tests.test_launcher_control_service -v 2>&1 | tail -20
 ```
 
@@ -320,7 +320,7 @@ def test_install_sync_cleans_venv_on_pip_failure(self) -> None:
 - [ ] **Step 2: Run the test — expect FAIL**
 
 ```bash
-cd /Users/yoshimartodihardjo/NeuroMorphicToolKit && \
+cd $HOME/NeuroMorphicToolKit && \
   python3 -m unittest \
     tests.test_launcher_control_service.LauncherControlServiceTest.test_install_sync_cleans_venv_on_pip_failure \
     -v 2>&1 | tail -10
@@ -384,7 +384,7 @@ Locate the section of `_install_sync` that begins after the venv creation and pi
 - [ ] **Step 4: Run the failing test — expect PASS**
 
 ```bash
-cd /Users/yoshimartodihardjo/NeuroMorphicToolKit && \
+cd $HOME/NeuroMorphicToolKit && \
   python3 -m unittest \
     tests.test_launcher_control_service.LauncherControlServiceTest.test_install_sync_cleans_venv_on_pip_failure \
     -v 2>&1 | tail -10
@@ -471,7 +471,7 @@ Locate `installModule()` in `module_provider.dart` (lines 260–297) and add the
 Check if `ModuleProvider` is an abstract class/interface:
 ```bash
 grep -n "abstract\|interface\|repairModule" \
-  /Users/yoshimartodihardjo/NeuroMorphicToolKit/nmtk/neuro_toolkit/lib/providers/module_provider.dart | head -10
+  $HOME/NeuroMorphicToolKit/nmtk/neuro_toolkit/lib/providers/module_provider.dart | head -10
 ```
 
 If there is an abstract base or interface that lists `installModule`, `launchModule`, etc., add `Future<void> repairModule(String moduleId);` to it in the same position (after `installModule`).
@@ -479,7 +479,7 @@ If there is an abstract base or interface that lists `installModule`, `launchMod
 - [ ] **Step 4: Run Flutter tests to detect compilation errors**
 
 ```bash
-cd /Users/yoshimartodihardjo/NeuroMorphicToolKit/nmtk/neuro_toolkit && flutter test --no-pub 2>&1 | head -30
+cd $HOME/NeuroMorphicToolKit/nmtk/neuro_toolkit && flutter test --no-pub 2>&1 | head -30
 ```
 
 Expected: compilation succeeds (any test failures at this point will be in the next task's widget test).
@@ -550,7 +550,7 @@ Then add the widget test after the last existing `testWidgets` call:
 - [ ] **Step 2: Run the new test — expect FAIL**
 
 ```bash
-cd /Users/yoshimartodihardjo/NeuroMorphicToolKit/nmtk/neuro_toolkit && \
+cd $HOME/NeuroMorphicToolKit/nmtk/neuro_toolkit && \
   flutter test test/module_picker_panel_test.dart --no-pub 2>&1 | tail -20
 ```
 
@@ -636,7 +636,7 @@ Search for where `_ModuleCard(` is constructed (inside `module_picker_panel.dart
 
 ```bash
 grep -n "_ModuleCard(" \
-  /Users/yoshimartodihardjo/NeuroMorphicToolKit/nmtk/neuro_toolkit/lib/widgets/module_picker_panel.dart
+  $HOME/NeuroMorphicToolKit/nmtk/neuro_toolkit/lib/widgets/module_picker_panel.dart
 ```
 
 In that construction site, pass the repair callback:
@@ -657,7 +657,7 @@ _ModuleCard(
 - [ ] **Step 6: Run the new test — expect PASS**
 
 ```bash
-cd /Users/yoshimartodihardjo/NeuroMorphicToolKit/nmtk/neuro_toolkit && \
+cd $HOME/NeuroMorphicToolKit/nmtk/neuro_toolkit && \
   flutter test test/module_picker_panel_test.dart --no-pub 2>&1 | tail -20
 ```
 
@@ -666,7 +666,7 @@ Expected: all tests including the new "Repair button" test PASS.
 - [ ] **Step 7: Run full Flutter test suite — no regressions**
 
 ```bash
-cd /Users/yoshimartodihardjo/NeuroMorphicToolKit/nmtk/neuro_toolkit && flutter test --no-pub 2>&1 | tail -20
+cd $HOME/NeuroMorphicToolKit/nmtk/neuro_toolkit && flutter test --no-pub 2>&1 | tail -20
 ```
 
 Expected: all previously passing tests still pass.

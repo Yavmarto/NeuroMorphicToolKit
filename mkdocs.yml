@@ -1,7 +1,7 @@
 site_name: NeuroMorphicToolKit
 site_description: A unified desktop suite for neuromorphic computing — SNN authoring, simulation, hardware deployment, benchmarking, and community sharing.
-site_url: https://completed-spoon-6.github.io/NeuroMorphicToolKit/
-repo_url: https://github.com/Completed-Spoon-6/NeuroMorphicToolKit
+site_url: https://yavmarto.github.io/NeuroMorphicToolKit/
+repo_url: https://github.com/Yavmarto/NeuroMorphicToolKit
 repo_name: NeuroMorphicToolKit
 edit_uri: edit/dev/docs/
 
@@ -105,4 +105,4 @@ nav:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/Completed-Spoon-6/NeuroMorphicToolKit
+      link: https://github.com/Yavmarto/NeuroMorphicToolKit

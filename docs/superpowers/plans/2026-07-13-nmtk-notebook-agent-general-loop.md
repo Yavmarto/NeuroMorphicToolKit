@@ -40,7 +40,7 @@ Canvas: Model
 1. Navigate to the Model Canvas (stepper tab '2. Model').
 2. Click the icon whose tooltip/content is 'NIR Importer' to open its side panel.
 3. Inside that panel, click the button labeled 'Load .nir'.
-4. A native file picker will open as a SEPARATE window you cannot see or click into — do not try. Instead: press key 'cmd+shift+g', then type the exact text '/Users/yoshimartodihardjo/NeuroMorphicToolKit/paper/01_lif/lif_norse.nir', then press key 'Return', then press key 'Return' again to confirm the file selection.
+4. A native file picker will open as a SEPARATE window you cannot see or click into — do not try. Instead: press key 'cmd+shift+g', then type the exact text '$HOME/NeuroMorphicToolKit/paper/01_lif/lif_norse.nir', then press key 'Return', then press key 'Return' again to confirm the file selection.
 5. Wait a couple of seconds, then confirm the Model canvas now shows a real graph (no longer empty).
 
 Canvas: Eval
@@ -101,7 +101,7 @@ Expected: FAIL with `AttributeError: module 'local_host_agent' has no attribute 
 - [ ] **Step 4: Commit**
 
 ```bash
-cd /Users/yoshimartodihardjo/NeuroMorphicToolKit
+cd $HOME/NeuroMorphicToolKit
 git add agent-tests/guides/lif_snntorch.md agent-tests/test_local_host_agent.py
 git commit -m "test: add lif_snntorch guide file and agent test scaffold"
 ```
@@ -244,7 +244,7 @@ Expected: PASS (2 passed)
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/yoshimartodihardjo/NeuroMorphicToolKit
+cd $HOME/NeuroMorphicToolKit
 git add agent-tests/local_host_agent.py agent-tests/test_local_host_agent.py
 git commit -m "feat: switch decision model to qwen3.5:35b and send screenshot to it"
 ```
@@ -341,7 +341,7 @@ Expected: PASS (all tests so far, including Task 1's `load_guide` tests)
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/yoshimartodihardjo/NeuroMorphicToolKit
+cd $HOME/NeuroMorphicToolKit
 git add agent-tests/local_host_agent.py agent-tests/test_local_host_agent.py
 git commit -m "refactor: drop scripted macro, make main() guide-driven"
 ```
@@ -422,7 +422,7 @@ Expected: PASS (all tests)
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/yoshimartodihardjo/NeuroMorphicToolKit
+cd $HOME/NeuroMorphicToolKit
 git add agent-tests/local_host_agent.py
 git commit -m "fix: pass live screenshot into query_llm from main() loop"
 ```
@@ -568,7 +568,7 @@ Expected: PASS (all tests)
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/yoshimartodihardjo/NeuroMorphicToolKit
+cd $HOME/NeuroMorphicToolKit
 git add agent-tests/local_host_agent.py
 git commit -m "fix: wrap AppleScript calls in 20s timeout with one retry"
 ```
@@ -706,7 +706,7 @@ Expected: preflight prints `✅ neuro_toolkit is reachable.` within a few second
 - [ ] **Step 4: Commit**
 
 ```bash
-cd /Users/yoshimartodihardjo/NeuroMorphicToolKit
+cd $HOME/NeuroMorphicToolKit
 git add agent-tests/run_agent.sh
 git commit -m "feat: guide-path argument + fast AppleEvent preflight in run_agent.sh"
 ```

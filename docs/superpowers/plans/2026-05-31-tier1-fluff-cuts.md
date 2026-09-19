@@ -15,7 +15,7 @@
 Before starting, verify you are in the repo root:
 
 ```bash
-cd /Users/yoshimartodihardjo/NeuroMorphicToolKit
+cd $HOME/NeuroMorphicToolKit
 git status
 ```
 
