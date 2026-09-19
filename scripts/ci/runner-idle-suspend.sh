@@ -16,7 +16,7 @@
 #
 # Config file (shell syntax, chmod 600; the same file runner-wake.sh uses is
 # fine, and GITHUB_TOKEN may be omitted here to skip the queue check):
-#   GITHUB_REPO="Completed-Spoon-6/NeuroMorphicToolKit"
+#   GITHUB_REPO="Yavmarto/NeuroMorphicToolKit"
 #   GITHUB_TOKEN="github_pat_..."
 #   WAKE_LABELS="nmtk-win,nmtk-linux"
 #   IDLE_MINUTES=10

@@ -18,12 +18,15 @@
 #                          rebuild that?"
 #   --akida-native         force the akida-native overlay on
 #   --no-akida-native      force it off (default is auto-detect)
+#   --prophesee            force the prophesee overlay (OpenEB worker + USB bus)
+#   --no-prophesee         force prophesee overlay off (default is auto-detect)
 #   --evict-ports          kill non-NMTK port holders on legacy dev stacks
 #   --remove-orphans       also remove containers no compose file defines
 #   -h | --help
 #
 # Env: REMOTE_HOST (default moosebun2@192.168.2.90), DEPLOY_DIR,
-#      CONTAINER_ENGINE, AKIDA_NATIVE (1/0 to skip detection)
+#      CONTAINER_ENGINE, AKIDA_NATIVE (1/0 to skip detection),
+#      PROPHESSEE (1/0 to skip detection)
 #
 # Why this exists: `docker-ex-deploy` rebuilds all 14 images for a one-line
 # Python change, and a plain rsync silently does nothing for the services that
@@ -68,6 +71,9 @@ AKIDA_DETECTED_VIA=""
 # from the host in apply_akida_overlay(); mirrors Makefile's docker-ex-all.
 NEUROCHIP_HW_WORKER_API_KEY="${NEUROCHIP_HW_WORKER_API_KEY:-}"
 NEUROCHIP_PORT=8002
+# unset = auto-detect; 1/0 = forced. See resolve_prophesee_overlay().
+PROPHESSEE="${PROPHESSEE:-}"
+PROPHESSEE_DETECTED_VIA=""
 APP_MANAGED_STACK=false
 APP_UPDATE_TMP_DIR=""
 UPDATE_LOCK_DIR="${NMTK_DEV_UPDATE_LOCK_DIR:-${TMPDIR:-/tmp}/nmtk-dev-update.lock}"
@@ -95,6 +101,8 @@ while [ $# -gt 0 ]; do
     --restart-suite-api-only) RESTART_SUITE_API_ONLY=true ;;
     --akida-native)    AKIDA_NATIVE=1 ;;
     --no-akida-native) AKIDA_NATIVE=0 ;;
+    --prophesee)       PROPHESSEE=1 ;;
+    --no-prophesee)    PROPHESSEE=0 ;;
     --evict-ports)     EVICT_PORTS=true ;;
     --remove-orphans)  REMOVE_ORPHANS=true ;;
     --force-rebuild) shift; [ $# -gt 0 ] || die "--force-rebuild needs a service name"
@@ -437,6 +445,34 @@ PY
   fi
 }
 
+resolve_prophesee_overlay() {
+  if [ -n "$PROPHESSEE" ]; then
+    PROPHESSEE_DETECTED_VIA="explicit override"
+    return
+  fi
+
+  # A connected Prophesee EVK shows up on lsusb with this vendor id.
+  local usb_line
+  usb_line="$(remote_probe "lsusb 2>/dev/null | awk '/ID 1d43:/ {print; exit}'" | tr -d '\r')"
+  if [ -n "$usb_line" ]; then
+    PROPHESSEE=1
+    PROPHESSEE_DETECTED_VIA="lsusb: $usb_line"
+    return
+  fi
+
+  PROPHESSEE=0
+  PROPHESSEE_DETECTED_VIA="no Prophesee USB device detected"
+}
+
+apply_prophesee_overlay() {
+  resolve_prophesee_overlay
+  if [ "$PROPHESSEE" = "1" ]; then
+    COMPOSE_ARGS="$COMPOSE_ARGS -f docker-compose.prophesee.yml"
+    log "Prophesee overlay ($PROPHESSEE_DETECTED_VIA)"
+    log "  → adding docker-compose.prophesee.yml: OpenEB worker image + /dev/bus/usb"
+  fi
+}
+
 apply_akida_overlay() {
   resolve_akida_native
   if [ "$AKIDA_NATIVE" = "1" ]; then
@@ -552,7 +588,9 @@ classify_path() {
     suite_api/Dockerfile)                    PATH_ACTIONS+=("REBUILD:suite_api") ;;
     Dockerfile.control)                      PATH_ACTIONS+=("REBUILD:launcher-control") ;;
     Dockerfile.lava)                         PATH_ACTIONS+=("REBUILD:lava-backend") ;;
-    workers/neurosense_hw/Dockerfile)        PATH_ACTIONS+=("REBUILD:neurosense-hw-worker") ;;
+    Dockerfile.brian2)                       PATH_ACTIONS+=("REBUILD:brian2-backend") ;;
+    workers/neurosense_hw/Dockerfile|workers/neurosense_hw/Dockerfile.prophesee) \
+                                             PATH_ACTIONS+=("REBUILD:neurosense-hw-worker") ;;
     workers/neurobench_runner/Dockerfile)    PATH_ACTIONS+=("REBUILD:neurobench-runner-worker") ;;
     workers/neurochip_hw/Dockerfile)         PATH_ACTIONS+=("REBUILD:neurochip-hw-worker") ;;
     workers/neurocnl_physics/Dockerfile)     PATH_ACTIONS+=("REBUILD:neurocnl-physics-worker") ;;
@@ -565,7 +603,7 @@ classify_path() {
     # Only these three are loaded by the dev stack, so only these justify a
     # recreate. prod/remote are bundled into the Flutter app by hash, so they
     # need the asset re-sync — but no dev container ever reads them.
-    docker-compose.yml|docker-compose.dev.yml|docker-compose.akida-native.yml) \
+    docker-compose.yml|docker-compose.dev.yml|docker-compose.akida-native.yml|docker-compose.prophesee.yml) \
                                              PATH_ACTIONS+=("RECREATE:all") ;;
     docker-compose.prod.yml|docker-compose.remote.yml) \
                                              PATH_ACTIONS+=("ASSETSYNC:-") ;;
@@ -615,6 +653,7 @@ classify_path() {
     # The lava worker's vendored requirements are baked into the image
     # (Dockerfile.lava:11-12), so a change needs a rebuild like worker source.
     workers/lava_backend/*)                  PATH_ACTIONS+=("REBUILD:lava-backend") ;;
+    workers/brian2_backend/*)                PATH_ACTIONS+=("REBUILD:brian2-backend") ;;
 
     # Shared contracts package. Copied into the build context of Dockerfile.lava
     # (lava-backend), workers/neurochip_hw/Dockerfile (neurochip-hw-worker), and
@@ -701,6 +740,7 @@ main() {
 
   # Decide the compose file set before anything else uses compose_remote().
   apply_akida_overlay
+  apply_prophesee_overlay
   detect_app_managed_stack
 
   if $RESTART_SUITE_API_ONLY; then

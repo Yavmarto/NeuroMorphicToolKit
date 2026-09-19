@@ -13,7 +13,7 @@ for candidate in "/Applications/Docker.app/Contents/Resources/bin" "$HOME/.docke
 done
 
 # Use the provided org/username or fallback to the canonical GitHub org for this repo
-GITHUB_USER=${1:-completed-spoon-6}
+GITHUB_USER=${1:-yavmarto}
 GITHUB_USER=$(echo "$GITHUB_USER" | tr '[:upper:]' '[:lower:]')
 REPO_NAME="neuromorphictoolkit"
 TARGET_FILTER=${2:-}

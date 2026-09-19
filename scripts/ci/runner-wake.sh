@@ -13,7 +13,7 @@
 #   --config   defaults to /etc/nmtk-runner-wake.conf
 #
 # Config file (shell syntax, chmod 600 — it holds a token):
-#   GITHUB_REPO="Completed-Spoon-6/NeuroMorphicToolKit"
+#   GITHUB_REPO="Yavmarto/NeuroMorphicToolKit"
 #   GITHUB_TOKEN="github_pat_..."   # fine-grained, Actions: read-only
 #   RUNNER_MAC="a4:bb:6d:11:22:33"  # wired NIC of the sleeping machine
 #   RUNNER_HOST="192.168.2.91"      # used to test whether it is already awake

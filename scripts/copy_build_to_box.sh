@@ -1,15 +1,18 @@
 #!/usr/bin/env bash
 # copy_build_to_box.sh — Copy a build artifact into the Box-synced NMTK folder.
 #
-# Usage: copy_build_to_box.sh SOURCE_FILE [BOX_DIR]
+# Usage: copy_build_to_box.sh SOURCE_FILE [BOX_DIR] [DEST_NAME]
 #
 # BOX_DIR defaults to $NMTK_BOX_DIR or ~/Library/CloudStorage/Box-Box/NMTK/Builds.
+# DEST_NAME renames the artifact at the destination (e.g. nmtk-profile.apk);
+# it defaults to the source basename.
 # If the Box sync folder is missing, prints a warning and exits 0 (non-fatal).
 
 set -euo pipefail
 
 SOURCE="${1:?source file required}"
 BOX_DIR="${2:-${NMTK_BOX_DIR:-$HOME/Library/CloudStorage/Box-Box/NMTK/Builds}}"
+DEST_NAME="${3:-}"
 
 if [ ! -f "$SOURCE" ]; then
   echo "Box copy skipped: source not found: $SOURCE" >&2
@@ -24,7 +27,7 @@ if [ ! -d "$BOX_NMTK_ROOT" ]; then
 fi
 
 mkdir -p "$BOX_DIR"
-DEST="$BOX_DIR/$(basename "$SOURCE")"
+DEST="$BOX_DIR/${DEST_NAME:-$(basename "$SOURCE")}"
 BASENAME="$(basename "$DEST")"
 
 copy_to_dest() {

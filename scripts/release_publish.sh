@@ -22,7 +22,7 @@ source "$REPO_ROOT/scripts/dev/lib.sh"   # also sets -euo pipefail
 
 RELEASE_BRANCH="${RELEASE_BRANCH:-dev}"
 REMOTE="${REMOTE:-origin}"
-GHCR_BASE="ghcr.io/completed-spoon-6/neuromorphictoolkit"
+GHCR_BASE="ghcr.io/yavmarto/neuromorphictoolkit"
 WORKFLOWS=("Release Docker Images" "Release Desktop Apps")
 
 VERSION=""

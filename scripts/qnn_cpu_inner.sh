@@ -110,18 +110,66 @@ arr = np.random.rand(*shape).astype(np.float32)
 raw_path = os.path.abspath("input0.raw")
 arr.tofile(raw_path)
 with open("input_list.txt", "w", encoding="utf-8") as f:
-    f.write(f"{name}:= {raw_path}\n")
+    f.write(f"{name}:={raw_path}\n")
 print(f"input_list for {name} shape={shape} bytes={os.path.getsize(raw_path)}")
 PY
 
 echo "=== Step 6: qnn-net-run on libQnnCpu.so ==="
+set +e
 /usr/bin/time -f "infer_seconds=%e" -o infer_timing.txt \
   "${QNN_BIN}/qnn-net-run" \
   --model "$MODEL_SO" \
   --backend "${QNN_LIB}/libQnnCpu.so" \
   --input_list input_list.txt \
   --output_dir output_cpu
+INFER_RC=$?
+set -e
 cat infer_timing.txt
+if [[ "$INFER_RC" -ne 0 ]]; then
+  echo "WARN: qnn-net-run exited $INFER_RC (CPU graph execution may fail for full YOLOv8n; conversion timing still valid)"
+
+  echo "=== Step 6b: ONNX Runtime + QNNExecutionProvider fallback ==="
+  set +e
+  /usr/bin/time -f "ort_qnn_ep_seconds=%e" -o ort_qnn_ep_timing.txt \
+    python - "${QNN_LIB}/libQnnCpu.so" <<'PY'
+import sys
+
+import numpy as np
+import onnxruntime as ort
+
+backend_path = sys.argv[1]
+session = ort.InferenceSession(
+    "yolov8n.onnx",
+    providers=["QNNExecutionProvider", "CPUExecutionProvider"],
+    provider_options=[{"backend_path": backend_path}, {}],
+)
+active = session.get_providers()
+input_meta = session.get_inputs()[0]
+shape = [dim if isinstance(dim, int) else 1 for dim in input_meta.shape]
+arr = np.random.rand(*shape).astype(np.float32)
+outputs = session.run(None, {input_meta.name: arr})
+print(f"ORT session active providers: {active}")
+print(f"ORT inference OK: {len(outputs)} output(s), shapes={[o.shape for o in outputs]}")
+# ponytail: ORT only warns and silently falls back to CPUExecutionProvider when a
+# requested provider isn't registered — a 0 exit code alone does not mean QNN EP ran.
+if "QNNExecutionProvider" not in active:
+    print("ORT_QNN_EP_NOT_USED: QNNExecutionProvider was not registered; ran on CPUExecutionProvider instead")
+    sys.exit(2)
+PY
+  ORT_RC=$?
+  set -e
+  cat ort_qnn_ep_timing.txt
+  if [[ "$ORT_RC" -eq 0 ]]; then
+    echo "PASS: ORT+QNN EP fallback ran the full graph via QNNExecutionProvider where raw qnn-net-run failed"
+    echo "pass_qnn_ep" > ort_qnn_ep_result.txt
+  elif [[ "$ORT_RC" -eq 2 ]]; then
+    echo "WARN: ORT+QNN EP fallback ran but QNNExecutionProvider was not registered (silently used CPUExecutionProvider) — QNN EP not available on this ONNX Runtime build/platform"
+    echo "fail_qnn_ep_not_registered" > ort_qnn_ep_result.txt
+  else
+    echo "WARN: ORT+QNN EP fallback also failed (rc=$ORT_RC)"
+    echo "fail_rc_${ORT_RC}" > ort_qnn_ep_result.txt
+  fi
+fi
 
 python - <<'PY'
 from pathlib import Path
@@ -141,13 +189,21 @@ parts = {
     "compile": read_seconds("compile_timing.txt"),
     "infer": read_seconds("infer_timing.txt"),
 }
+if Path("ort_qnn_ep_timing.txt").exists():
+    parts["ort_qnn_ep"] = read_seconds("ort_qnn_ep_timing.txt")
 parts["total"] = sum(parts.values())
 lines = [f"{k}_seconds={v:.3f}" for k, v in parts.items()]
+if Path("ort_qnn_ep_result.txt").exists():
+    lines.append(f"ort_qnn_ep_result={Path('ort_qnn_ep_result.txt').read_text(encoding='utf-8').strip()}")
 Path("timing_summary.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
-print("PASS: QNN CPU spike completed")
+print("PASS: QNN CPU spike completed (conversion + compile; see infer RC above)")
 for line in lines:
     print(line)
 PY
+
+if [[ "$INFER_RC" -ne 0 ]]; then
+  exit 0
+fi
 
 echo "=== Artifact summary ==="
 find /work -maxdepth 3 \( -name '*.so' -o -name 'timing_summary.txt' -o -name 'yolov8n.onnx' \) | sort

@@ -45,10 +45,14 @@ TFLITE="$(find /work -name '*full_integer_quant.tflite' ! -name '*_edgetpu.tflit
 test -n "$TFLITE"
 
 echo "=== Step 2: edgetpu_compiler on INT8 TFLite (generic compile path) ==="
-edgetpu_compiler -s "$TFLITE"
-EDGETPU="${TFLITE%.tflite}_edgetpu.tflite"
+TFLITE_DIR="$(dirname "$TFLITE")"
+TFLITE_BASE="$(basename "$TFLITE" .tflite)"
+cd "$TFLITE_DIR"
+edgetpu_compiler -s "$(basename "$TFLITE")"
+EDGETPU="${TFLITE_BASE}_edgetpu.tflite"
 test -f "$EDGETPU"
-echo "PASS: edgetpu_compiler produced $EDGETPU ($(stat -c%s "$EDGETPU") bytes)"
+echo "PASS: edgetpu_compiler produced $TFLITE_DIR/$EDGETPU ($(stat -c%s "$EDGETPU") bytes)"
+cd /work
 
 echo "=== Step 3: Ultralytics export(format=edgetpu) integrated path ==="
 python - <<'PY'

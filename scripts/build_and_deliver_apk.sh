@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # build_and_deliver_apk.sh — Build the NMTK Flutter launcher (macOS DMG, then Android APK)
 # and copy artifacts to the Box-synced NMTK folder.
+# The APK is renamed to nmtk-<buildtype>.apk when copied (e.g. nmtk-profile.apk).
 #
 # Usage:
 #   scripts/build_and_deliver_apk.sh [OPTIONS]
@@ -43,7 +44,7 @@ DMG_VERSION="dev"
 SIGNING_IDENTITY=""
 
 usage() {
-  sed -n '2,24p' "$0" | sed 's/^# //' | sed 's/^#//'
+  sed -n '2,25p' "$0" | sed 's/^# //' | sed 's/^#//'
 }
 
 while [ $# -gt 0 ]; do
@@ -110,6 +111,10 @@ apk_filename() {
   esac
 }
 
+apk_dest_name() {
+  printf 'nmtk-%s.apk\n' "$BUILD_MODE"
+}
+
 xcode_config_name() {
   case "$BUILD_MODE" in
     debug) printf '%s\n' "Debug" ;;
@@ -124,10 +129,11 @@ dmg_filename() {
 
 copy_to_box() {
   local file="$1"
+  local dest_name="${2:-}"
   if [ -n "$BOX_DIR" ]; then
-    bash "$SCRIPT_DIR/copy_build_to_box.sh" "$file" "$BOX_DIR"
+    bash "$SCRIPT_DIR/copy_build_to_box.sh" "$file" "$BOX_DIR" "$dest_name"
   else
-    bash "$SCRIPT_DIR/copy_build_to_box.sh" "$file"
+    bash "$SCRIPT_DIR/copy_build_to_box.sh" "$file" "" "$dest_name"
   fi
 }
 
@@ -149,7 +155,7 @@ deliver_apk() {
     echo "Run without --skip-build, or build manually from nmtk/neuro_toolkit." >&2
     exit 1
   fi
-  copy_to_box "$APK_PATH"
+  copy_to_box "$APK_PATH" "$(apk_dest_name)"
 }
 
 deliver_dmg() {
