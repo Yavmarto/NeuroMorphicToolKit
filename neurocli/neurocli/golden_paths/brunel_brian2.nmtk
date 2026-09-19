@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "workspace": {
+    "files": [
+      {
+        "id": "f1",
+        "name": "brunel_balanced_ei.cnl",
+        "content": "# Brunel (2000) balanced E/I network (miniature, Studio-verifiable)\n# Dynamics verification — not a classifier. Poisson drive via Deploy stimulus.\n\nDefine a network named brunel_ei with timestep 0.001.\nDefine an input port named external with shape (20,).\nDefine a LIF neuron named excitatory with time constant 0.02, resistance 1.0, leak voltage 0.0, and firing threshold 1.0.\nDefine a LIF neuron named inhibitory with time constant 0.01, resistance 1.0, leak voltage 0.0, and firing threshold 1.0.\nDefine a linear transformation named w_ext_e with weight matrix shape (40, 20) annotated with metadata weight_init equal to \"xavier\" annotated with metadata seed equal to 2000.\nDefine a linear transformation named w_e_e with weight matrix shape (40, 40) annotated with metadata weight_init equal to \"xavier\" annotated with metadata seed equal to 2001.\nDefine a linear transformation named w_e_i with weight matrix shape (10, 40) annotated with metadata weight_init equal to \"xavier\" annotated with metadata seed equal to 2002.\nDefine a linear transformation named w_i_e with weight matrix shape (40, 10) annotated with metadata weight_init equal to \"xavier\" annotated with metadata seed equal to 2003.\nDefine a linear transformation named w_i_i with weight matrix shape (10, 10) annotated with metadata weight_init equal to \"xavier\" annotated with metadata seed equal to 2004.\nDefine an output port named output with shape (40,).\nexternal connects to w_ext_e.\nw_ext_e connects to excitatory.\nexcitatory connects to w_e_e.\nw_e_e connects to excitatory.\nexcitatory connects to w_e_i.\nw_e_i connects to inhibitory.\ninhibitory connects to w_i_e.\nw_i_e connects to excitatory.\ninhibitory connects to w_i_i.\nw_i_i connects to inhibitory.\nexcitatory connects to output.\n"
+      }
+    ],
+    "activeFileId": "f1",
+    "workspaceName": "golden-brunel-brian2",
+    "selectedPlatforms": ["brian2_sim"],
+    "selectedDataset": null
+  }
+}
