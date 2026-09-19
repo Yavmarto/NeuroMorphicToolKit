@@ -149,9 +149,9 @@ For dev, `REMOTE_HOST=moosebun2@192.168.2.90` can be used. The server address is
 
 To run the app, use:
 ```
-flutter run -d macos
+scripts/flutter_build_lock.sh run -d macos
 ```
-This runs the Flutter macOS app directly, matching the end-user experience as closely as possible. Do not suggest or use `make docker-ex-m` or `scripts/run_dev.sh` — those workflows are no longer used.
+This runs the Flutter macOS app directly, matching the end-user experience as closely as possible. It also takes the shared build lock (`nmtk/neuro_toolkit/.flutter_build.lock`) that `scripts/build_and_deliver_apk.sh` uses, so a dev run cannot corrupt a packaging build by writing `build/macos`, `macos/Flutter/ephemeral`, or `Pods` at the same time. Plain `flutter run -d macos` still works, but then the packaging script may have to retry if it collides with your build. Do not suggest or use `make docker-ex-m` or `scripts/run_dev.sh` — those workflows are no longer used.
 
 ## Updating the backend
 
@@ -254,6 +254,9 @@ artifact into the local Box sync folder (default
 Use `--apk-only` or `--dmg-only` to build just one, or `--skip-build` to copy existing artifacts.
 If Box is not installed or synced, the copy is skipped with a warning and the script still exits 0.
 A DMG build failure does not block APK delivery when both are requested.
+The macOS build holds `nmtk/neuro_toolkit/.flutter_build.lock` for the whole build phase
+(same lock as `scripts/flutter_build_lock.sh`), and retries the whole `flutter build macos`
+step up to 5 times if a concurrent Flutter process corrupts an in-progress artifact.
 The macOS DMG path (`make build-macos-dmg-signed` → `create-dmg.sh`) uses the same Box copy
 helper and the same `NMTK_BOX_DIR` default.
 

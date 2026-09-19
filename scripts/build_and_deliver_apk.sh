@@ -30,7 +30,15 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-FLUTTER_DIR="$REPO_ROOT/nmtk/neuro_toolkit"
+
+# Shared serialization with ad-hoc `flutter run -d macos` / `flutter build
+# macos` sessions and other packaging runs touching the same project tree.
+# Sourcing this defines FLUTTER_PROJECT_DIR and acquire_flutter_build_lock();
+# see scripts/flutter_build_lock.sh for the documented interactive wrapper.
+# shellcheck source=scripts/flutter_build_lock.sh
+. "$SCRIPT_DIR/flutter_build_lock.sh"
+
+FLUTTER_DIR="$FLUTTER_PROJECT_DIR"
 APK_OUTPUT_DIR="$FLUTTER_DIR/build/app/outputs/flutter-apk"
 MACOS_PRODUCTS_DIR="$FLUTTER_DIR/build/macos/Build/Products"
 DMG_OUTPUT_DIR="$FLUTTER_DIR/build/deliver"
@@ -171,27 +179,9 @@ deliver_dmg() {
   copy_to_box "$DMG_PATH"
 }
 
-# Other agents/processes in this repo build the same Flutter project
-# concurrently. Two `flutter build macos` runs racing on the same
-# build/macos/Build/Products tree can corrupt the App.framework codesign
-# (codesign fails with "replacing existing signature" / errSecInternalComponent).
-# Serialize builds across invocations with a simple lock dir.
-BUILD_LOCK_DIR="$FLUTTER_DIR/.build_and_deliver_apk.lock"
-
-acquire_build_lock() {
-  local waited=0
-  local timeout=600
-  while ! mkdir "$BUILD_LOCK_DIR" 2>/dev/null; do
-    if [ "$waited" -ge "$timeout" ]; then
-      echo "Timed out waiting for another build to finish (lock: $BUILD_LOCK_DIR)." >&2
-      exit 1
-    fi
-    echo "Another build is in progress; waiting for the lock... (${waited}s)"
-    sleep 5
-    waited=$((waited + 5))
-  done
-  trap 'rmdir "$BUILD_LOCK_DIR" 2>/dev/null || true' EXIT
-}
+# Build serialization lives in scripts/flutter_build_lock.sh (sourced above).
+# It takes the same lock any interactive `flutter run -d macos` session should
+# take, so packaging runs and dev runs cannot write build/macos at once.
 
 # codesign needs the login keychain unlocked to sign the macOS app. Only try
 # interactively — SSH/agent runs cannot answer the password prompt.
@@ -211,35 +201,97 @@ unlock_login_keychain() {
   fi
 }
 
-# flutter build macos occasionally fails with a codesign error
-# ("replacing existing signature" / errSecInternalComponent) when it races
-# another build touching the same App.framework. Retry a couple of times
-# before giving up, since a clean re-run of the same command usually succeeds.
+# flutter build macos can fail when another Flutter process is writing the
+# shared build/macos tree at the same time:
+#   - codesign conflict on App.framework ("replacing existing signature" /
+#     errSecInternalComponent).
+# The lock above serializes packaging runs, but an ad-hoc `flutter run -d
+# macos` can still race us. Retry the WHOLE `flutter build macos` command (not
+# just codesign): a clean re-run after the racing build stops writing succeeds.
+#
+# The SAME error text also appears for a non-race reason on Xcode 27: Flutter
+# 3.44.2's thinFramework runs `lipo <fat> -verify_arch <arch> <arch>`, and the
+# Xcode 27 lipo rejects more than one arch there ("-verify_arch requires
+# exactly one input file"), so every universal build fails at
+# profile_unpack_macos. See flutter/flutter#188461 (fixed upstream by #189792).
+# On that toolchain a retry can never succeed, so fall back once to a
+# single-arch build. Set NMTK_MACOS_NO_SINGLE_ARCH_FALLBACK=1 to fail instead.
+build_macos_host_arch() {
+  case "$(uname -m)" in
+    arm64) printf 'arm64' ;;
+    x86_64) printf 'x86_64' ;;
+    *) printf '' ;;
+  esac
+}
+
+flutter_build_macos() {
+  local archs_override="${1:-}"
+  (
+    cd "$FLUTTER_DIR"
+    if [ -n "$archs_override" ]; then
+      export FLUTTER_XCODE_ARCHS="$archs_override"
+    fi
+    _define="$(flutter_non_release_define)"
+    case "$BUILD_MODE" in
+      # ponytail: --no-tree-shake-icons keeps the full zeta-icons font so a
+      # stale subset cannot map codepoints to missing/CJK fallback glyphs
+      # (CEL-178, CEL-229).
+      debug) flutter build macos --debug --no-tree-shake-icons ${_define:+"$_define"} ;;
+      profile) flutter build macos --profile --no-tree-shake-icons ${_define:+"$_define"} ;;
+      *) flutter build macos --release --no-tree-shake-icons ;;
+    esac
+  )
+}
+
 build_macos_with_retry() {
   local attempt=1
-  local max_attempts=3
+  local max_attempts="${NMTK_MACOS_BUILD_ATTEMPTS:-5}"
+  local retry_sleep="${NMTK_MACOS_BUILD_RETRY_SLEEP:-5}"
+  local arch_retry_sleep="${NMTK_MACOS_ARCH_RETRY_SLEEP:-15}"
+  local arch_retry_sleep_max="${NMTK_MACOS_ARCH_RETRY_SLEEP_MAX:-120}"
+  local archs_override=""
+  local allow_single_arch=true
+  local host_arch
+  host_arch="$(build_macos_host_arch)"
+  if [ "${NMTK_MACOS_NO_SINGLE_ARCH_FALLBACK:-0}" = "1" ]; then
+    allow_single_arch=false
+  fi
+  local log
+  log="$(mktemp "${TMPDIR:-/tmp}/nmtk-macos-build.XXXXXX")"
   while true; do
-    if (
-      cd "$FLUTTER_DIR"
-      _define="$(flutter_non_release_define)"
-      case "$BUILD_MODE" in
-        # ponytail: --no-tree-shake-icons keeps the full zeta-icons font so a
-        # stale subset cannot map codepoints to missing/CJK fallback glyphs
-        # (CEL-178, CEL-229).
-        debug) flutter build macos --debug --no-tree-shake-icons ${_define:+"$_define"} ;;
-        profile) flutter build macos --profile --no-tree-shake-icons ${_define:+"$_define"} ;;
-        *) flutter build macos --release --no-tree-shake-icons ;;
-      esac
-    ); then
+    local rc=0
+    if flutter_build_macos "$archs_override" 2>&1 | tee "$log"; then
+      rm -f "$log"
       return 0
+    else
+      rc="${PIPESTATUS[0]}"
     fi
     if [ "$attempt" -ge "$max_attempts" ]; then
-      echo "flutter build macos failed after $max_attempts attempts." >&2
+      echo "flutter build macos failed after $max_attempts attempts (last exit: $rc)." >&2
+      echo "Last build output:" >&2
+      tail -n 40 "$log" >&2 || true
+      rm -f "$log"
       return 1
     fi
-    echo "flutter build macos failed (attempt $attempt/$max_attempts), likely a transient codesign conflict with a concurrent build. Retrying in 5s..." >&2
+    if grep -q "does not contain architectures" "$log"; then
+      if [ -z "$archs_override" ] && [ "$allow_single_arch" = true ] && [ -n "$host_arch" ]; then
+        archs_override="$host_arch"
+        echo "WARNING: the local Xcode lipo rejected the universal-arch check (Xcode 27 lipo bug, flutter/flutter#188461)." >&2
+        echo "WARNING: falling back to a single-arch (${host_arch}) macOS build; the resulting app/DMG will NOT run on Intel Macs." >&2
+        echo "WARNING: upgrade Flutter (fixed in 3.45+) or downgrade Xcode to build universal again. Set NMTK_MACOS_NO_SINGLE_ARCH_FALLBACK=1 to fail instead." >&2
+      else
+        echo "flutter build macos reported a framework arch check (attempt $attempt/$max_attempts); retrying in ${arch_retry_sleep}s..." >&2
+        sleep "$arch_retry_sleep"
+        arch_retry_sleep=$((arch_retry_sleep * 2))
+        if [ "$arch_retry_sleep" -gt "$arch_retry_sleep_max" ]; then
+          arch_retry_sleep="$arch_retry_sleep_max"
+        fi
+      fi
+    else
+      echo "flutter build macos failed (attempt $attempt/$max_attempts), likely a transient conflict with a concurrent build; retrying in ${retry_sleep}s..." >&2
+      sleep "$retry_sleep"
+    fi
     attempt=$((attempt + 1))
-    sleep 5
   done
 }
 
@@ -254,7 +306,7 @@ if [ "$BUILD_APK" = false ] && [ "$BUILD_DMG" = false ]; then
 fi
 
 if [ "$SKIP_BUILD" = false ]; then
-  acquire_build_lock
+  acquire_flutter_build_lock
 
   if [ "$BUILD_DMG" = true ]; then
     unlock_login_keychain

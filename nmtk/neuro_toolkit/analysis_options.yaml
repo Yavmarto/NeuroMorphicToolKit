@@ -9,6 +9,14 @@ analyzer:
     missing_return: error
     dead_code: warning
     unused_import: warning
+  exclude:
+    - build/**
+    - android/**
+    - ios/**
+    - web/**
+    - windows/**
+    - macos/**
+    - linux/**
 
 linter:
   rules:
