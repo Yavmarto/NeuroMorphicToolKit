@@ -9,7 +9,10 @@ class _BusyBanner extends StatelessWidget {
     final zeta = Zeta.of(context);
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
+      padding: EdgeInsets.symmetric(
+        horizontal: context.nmtkTokens.sectionGap * 1.5,
+        vertical: context.nmtkTokens.compactGap,
+      ),
       color: zeta.colors.surfaceInfoSubtle,
       child: Row(
         children: [

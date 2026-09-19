@@ -96,7 +96,7 @@ class _ServerSetupScreenState extends ConsumerState<ServerSetupScreen> {
         else if (state.result != null)
           _buildSuccessPanel(state.result!, tokens)
         else if (state.isRunning)
-          _buildRunningPanel(state, tokens)
+          _buildRunningPanel(context, state, tokens)
         else
           _buildForm(tokens),
       ],
@@ -312,7 +312,11 @@ class _ServerSetupScreenState extends ConsumerState<ServerSetupScreen> {
     );
   }
 
-  Widget _buildRunningPanel(ProvisionState state, NmtkShellTokens tokens) {
+  Widget _buildRunningPanel(
+    BuildContext context,
+    ProvisionState state,
+    NmtkShellTokens tokens,
+  ) {
     final phaseLabel = state.phaseLabel ?? 'Setting up your server…';
 
     return NmtkSurfaceCard(
@@ -324,7 +328,11 @@ class _ServerSetupScreenState extends ConsumerState<ServerSetupScreen> {
           children: [
             Row(
               children: [
-                const Icon(ZetaIcons.sync, size: 20),
+                Icon(
+                  ZetaIcons.sync,
+                  size: 20,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(

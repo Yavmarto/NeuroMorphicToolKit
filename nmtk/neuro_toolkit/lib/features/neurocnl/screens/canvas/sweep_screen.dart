@@ -24,138 +24,144 @@ class _SweepScreenState extends ConsumerState<SweepScreen> {
   @override
   Widget build(BuildContext context) {
     final sweepState = ref.watch(sweepProvider);
+    final tokens = NmtkShellTokens.of(context);
+    final compact =
+        MediaQuery.sizeOf(context).width < NmtkShellTokens.compactBreakpoint;
+
+    final formFields = <Widget>[
+      Row(
+        children: [
+          Expanded(
+            child: Text(
+              'Sweep Configuration',
+              style: Zeta.of(context).textStyles.titleMedium.copyWith(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+            ),
+          ),
+          Tooltip(
+            message: 'Reset configuration',
+            child: ZetaIconButton.text(
+              icon: ZetaIcons.refresh,
+              semanticLabel: 'Reset configuration',
+              onPressed: () => ref.read(sweepProvider.notifier).reset(),
+            ),
+          ),
+        ],
+      ),
+      if (sweepState.backendSupport != null) ...[
+        const SizedBox(height: 16),
+        NmtkBackendSupportBanner(
+          verdict: sweepState.backendSupport!.verdict,
+          backend: sweepState.backendSupport!.backend,
+          warnings: sweepState.backendSupport!.warnings,
+          title: 'Sweep Backend',
+          compact: true,
+        ),
+      ],
+      const SizedBox(height: 16),
+      NmtkTextInput(
+        key: const Key('sweep-parameter-path-field'),
+        label: 'Parameter Path',
+        placeholder: 'e.g., nodes.N1.tau',
+        initialValue: _parameterPath,
+        onChange: (value) => _parameterPath = value ?? '',
+        validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+      ),
+      NmtkTextInput(
+        key: const Key('sweep-start-field'),
+        label: 'Start Value',
+        initialValue: _start.toString(),
+        keyboardType: TextInputType.number,
+        onChange: (value) => _start = double.tryParse(value ?? '') ?? 0.0,
+        validator: (v) =>
+            double.tryParse(v ?? '') == null ? 'Invalid number' : null,
+      ),
+      NmtkTextInput(
+        key: const Key('sweep-end-field'),
+        label: 'End Value',
+        initialValue: _end.toString(),
+        keyboardType: TextInputType.number,
+        onChange: (value) => _end = double.tryParse(value ?? '') ?? 1.0,
+        validator: (v) =>
+            double.tryParse(v ?? '') == null ? 'Invalid number' : null,
+      ),
+      NmtkTextInput(
+        key: const Key('sweep-steps-field'),
+        label: 'Steps (max 20)',
+        initialValue: _steps.toString(),
+        keyboardType: TextInputType.number,
+        onChange: (value) => _steps = int.tryParse(value ?? '') ?? 5,
+        validator: (v) {
+          final val = int.tryParse(v ?? '');
+          if (val == null) {
+            return 'Invalid number';
+          }
+          if (val <= 0 || val > 20) {
+            return 'Must be between 1 and 20';
+          }
+          return null;
+        },
+      ),
+      if (!compact) const Spacer(),
+      SizedBox(height: compact ? tokens.sectionGap : 0),
+      ZetaButton(
+        key: const Key('sweep-run-button'),
+        onPressed: sweepState.isLoading ? null : _handleRunSweep,
+        label: sweepState.isLoading ? 'Running…' : 'Run Sweep',
+        leadingIcon: sweepState.isLoading ? null : ZetaIcons.play,
+      ),
+    ];
+
+    final configPanel = NmtkSurfaceCard(
+      expandChild: !compact,
+      child: Form(
+        key: _formKey,
+        child: compact
+            ? SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: formFields,
+                ),
+              )
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: formFields,
+              ),
+      ),
+    );
+
+    final resultsPanel = NmtkSurfaceCard(
+      expandChild: true,
+      child: _buildResultsView(sweepState, compact: compact),
+    );
 
     return Material(
       // ZETA-MIGRATION-EXEMPT: transparent (no fill) — Zeta has no transparent token
       color: Colors.transparent,
       child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 320,
-              // Allowed: single-topic surface
-              child: NmtkSurfaceCard(
-                expandChild: true,
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              'Sweep Configuration',
-                              style: Zeta.of(context).textStyles.titleMedium
-                                  .copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 18,
-                                  ),
-                            ),
-                          ),
-                          Tooltip(
-                            message: 'Reset configuration',
-                            child: ZetaIconButton.text(
-                              icon: ZetaIcons.refresh,
-                              semanticLabel: 'Reset configuration',
-                              onPressed: () =>
-                                  ref.read(sweepProvider.notifier).reset(),
-                            ),
-                          ),
-                        ],
-                      ),
-                      if (sweepState.backendSupport != null) ...[
-                        const SizedBox(height: 16),
-                        NmtkBackendSupportBanner(
-                          verdict: sweepState.backendSupport!.verdict,
-                          backend: sweepState.backendSupport!.backend,
-                          warnings: sweepState.backendSupport!.warnings,
-                          title: 'Sweep Backend',
-                          compact: true,
-                        ),
-                      ],
-                      const SizedBox(height: 16),
-                      NmtkTextInput(
-                        key: const Key('sweep-parameter-path-field'),
-                        label: 'Parameter Path',
-                        placeholder: 'e.g., nodes.N1.tau',
-                        initialValue: _parameterPath,
-                        onChange: (value) => _parameterPath = value ?? '',
-                        validator: (v) =>
-                            v == null || v.isEmpty ? 'Required' : null,
-                      ),
-                      NmtkTextInput(
-                        key: const Key('sweep-start-field'),
-                        label: 'Start Value',
-                        initialValue: _start.toString(),
-                        keyboardType: TextInputType.number,
-                        onChange: (value) =>
-                            _start = double.tryParse(value ?? '') ?? 0.0,
-                        validator: (v) => double.tryParse(v ?? '') == null
-                            ? 'Invalid number'
-                            : null,
-                      ),
-                      NmtkTextInput(
-                        key: const Key('sweep-end-field'),
-                        label: 'End Value',
-                        initialValue: _end.toString(),
-                        keyboardType: TextInputType.number,
-                        onChange: (value) =>
-                            _end = double.tryParse(value ?? '') ?? 1.0,
-                        validator: (v) => double.tryParse(v ?? '') == null
-                            ? 'Invalid number'
-                            : null,
-                      ),
-                      NmtkTextInput(
-                        key: const Key('sweep-steps-field'),
-                        label: 'Steps (max 20)',
-                        initialValue: _steps.toString(),
-                        keyboardType: TextInputType.number,
-                        onChange: (value) =>
-                            _steps = int.tryParse(value ?? '') ?? 5,
-                        validator: (v) {
-                          final val = int.tryParse(v ?? '');
-                          if (val == null) {
-                            return 'Invalid number';
-                          }
-                          if (val <= 0 || val > 20) {
-                            return 'Must be between 1 and 20';
-                          }
-                          return null;
-                        },
-                      ),
-                      const Spacer(),
-                      ZetaButton(
-                        key: const Key('sweep-run-button'),
-                        onPressed: sweepState.isLoading
-                            ? null
-                            : _handleRunSweep,
-                        label: sweepState.isLoading ? 'Running…' : 'Run Sweep',
-                        leadingIcon: sweepState.isLoading
-                            ? null
-                            : ZetaIcons.play,
-                      ),
-                    ],
-                  ),
-                ),
+        padding: EdgeInsets.all(tokens.sectionGap),
+        child: compact
+            ? Column(
+                children: <Widget>[
+                  configPanel,
+                  SizedBox(height: tokens.sectionGap),
+                  Expanded(child: resultsPanel),
+                ],
+              )
+            : Row(
+                children: <Widget>[
+                  SizedBox(width: 320, child: configPanel),
+                  SizedBox(width: tokens.sectionGap),
+                  Expanded(child: resultsPanel),
+                ],
               ),
-            ),
-            const SizedBox(width: 24),
-            Expanded(
-              // Allowed: single-topic surface
-              child: NmtkSurfaceCard(
-                expandChild: true,
-                child: _buildResultsView(sweepState),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
 
-  Widget _buildResultsView(SweepState state) {
+  Widget _buildResultsView(SweepState state, {required bool compact}) {
     if (state.isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -192,8 +198,8 @@ class _SweepScreenState extends ConsumerState<SweepScreen> {
         Expanded(
           child: GridView.builder(
             padding: const EdgeInsets.all(16),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: compact ? 2 : 3,
               childAspectRatio: 1.5,
               crossAxisSpacing: 16,
               mainAxisSpacing: 16,

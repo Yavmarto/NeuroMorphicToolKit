@@ -116,7 +116,10 @@ class _HubExploreViewState extends State<HubExploreView> {
                 focusNode: _searchFocusNode,
                 semanticLabel: 'Search NeuroHub items',
                 placeholder: 'Search titles, tags, people, or metadata',
-                prefix: const Icon(ZetaIcons.search),
+                prefix: Icon(
+                  ZetaIcons.search,
+                  color: Zeta.of(context).colors.mainSubtle,
+                ),
                 suffix: widget.query.isEmpty
                     ? null
                     : Tooltip(

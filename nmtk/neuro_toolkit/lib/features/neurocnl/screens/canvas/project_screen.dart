@@ -232,13 +232,16 @@ class _ProjectScreenState extends ConsumerState<ProjectScreen> {
         title: Text(
           project == null ? 'Save Current Design' : 'Update Project Metadata',
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            NmtkTextInput(controller: nameController, label: 'Project Name'),
-            const SizedBox(height: 12),
-            NmtkTextInput(controller: descController, label: 'Description'),
-          ],
+        content: NmtkDialogSurface.wrapScrollable(
+          context,
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              NmtkTextInput(controller: nameController, label: 'Project Name'),
+              const SizedBox(height: 12),
+              NmtkTextInput(controller: descController, label: 'Description'),
+            ],
+          ),
         ),
         actions: [
           ZetaButton.outline(

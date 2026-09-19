@@ -33,9 +33,9 @@ Future<void> saveCurrentWorkspaceToNeurohub(
   if (!binding.canEdit) {
     if (!context.mounted) return;
     NmtkSnackBars.error(
-        context,
-        'You can preview this workspace, but you cannot save changes to it. Fork a private copy instead.',
-      );
+      context,
+      'You can preview this workspace, but you cannot save changes to it. Fork a private copy instead.',
+    );
     return;
   }
 
@@ -94,11 +94,11 @@ Future<void> _createWorkspace(
     _afterSave(ref, saved);
     if (!context.mounted) return;
     NmtkSnackBars.success(
-        context,
-        details.isPublic
-            ? 'Published to Neurohub.'
-            : 'Saved privately to Neurohub.',
-      );
+      context,
+      details.isPublic
+          ? 'Published to Neurohub.'
+          : 'Saved privately to Neurohub.',
+    );
   } on NeurohubException catch (error) {
     if (!context.mounted) return;
     NmtkSnackBars.error(context, workspaceErrorMessage(error));
@@ -180,15 +180,11 @@ class _ConflictDialog extends StatelessWidget {
   const _ConflictDialog();
 
   @override
-  Widget build(BuildContext context) => AlertDialog(
-    title: const Text('This workspace changed elsewhere'),
-    content: const SizedBox(
-      width: 520,
-      child: Text(
-        'Your work is still safe in Studio. Choose whether to load the latest saved version, keep your work as a new workspace, or compare both first.',
-      ),
-    ),
-    actions: <Widget>[
+  Widget build(BuildContext context) {
+    const message =
+        'Your work is still safe in Studio. Choose whether to load the latest saved version, keep your work as a new workspace, or compare both first.';
+    final tokens = NmtkShellTokens.of(context);
+    final actionButtons = <Widget>[
       NmtkOutlinedButton(
         label: 'Keep editing',
         onPressed: () => Navigator.of(context).pop(_ConflictChoice.keepEditing),
@@ -205,8 +201,32 @@ class _ConflictDialog extends StatelessWidget {
         label: 'Reload saved version',
         onPressed: () => Navigator.of(context).pop(_ConflictChoice.reload),
       ),
-    ],
-  );
+    ];
+    final compact = NmtkDialogSurface.isCompact(context);
+    if (compact) {
+      return AlertDialog(
+        insetPadding: NmtkDialogSurface.insetPadding(context),
+        title: const Text('This workspace changed elsewhere'),
+        content: NmtkDialogSurface.wrapScrollable(
+          context,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              const Text(message),
+              SizedBox(height: tokens.sectionGap),
+              ...NmtkDialogSurface.layoutActions(context, actionButtons),
+            ],
+          ),
+        ),
+      );
+    }
+    return AlertDialog(
+      insetPadding: NmtkDialogSurface.insetPadding(context),
+      title: const Text('This workspace changed elsewhere'),
+      content: NmtkDialogSurface.wrapScrollable(context, const Text(message)),
+      actions: actionButtons,
+    );
+  }
 }
 
 class _WorkspaceCompareDialog extends StatelessWidget {
@@ -220,7 +240,8 @@ class _WorkspaceCompareDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final compact = MediaQuery.sizeOf(context).width < 900;
+    final tokens = NmtkShellTokens.of(context);
+    final stacked = NmtkDialogSurface.isCompact(context);
     final local = _ComparisonPane(
       title: 'Your Studio workspace',
       payload: localPayload,
@@ -229,69 +250,78 @@ class _WorkspaceCompareDialog extends StatelessWidget {
       title: 'Latest saved workspace',
       payload: remotePayload,
     );
-    return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: NmtkDesignTokens.dialogShape),
-      insetPadding: const EdgeInsets.all(24),
-      child: SizedBox(
-        width: 1180,
-        height: 720,
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              Text(
-                'Compare workspace changes',
-                style: Zeta.of(context).textStyles.titleLarge,
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Both previews are read-only. Nothing changes until you choose an action.',
-              ),
-              const SizedBox(height: 16),
-              Expanded(
-                child: compact
-                    ? Column(
-                        children: <Widget>[
-                          Expanded(child: local),
-                          const SizedBox(height: 16),
-                          Expanded(child: saved),
-                        ],
-                      )
-                    : Row(
-                        children: <Widget>[
-                          Expanded(child: local),
-                          const SizedBox(width: 16),
-                          Expanded(child: saved),
-                        ],
-                      ),
-              ),
-              const SizedBox(height: 16),
-              Wrap(
-                alignment: WrapAlignment.end,
-                spacing: 8,
-                runSpacing: 8,
-                children: <Widget>[
-                  NmtkOutlinedButton(
-                    label: 'Keep editing',
-                    onPressed: () =>
-                        Navigator.of(context).pop(_ConflictChoice.keepEditing),
-                  ),
-                  NmtkOutlinedButton(
-                    label: 'Save as new workspace',
-                    onPressed: () =>
-                        Navigator.of(context).pop(_ConflictChoice.saveCopy),
-                  ),
-                  NmtkPrimaryButton(
-                    label: 'Reload saved version',
-                    onPressed: () =>
-                        Navigator.of(context).pop(_ConflictChoice.reload),
-                  ),
-                ],
-              ),
-            ],
+    final actionButtons = <Widget>[
+      NmtkOutlinedButton(
+        label: 'Keep editing',
+        onPressed: () => Navigator.of(context).pop(_ConflictChoice.keepEditing),
+      ),
+      NmtkOutlinedButton(
+        label: 'Save as new workspace',
+        onPressed: () => Navigator.of(context).pop(_ConflictChoice.saveCopy),
+      ),
+      NmtkPrimaryButton(
+        label: 'Reload saved version',
+        onPressed: () => Navigator.of(context).pop(_ConflictChoice.reload),
+      ),
+    ];
+    final body = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Text(
+          'Compare workspace changes',
+          style: Zeta.of(context).textStyles.titleLarge,
+        ),
+        SizedBox(height: tokens.compactGap),
+        const Text(
+          'Both previews are read-only. Nothing changes until you choose an action.',
+        ),
+        SizedBox(height: tokens.sectionGap),
+        Expanded(
+          child: stacked
+              ? Column(
+                  children: <Widget>[
+                    Expanded(child: local),
+                    SizedBox(height: tokens.sectionGap),
+                    Expanded(child: saved),
+                  ],
+                )
+              : Row(
+                  children: <Widget>[
+                    Expanded(child: local),
+                    SizedBox(width: tokens.sectionGap),
+                    Expanded(child: saved),
+                  ],
+                ),
+        ),
+        SizedBox(height: tokens.sectionGap),
+        Wrap(
+          alignment: WrapAlignment.end,
+          spacing: tokens.compactGap,
+          runSpacing: tokens.compactGap,
+          children: NmtkDialogSurface.layoutActions(context, actionButtons),
+        ),
+      ],
+    );
+    if (stacked) {
+      return Dialog.fullscreen(
+        child: SafeArea(
+          child: Padding(
+            padding: EdgeInsets.all(tokens.sectionGap),
+            child: body,
           ),
         ),
+      );
+    }
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: NmtkDesignTokens.dialogShape),
+      insetPadding: NmtkDialogSurface.insetPadding(context),
+      child: ConstrainedBox(
+        constraints: NmtkDialogSurface.constraints(
+          context,
+          maxWidth: 1180,
+          maxHeight: 720,
+        ),
+        child: Padding(padding: EdgeInsets.all(tokens.sectionGap), child: body),
       ),
     );
   }
@@ -366,42 +396,41 @@ class _CreateWorkspaceDialogState extends State<_CreateWorkspaceDialog> {
     final name = _name.text.trim();
     final slug = slugifyWorkspaceName(name);
     return AlertDialog(
+      insetPadding: NmtkDialogSurface.insetPadding(context),
       title: const Text('Save to Neurohub'),
-      content: SizedBox(
-        width: 520,
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              const Text(
-                'Workspaces start private. You can publish or invite collaborators later.',
-              ),
-              const SizedBox(height: 16),
-              ZetaTextInput(
-                key: const Key('neurohub-create-name'),
-                controller: _name,
-                label: 'Workspace name',
-                onChange: (_) => setState(() {}),
-              ),
-              const SizedBox(height: 12),
-              ZetaTextInput(
-                controller: _description,
-                label: 'Description (optional)',
-              ),
-              const SizedBox(height: 12),
-              ZetaTextInput(
-                controller: _tags,
-                label: 'Tags (optional)',
-                placeholder: 'vision, akida, tutorial',
-              ),
-              const SizedBox(height: 16),
-              ZetaCheckbox(
-                value: _public,
-                label: 'Publish for others to discover',
-                onChanged: (value) => setState(() => _public = value),
-              ),
-            ],
-          ),
+      content: NmtkDialogSurface.wrapScrollable(
+        context,
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            const Text(
+              'Workspaces start private. You can publish or invite collaborators later.',
+            ),
+            const SizedBox(height: 16),
+            ZetaTextInput(
+              key: const Key('neurohub-create-name'),
+              controller: _name,
+              label: 'Workspace name',
+              onChange: (_) => setState(() {}),
+            ),
+            const SizedBox(height: 12),
+            ZetaTextInput(
+              controller: _description,
+              label: 'Description (optional)',
+            ),
+            const SizedBox(height: 12),
+            ZetaTextInput(
+              controller: _tags,
+              label: 'Tags (optional)',
+              placeholder: 'vision, akida, tutorial',
+            ),
+            const SizedBox(height: 16),
+            ZetaCheckbox(
+              value: _public,
+              label: 'Publish for others to discover',
+              onChanged: (value) => setState(() => _public = value),
+            ),
+          ],
         ),
       ),
       actions: <Widget>[

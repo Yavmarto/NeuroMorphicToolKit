@@ -49,42 +49,61 @@ class _WorkspaceReposScreenState extends ConsumerState<WorkspaceReposScreen> {
   Widget build(BuildContext context) {
     final session = ref.watch(neurohubSessionProvider);
     final workspaces = ref.watch(neurohubWorkspacesProvider);
+    final tokens = NmtkShellTokens.of(context);
+    final compact =
+        MediaQuery.sizeOf(context).width < NmtkShellTokens.compactBreakpoint;
+    final gap = tokens.sectionGap;
+
+    final titleBlock = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          'My workspace repos',
+          style: Theme.of(
+            context,
+          ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          'Repositories on your GitHub account that are shared '
+          'as Neurohub workspaces.',
+          style: Zeta.of(context).textStyles.bodyMedium.copyWith(
+            color: Zeta.of(context).colors.mainSubtle,
+          ),
+        ),
+      ],
+    );
+    final shareButton = session.isSignedIn
+        ? NmtkPrimaryButton(
+            key: const Key('share-new-workspace-repo-button'),
+            label: 'Share new workspace repo',
+            icon: Icons.add,
+            onPressed: _openShareScreen,
+          )
+        : null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         Padding(
-          padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
-          child: Row(
-            children: <Widget>[
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          padding: EdgeInsets.fromLTRB(gap, gap, gap, tokens.compactGap),
+          child: compact || shareButton == null
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
-                    Text(
-                      'My workspace repos',
-                      style: Theme.of(context).textTheme.headlineSmall
-                          ?.copyWith(fontWeight: FontWeight.w700),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Repositories on your GitHub account that are shared '
-                      'as Neurohub workspaces.',
-                      style: Zeta.of(context).textStyles.bodyMedium.copyWith(
-                        color: Zeta.of(context).colors.mainSubtle,
-                      ),
-                    ),
+                    titleBlock,
+                    if (shareButton != null) ...<Widget>[
+                      SizedBox(height: tokens.compactGap),
+                      shareButton,
+                    ],
+                  ],
+                )
+              : Row(
+                  children: <Widget>[
+                    Expanded(child: titleBlock),
+                    shareButton,
                   ],
                 ),
-              ),
-              NmtkPrimaryButton(
-                key: const Key('share-new-workspace-repo-button'),
-                label: 'Share new workspace repo',
-                icon: Icons.add,
-                onPressed: session.isSignedIn ? _openShareScreen : null,
-              ),
-            ],
-          ),
         ),
         Expanded(child: _buildBody(session, workspaces)),
       ],
@@ -112,7 +131,7 @@ class _WorkspaceReposScreenState extends ConsumerState<WorkspaceReposScreen> {
     return workspaces.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, stackTrace) => Padding(
-        padding: const EdgeInsets.all(24),
+        padding: EdgeInsets.all(NmtkShellTokens.of(context).sectionGap),
         child: NmtkErrorCard(
           key: const Key('workspace-repos-error'),
           title: 'Could not load your workspace repos',
@@ -144,8 +163,9 @@ class _WorkspaceReposScreenState extends ConsumerState<WorkspaceReposScreen> {
             ),
           );
         }
+        final gap = NmtkShellTokens.of(context).sectionGap;
         return ListView.separated(
-          padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+          padding: EdgeInsets.fromLTRB(gap, gap / 2, gap, gap),
           itemCount: repos.length,
           separatorBuilder: (_, _) => const SizedBox(height: 8),
           itemBuilder: (context, index) {

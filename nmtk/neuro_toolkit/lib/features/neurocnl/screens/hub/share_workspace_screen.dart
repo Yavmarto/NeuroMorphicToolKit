@@ -146,7 +146,7 @@ class _ShareWorkspaceScreenState extends ConsumerState<ShareWorkspaceScreen> {
       appBar: AppBar(
         title: const Text('Share as new workspace repo'),
         leading: IconButton(
-          icon: const Icon(Icons.close),
+          icon: Icon(Icons.close, color: colors.mainSubtle),
           tooltip: 'Close',
           onPressed: () => context.pop(),
         ),
@@ -177,34 +177,34 @@ class _ShareWorkspaceScreenState extends ConsumerState<ShareWorkspaceScreen> {
                     _nameError = null;
                   }),
                 ),
-                  const SizedBox(height: 8),
-                  Text(
-                    slugPreview.isEmpty
-                        ? 'Repo name is created from your workspace name.'
-                        : 'Repo name: $slugPreview',
-                    key: const Key('share-workspace-slug-preview'),
-                    style: textStyles.bodySmall.copyWith(
-                      color: colors.mainSubtle,
-                    ),
+                const SizedBox(height: 8),
+                Text(
+                  slugPreview.isEmpty
+                      ? 'Repo name is created from your workspace name.'
+                      : 'Repo name: $slugPreview',
+                  key: const Key('share-workspace-slug-preview'),
+                  style: textStyles.bodySmall.copyWith(
+                    color: colors.mainSubtle,
                   ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'The repository is private and tagged as a Neurohub '
+                  'workspace automatically.',
+                  style: textStyles.bodySmall.copyWith(
+                    color: colors.mainSubtle,
+                  ),
+                ),
+                if (_errorMessage != null) ...[
                   const SizedBox(height: 16),
-                  Text(
-                    'The repository is private and tagged as a Neurohub '
-                    'workspace automatically.',
-                    style: textStyles.bodySmall.copyWith(
-                      color: colors.mainSubtle,
-                    ),
+                  NmtkErrorCard(
+                    key: const Key('share-workspace-error'),
+                    title: 'Could not share this workspace',
+                    subtitle: 'The repository was not created.',
+                    message: _errorMessage!,
                   ),
-                  if (_errorMessage != null) ...[
-                    const SizedBox(height: 16),
-                    NmtkErrorCard(
-                      key: const Key('share-workspace-error'),
-                      title: 'Could not share this workspace',
-                      subtitle: 'The repository was not created.',
-                      message: _errorMessage!,
-                    ),
-                  ],
-                  const SizedBox(height: 24),
+                ],
+                const SizedBox(height: 24),
                 Row(
                   children: <Widget>[
                     Expanded(

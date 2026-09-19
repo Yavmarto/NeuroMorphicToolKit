@@ -60,7 +60,10 @@ class _NeurohubShareSurfaceState extends ConsumerState<NeurohubShareSurface> {
             IconButton(
               key: const Key('neurohub-share-sign-out'),
               tooltip: 'Sign out',
-              icon: const Icon(Icons.logout),
+              icon: Icon(
+                Icons.logout,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
               onPressed: () =>
                   ref.read(neurohubSessionProvider.notifier).signOut(),
             ),
@@ -289,36 +292,52 @@ class _WorkspaceDetailContent extends ConsumerWidget {
               key: const Key('neurohub-share-preview'),
               label: 'Preview',
               icon: ZetaIcons.visibility,
-              onPressed: () => showDialog<void>(
-                context: context,
-                builder: (dialogContext) => Dialog(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: NmtkDesignTokens.dialogShape,
-                  ),
-                  child: SizedBox(
-                    width: 960,
-                    height: 640,
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: <Widget>[
-                          Text(
-                            workspace.displayName,
-                            style: Zeta.of(context).textStyles.titleLarge,
-                          ),
-                          const SizedBox(height: 12),
-                          Expanded(
-                            child: NeurohubWorkspacePreview(
-                              payload: workspace.workspace,
-                            ),
-                          ),
-                        ],
+              onPressed: () {
+                final compact = NmtkDialogSurface.isCompact(context);
+                final tokens = NmtkShellTokens.of(context);
+                final preview = Padding(
+                  padding: EdgeInsets.all(tokens.sectionGap),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: <Widget>[
+                      Text(
+                        workspace.displayName,
+                        style: Zeta.of(context).textStyles.titleLarge,
                       ),
-                    ),
+                      SizedBox(height: tokens.compactGap),
+                      Expanded(
+                        child: NeurohubWorkspacePreview(
+                          payload: workspace.workspace,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ),
+                );
+                showDialog<void>(
+                  context: context,
+                  builder: (dialogContext) {
+                    if (compact) {
+                      return Dialog.fullscreen(child: SafeArea(child: preview));
+                    }
+                    return Dialog(
+                      insetPadding: NmtkDialogSurface.insetPadding(
+                        dialogContext,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: NmtkDesignTokens.dialogShape,
+                      ),
+                      child: ConstrainedBox(
+                        constraints: NmtkDialogSurface.constraints(
+                          dialogContext,
+                          maxWidth: 960,
+                          maxHeight: 640,
+                        ),
+                        child: preview,
+                      ),
+                    );
+                  },
+                );
+              },
             ),
             NmtkOutlinedButton(
               key: const Key('neurohub-share-open-repo'),

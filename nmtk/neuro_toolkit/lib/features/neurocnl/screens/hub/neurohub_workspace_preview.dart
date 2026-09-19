@@ -187,9 +187,8 @@ class _NeurohubWorkspacePreviewState extends State<NeurohubWorkspacePreview> {
                             edgeColor: NmtkShellTokens.of(context).chromeBorder,
                             textColor: Zeta.of(context).colors.mainInverse,
                             nodeRadius: NmtkShellTokens.of(context).radiusMd,
-                            labelStyle: Zeta.of(context).textStyles.labelMedium.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
+                            labelStyle: Zeta.of(context).textStyles.labelMedium
+                                .copyWith(fontWeight: FontWeight.w600),
                           ),
                         ),
                       ),

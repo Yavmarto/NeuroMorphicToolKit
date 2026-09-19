@@ -68,13 +68,11 @@ class _EnvironmentEditorScreenState
   Widget build(BuildContext context) {
     final providerAsync = ref.watch(environmentProvider);
     final provider = providerAsync.value;
+    final busy = provider?.busy ?? false;
 
-    if (provider == null) {
-      return const Scaffold(
-        body: Center(child: ZetaProgressCircle(size: ZetaCircleSizes.s)),
-      );
-    }
-
+    // The app bar renders in every state (loading, error, empty, busy, ready)
+    // so the screen never loses its back affordance while the environment list
+    // is still loading. This mirrors the CEL-419/CEL-421 setup-flow rule.
     return Scaffold(
       appBar: AppBar(
         // ZETA-MIGRATION-EXEMPT: no Zeta app bar exists; this is the same
@@ -88,20 +86,22 @@ class _EnvironmentEditorScreenState
             ),
             child: ZetaButton.text(
               label: 'Refresh',
-              onPressed: provider.busy
+              onPressed: busy
                   ? null
                   : () => ref.read(environmentProvider.notifier).refresh(),
             ),
           ),
         ],
       ),
-      body: Column(
-        children: [
-          if (provider.busy)
-            _BusyBanner(label: provider.activeOperation ?? 'Working…'),
-          Expanded(child: _buildBody(providerAsync, provider)),
-        ],
-      ),
+      body: provider == null
+          ? const Center(child: ZetaProgressCircle(size: ZetaCircleSizes.s))
+          : Column(
+              children: [
+                if (provider.busy)
+                  _BusyBanner(label: provider.activeOperation ?? 'Working…'),
+                Expanded(child: _buildBody(providerAsync, provider)),
+              ],
+            ),
     );
   }
 

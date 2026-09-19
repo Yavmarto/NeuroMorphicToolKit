@@ -50,7 +50,8 @@ class HubArtefactCard extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final stackTrailing = constraints.maxWidth < _stackTrailingWidth;
+                final stackTrailing =
+                    constraints.maxWidth < _stackTrailingWidth;
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[

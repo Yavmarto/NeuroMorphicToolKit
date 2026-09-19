@@ -36,21 +36,14 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
   Widget build(BuildContext context) {
     final exportState = ref.watch(exportProvider);
     final canvasState = ref.watch(canvasProvider);
+    final tokens = NmtkShellTokens.of(context);
+    final compact =
+        MediaQuery.sizeOf(context).width < NmtkShellTokens.compactBreakpoint;
 
-    return Material(
-      // ZETA-MIGRATION-EXEMPT: transparent (no fill) — Zeta has no transparent token
-      color: Colors.transparent,
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 320,
-              // Allowed: single-topic surface
-              child: NmtkSurfaceCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
+    final configPanel = NmtkSurfaceCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
                     Text(
                       'Export Design',
                       style: Zeta.of(context).textStyles.titleMedium.copyWith(
@@ -185,36 +178,48 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
                     ),
                   ],
                 ),
+    );
+
+    final resultsPanel = NmtkSurfaceCard(
+      expandChild: true,
+      child: exportState.isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : exportState.error != null
+          ? Center(
+              child: Text(
+                'Error: ${exportState.error}',
+                style: Zeta.of(context).textStyles.bodyMedium.copyWith(
+                  color: Theme.of(context).colorScheme.error,
+                ),
               ),
+            )
+          : exportState.data != null
+          ? _buildExportResult(exportState.data!, exportState.format!)
+          : const Center(
+              child: Text('Select a format to review fidelity, then export.'),
             ),
-            const SizedBox(width: 24),
-            Expanded(
-              // Allowed: single-topic surface
-              child: NmtkSurfaceCard(
-                expandChild: true,
-                child: exportState.isLoading
-                    ? const Center(child: CircularProgressIndicator())
-                    : exportState.error != null
-                    ? Center(
-                        child: Text(
-                          'Error: ${exportState.error}',
-                          style: Zeta.of(context).textStyles.bodyMedium
-                              .copyWith(
-                                color: Theme.of(context).colorScheme.error,
-                              ),
-                        ),
-                      )
-                    : exportState.data != null
-                    ? _buildExportResult(exportState.data!, exportState.format!)
-                    : const Center(
-                        child: Text(
-                          'Select a format to review fidelity, then export.',
-                        ),
-                      ),
+    );
+
+    return Material(
+      // ZETA-MIGRATION-EXEMPT: transparent (no fill) — Zeta has no transparent token
+      color: Colors.transparent,
+      child: Padding(
+        padding: EdgeInsets.all(tokens.sectionGap),
+        child: compact
+            ? Column(
+                children: <Widget>[
+                  configPanel,
+                  SizedBox(height: tokens.sectionGap),
+                  Expanded(child: resultsPanel),
+                ],
+              )
+            : Row(
+                children: <Widget>[
+                  SizedBox(width: 320, child: configPanel),
+                  SizedBox(width: tokens.sectionGap),
+                  Expanded(child: resultsPanel),
+                ],
               ),
-            ),
-          ],
-        ),
       ),
     );
   }

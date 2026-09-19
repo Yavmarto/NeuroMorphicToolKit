@@ -30,6 +30,7 @@ class ServerAccessGate extends ConsumerStatefulWidget {
 class _ServerAccessGateState extends ConsumerState<ServerAccessGate> {
   bool _reconnectTriggered = false;
   bool _reconnectPending = false;
+  bool _reconnectCancelled = false;
   bool _popupOpen = false;
   bool _popupDismissed = false;
 
@@ -76,7 +77,8 @@ class _ServerAccessGateState extends ConsumerState<ServerAccessGate> {
     final showReconnectingOverlay =
         _reconnectTriggered &&
         state.phase == ConnectPhase.reconnecting &&
-        !_popupOpen;
+        !_popupOpen &&
+        !_reconnectCancelled;
 
     return Stack(
       fit: StackFit.expand,
@@ -95,19 +97,38 @@ class _ServerAccessGateState extends ConsumerState<ServerAccessGate> {
             child: ModalBarrier(dismissible: false, color: Colors.black26),
           ),
         if (showReconnectingOverlay)
-          const Center(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ZetaProgressCircle(size: ZetaCircleSizes.s),
-                SizedBox(width: 12),
-                Flexible(
-                  child: Text(
-                    'Reconnecting to your server…',
-                    overflow: TextOverflow.ellipsis,
+          Center(
+            child: Padding(
+              padding: EdgeInsets.all(
+                NmtkShellTokens.of(context).sectionGap * 1.5,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      ZetaProgressCircle(size: ZetaCircleSizes.s),
+                      SizedBox(width: 12),
+                      Flexible(
+                        child: Text(
+                          'Reconnecting to your server…',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ],
+                  SizedBox(height: NmtkShellTokens.of(context).sectionGap),
+                  // A reconnect that stalls must not trap the user behind a
+                  // modal barrier with no way out — desktop/web have no OS
+                  // back gesture. Cancel opens the sign-in popup instead.
+                  ZetaButton.text(
+                    key: const Key('server-access-reconnect-cancel'),
+                    label: 'Cancel',
+                    onPressed: _cancelReconnect,
+                  ),
+                ],
+              ),
             ),
           ),
       ],
@@ -175,6 +196,18 @@ class _ServerAccessGateState extends ConsumerState<ServerAccessGate> {
       navigator.pop();
     }
     _popupOpen = false;
+  }
+
+  /// Cancels a reconnect that is taking too long and opens the sign-in popup
+  /// instead, so a stalled reconnect cannot trap the user behind a modal
+  /// barrier with no visible way out.
+  void _cancelReconnect() {
+    if (!mounted) return;
+    setState(() {
+      _reconnectCancelled = true;
+      _popupDismissed = false;
+    });
+    _openPopup();
   }
 
   static bool _isConnectedPhase(ConnectPhase? phase) =>

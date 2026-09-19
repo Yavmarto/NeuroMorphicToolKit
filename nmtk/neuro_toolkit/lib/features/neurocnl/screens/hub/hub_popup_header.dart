@@ -16,28 +16,40 @@ class HubPopupHeader extends StatelessWidget {
   final Widget navigation;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(24, 16, 16, 16),
-    child: Row(
-      children: <Widget>[
-        if (showingDetail)
-          NmtkOutlinedButton(
-            label: 'Back',
-            icon: Icons.arrow_back,
-            onPressed: onBack,
-          )
-        else
-          Expanded(child: navigation),
-        const Spacer(),
-        Tooltip(
-          message: 'Close NeuroHub',
-          child: ZetaIconButton.text(
-            icon: ZetaIcons.close,
-            semanticLabel: 'Close NeuroHub',
-            onPressed: onClose,
+  Widget build(BuildContext context) {
+    final tokens = NmtkShellTokens.of(context);
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        tokens.sectionGap,
+        tokens.sectionGap,
+        tokens.compactGap,
+        tokens.sectionGap,
+      ),
+      child: Row(
+        children: <Widget>[
+          if (showingDetail)
+            NmtkOutlinedButton(
+              label: 'Back',
+              icon: Icons.arrow_back,
+              onPressed: onBack,
+            )
+          else
+            Expanded(child: navigation),
+          const Spacer(),
+          Tooltip(
+            message: 'Close NeuroHub',
+            child: SizedBox(
+              width: 44,
+              height: 44,
+              child: ZetaIconButton.text(
+                icon: ZetaIcons.close,
+                semanticLabel: 'Close NeuroHub',
+                onPressed: onClose,
+              ),
+            ),
           ),
-        ),
-      ],
-    ),
-  );
+        ],
+      ),
+    );
+  }
 }

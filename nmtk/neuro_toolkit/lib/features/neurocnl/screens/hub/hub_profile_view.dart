@@ -38,10 +38,15 @@ class HubProfileView extends StatelessWidget {
       children: <Widget>[
         if (!hasRealWorkspaces) ...[
           // Allowed: single-topic surface — user profile summary.
-          const NmtkSurfaceCard(
+          NmtkSurfaceCard(
             title: 'Maya Chen',
             subtitle: 'Signed in as Maya Chen · @maya-chen',
-            leading: CircleAvatar(child: Icon(Icons.person)),
+            leading: CircleAvatar(
+              child: Icon(
+                Icons.person,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
             child: Text(
               'Your public work is discoverable in Explore. Keep drafts private until they are ready.',
             ),

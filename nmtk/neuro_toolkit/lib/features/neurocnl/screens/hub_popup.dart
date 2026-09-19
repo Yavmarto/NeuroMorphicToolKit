@@ -103,23 +103,32 @@ class _HubPopupState extends ConsumerState<HubPopup> {
   });
 
   void _openInStudioPreview() {
-    NmtkSnackBars.info(context, 'Workspace opening will be connected to the registry next.',
-        );
+    NmtkSnackBars.info(
+      context,
+      'Workspace opening will be connected to the registry next.',
+    );
   }
 
   void _runBenchmarkPreview() {
-    NmtkSnackBars.success(context, 'Benchmark run is ready to open in Results.');
+    NmtkSnackBars.success(
+      context,
+      'Benchmark run is ready to open in Results.',
+    );
   }
 
   void _downloadNodePreview() {
-    NmtkSnackBars.info(context, 'Node download is ready for the local Hub preview.');
+    NmtkSnackBars.info(
+      context,
+      'Node download is ready for the local Hub preview.',
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final compact = MediaQuery.sizeOf(context).width < 760;
+    final compact = NmtkDialogSurface.isCompact(context);
+    final tokens = NmtkShellTokens.of(context);
     final content = Material(
-      color: NmtkShellTokens.of(context).shellBackground,
+      color: tokens.shellBackground,
       child: SafeArea(
         child: Column(
           children: <Widget>[
@@ -128,7 +137,7 @@ class _HubPopupState extends ConsumerState<HubPopup> {
               onBack: () => setState(() => _selectedItem = null),
               onClose: () => Navigator.of(context).pop(),
               navigation: SizedBox(
-                width: 300,
+                width: compact ? double.infinity : 300,
                 child: ZetaSegmentedControl<_HubTab>(
                   segments: const <ZetaButtonSegment<_HubTab>>[
                     ZetaButtonSegment(

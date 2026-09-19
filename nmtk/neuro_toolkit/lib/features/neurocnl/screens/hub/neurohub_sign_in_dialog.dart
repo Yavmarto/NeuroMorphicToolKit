@@ -175,129 +175,142 @@ class _NeurohubSignInDialogState extends ConsumerState<NeurohubSignInDialog> {
         .open(url);
     if (!opened && mounted) {
       NmtkSnackBars.error(
-          context,
-          'The browser could not open. Copy the address and open it manually.',
-        );
+        context,
+        'The browser could not open. Copy the address and open it manually.',
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final started = _started;
+    final tokens = NmtkShellTokens.of(context);
+    final actionButtons = <Widget>[
+      NmtkOutlinedButton(
+        label: 'Cancel',
+        onPressed: () => Navigator.of(context).pop(false),
+      ),
+      if (_error != null) ...<Widget>[
+        NmtkPrimaryButton(
+          label: started == null ? 'Try again' : 'Check again',
+          onPressed: started == null
+              ? _start
+              : () => _poll(started, started.interval),
+        ),
+        if (started != null)
+          NmtkPrimaryButton(label: 'New code', onPressed: _start),
+      ],
+    ];
+    final body = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Text(
+          'Sign in to Neurohub',
+          style: Zeta.of(context).textStyles.titleLarge,
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'Connect your GitHub account to save and share Studio workspaces.',
+        ),
+        const SizedBox(height: 24),
+        if (_starting)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 32),
+            child: Center(
+              child: CircularProgressIndicator(
+                // ZETA-MIGRATION-EXEMPT: determinate-only Zeta progress.
+              ),
+            ),
+          )
+        else if (started != null) ...<Widget>[
+          // Allowed: single-topic surface — the GitHub device code.
+          NmtkSurfaceCard(
+            title: 'Enter this code on GitHub',
+            subtitle: _remainingLabel,
+            child: Row(
+              children: <Widget>[
+                Expanded(
+                  child: SelectableText(
+                    started.userCode,
+                    key: const Key('neurohub-user-code'),
+                    style: Zeta.of(context).textStyles.displaySmall,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                NmtkOutlinedButton(
+                  label: 'Copy code',
+                  icon: Icons.copy_outlined,
+                  onPressed: _copyCode,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          NmtkOutlinedButton(
+            key: const Key('neurohub-open-sign-in-link'),
+            label: 'Open ${started.verificationUri}',
+            icon: Icons.open_in_new,
+            onPressed: _openLink,
+          ),
+          if (_polling) ...<Widget>[
+            const SizedBox(height: 16),
+            const Row(
+              children: <Widget>[
+                SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    // ZETA-MIGRATION-EXEMPT: determinate-only Zeta progress.
+                  ),
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text('Waiting for you to finish in the browser…'),
+                ),
+              ],
+            ),
+          ],
+        ],
+        if (_error case final error?) ...<Widget>[
+          const SizedBox(height: 16),
+          Text(
+            error,
+            key: const Key('neurohub-sign-in-error'),
+            style: Zeta.of(context).textStyles.bodyMedium.copyWith(
+              color: NmtkShellTokens.of(context).errorColor,
+            ),
+          ),
+        ],
+      ],
+    );
     return Dialog(
+      insetPadding: NmtkDialogSurface.insetPadding(context),
       shape: RoundedRectangleBorder(borderRadius: NmtkDesignTokens.dialogShape),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 560),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              Text(
-                'Sign in to Neurohub',
-                style: Zeta.of(context).textStyles.titleLarge,
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Connect your GitHub account to save and share Studio workspaces.',
-              ),
-              const SizedBox(height: 24),
-              if (_starting)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 32),
-                  child: Center(
-                    child: CircularProgressIndicator(
-                      // ZETA-MIGRATION-EXEMPT: determinate-only Zeta progress.
-                    ),
-                  ),
-                )
-              else if (started != null) ...<Widget>[
-                // Allowed: single-topic surface — the GitHub device code.
-                NmtkSurfaceCard(
-                  title: 'Enter this code on GitHub',
-                  subtitle: _remainingLabel,
-                  child: Row(
-                    children: <Widget>[
-                      Expanded(
-                        child: SelectableText(
-                          started.userCode,
-                          key: const Key('neurohub-user-code'),
-                          style: Zeta.of(context).textStyles.displaySmall,
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      NmtkOutlinedButton(
-                        label: 'Copy code',
-                        icon: Icons.copy_outlined,
-                        onPressed: _copyCode,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                NmtkOutlinedButton(
-                  key: const Key('neurohub-open-sign-in-link'),
-                  label: 'Open ${started.verificationUri}',
-                  icon: Icons.open_in_new,
-                  onPressed: _openLink,
-                ),
-                if (_polling) ...<Widget>[
-                  const SizedBox(height: 16),
-                  const Row(
-                    children: <Widget>[
-                      SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          // ZETA-MIGRATION-EXEMPT: determinate-only Zeta progress.
-                        ),
-                      ),
-                      SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'Waiting for you to finish in the browser…',
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ],
-              if (_error case final error?) ...<Widget>[
-                const SizedBox(height: 16),
-                Text(
-                  error,
-                  key: const Key('neurohub-sign-in-error'),
-                  style: Zeta.of(context).textStyles.bodyMedium.copyWith(
-                    color: NmtkShellTokens.of(context).errorColor,
+        constraints: NmtkDialogSurface.constraints(context),
+        child: NmtkDialogSurface.wrapScrollable(
+          context,
+          Padding(
+            padding: EdgeInsets.all(tokens.sectionGap),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                body,
+                SizedBox(height: tokens.sectionGap),
+                Wrap(
+                  alignment: WrapAlignment.end,
+                  spacing: tokens.compactGap,
+                  runSpacing: tokens.compactGap,
+                  children: NmtkDialogSurface.layoutActions(
+                    context,
+                    actionButtons,
                   ),
                 ),
               ],
-              const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: <Widget>[
-                  NmtkOutlinedButton(
-                    label: 'Cancel',
-                    onPressed: () => Navigator.of(context).pop(false),
-                  ),
-                  if (_error != null) ...<Widget>[
-                    const SizedBox(width: 8),
-                    NmtkPrimaryButton(
-                      label: started == null ? 'Try again' : 'Check again',
-                      onPressed: started == null
-                          ? _start
-                          : () => _poll(started, started.interval),
-                    ),
-                    if (started != null) ...<Widget>[
-                      const SizedBox(width: 8),
-                      NmtkPrimaryButton(label: 'New code', onPressed: _start),
-                    ],
-                  ],
-                ],
-              ),
-            ],
+            ),
           ),
         ),
       ),

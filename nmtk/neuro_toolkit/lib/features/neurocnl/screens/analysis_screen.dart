@@ -22,24 +22,26 @@ class AnalysisScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    const content = DefaultTabController(
+    final tabIconColor = Theme.of(context).colorScheme.onSurfaceVariant;
+    final content = DefaultTabController(
       length: 3,
       child: Column(
         children: [
           TabBar(
             tabs: [
               Tab(
-                icon: Icon(Icons.bolt, size: 18),
+                icon: Icon(Icons.bolt, size: 18, color: tabIconColor),
                 text: 'Energy',
               ), // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
               Tab(
-                icon: Icon(Icons.compress, size: 18),
+                icon: Icon(Icons.compress, size: 18, color: tabIconColor),
                 text: 'Quantization',
               ), // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
               Tab(
                 icon: Icon(
                   Icons.bug_report,
                   size: 18,
+                  color: tabIconColor,
                 ), // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
                 text: 'Fault Injection',
               ),
@@ -62,15 +64,15 @@ class AnalysisScreen extends ConsumerWidget {
       return content;
     }
 
-    return const Column(
+    return Column(
       children: [
-        NeurocnlScreenHeader(
+        const NeurocnlScreenHeader(
           eyebrow: 'Diagnostics',
           title: 'Analysis',
           subtitle:
               'Review energy, quantization, and fault diagnostics inside the Studio workflow shell.',
         ),
-        Padding(
+        const Padding(
           padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
           child: _AnalysisOwnershipCard(),
         ),

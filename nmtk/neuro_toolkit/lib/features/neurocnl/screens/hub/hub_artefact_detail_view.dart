@@ -34,7 +34,10 @@ class HubArtefactDetailView extends StatelessWidget {
         NmtkSurfaceCard(
           title: item.title,
           subtitle: 'by ${item.author} · ${item.updatedLabel}',
-          leading: Icon(presentation.icon),
+          leading: Icon(
+            presentation.icon,
+            color: Zeta.of(context).colors.mainDefault,
+          ),
           trailing: NmtkStatusBadge(
             label: item.kindLabel,
             icon: presentation.icon,

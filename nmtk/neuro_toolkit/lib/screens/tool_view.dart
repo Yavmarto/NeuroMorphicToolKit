@@ -165,7 +165,8 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen>
         )
         .toList(growable: false);
 
-    final isMobile = MediaQuery.sizeOf(context).width < 840;
+    final isMobile =
+        MediaQuery.sizeOf(context).width < NmtkShellTokens.compactBreakpoint;
 
     if (eligibleModules.isEmpty) {
       final emptyState = NmtkEmptyState(
