@@ -1,6 +1,6 @@
 # Keep in sync with Neurosense/pyproject.toml [project].dependencies.
 # Used by suite_api, neurosense_hw, and Neurosense Dockerfiles.
-fastapi>=0.111
+fastapi>=0.141.1
 uvicorn[standard]>=0.29
 pydantic>=2
 brainflow
