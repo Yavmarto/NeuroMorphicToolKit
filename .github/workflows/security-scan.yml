@@ -24,7 +24,7 @@ jobs:
         shell: cmd
         run: |
           if exist "C:\Program Files\Git\cmd" echo C:\Program Files\Git\cmd>>%GITHUB_PATH%
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Configure tool cache
         shell: bash
         run: |
@@ -67,7 +67,7 @@ jobs:
   trivy-scan:
     runs-on: [self-hosted, Linux, X64]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Trivy config scan (Dockerfiles)
         uses: aquasecurity/trivy-action@v0.36.0
         with:

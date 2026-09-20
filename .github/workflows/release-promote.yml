@@ -24,7 +24,7 @@ jobs:
     # Pure git work — no reason to wait on a self-hosted machine.
     runs-on: ${{ vars.RELEASE_RUNNER_LINUX || 'ubuntu-latest' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
           fetch-depth: 0
