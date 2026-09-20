@@ -7,13 +7,14 @@ import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/deploy_results_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/workspace_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/deploy/deploy_target_catalog/support.dart';
+import 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/deploy/neurosense_workspace/neurosense_execution_pane.dart';
+import 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/deploy/neurosense_workspace/neurosense_source_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/deploy/simulator_deploy_workspace/run_all_simulators_button.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/deploy/simulator_deploy_workspace/shared_simulator_settings_card.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/deploy/deploy_targets_overview/hardware_targets_table.dart';
-import 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/deploy/deploy_targets_overview/live_source_targets_table.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/deploy/deploy_targets_overview/simulator_targets_table.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/deploy/deploy_targets_overview/support.dart';
-import 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/deploy/neurosense_workspace/neurosense_source_provider.dart';
+import 'package:neuro_toolkit/features/neurocnl/features/studio/workflow/steps/setup_step/setup_input_source_section.dart';
 
 class DeployTargetsOverview extends ConsumerWidget {
   const DeployTargetsOverview({
@@ -75,10 +76,7 @@ class DeployTargetsOverview extends ConsumerWidget {
               .where(selectedPlatforms.contains)
               .toList(growable: false)
         : frameworkRuntimeBackendIds();
-    final runtimeBackendIds = <String>[
-      ...simulatorIds,
-      ...frameworkRuntimeIds,
-    ];
+    final runtimeBackendIds = <String>[...simulatorIds, ...frameworkRuntimeIds];
     final lavaSelected =
         !anyKnownSelected || selectedPlatforms.contains('lava');
     final exportOnlyIds = anyKnownSelected
@@ -94,6 +92,10 @@ class DeployTargetsOverview extends ConsumerWidget {
               .where((t) => targetIsExportOnly(t.id))
               .map((t) => t.id)
               .toList(growable: false);
+    final usingLiveSensor =
+        ref.watch(workspaceProvider.select((w) => w.workspaceSourceKind)) ==
+        SetupInputSourceSection.liveSensorKind;
+    final neurosenseConfig = ref.watch(neuroSenseSourceProvider);
 
     return Column(
       key: const Key('deploy-targets-overview'),
@@ -205,25 +207,10 @@ class DeployTargetsOverview extends ConsumerWidget {
           ],
           const SizedBox(height: 24),
         ],
-        // Live sensor sources (e.g. NeuroSense) get their own section: they
-        // aren't in `deployTargets`/`selectedPlatforms` at all — Setup's
-        // input-source picker turns them on independently — so there's no
-        // selection gate to apply here the way there is for the sections
-        // above.
-        Text(
-          'Live Sources',
-          style: textStyles.titleMedium.copyWith(fontWeight: FontWeight.w700),
-        ),
-        const SizedBox(height: 12),
-        LiveSourceTargetsTable(
-          targetIds: liveSourceTargets.map((s) => s.id).toList(growable: false),
-          isConfigured: (id) => switch (id) {
-            'neurosense' => ref.watch(neuroSenseSourceProvider) != null,
-            _ => false,
-          },
-          onOpenTarget: (id) => showLiveSourceDialog(context, id),
-        ),
-        const SizedBox(height: 24),
+        if (usingLiveSensor) ...[
+          NeurosenseExecutionPane(config: neurosenseConfig),
+          const SizedBox(height: 24),
+        ],
         if (hardwareIds.isNotEmpty) ...[
           Text(
             'Hardware Targets',

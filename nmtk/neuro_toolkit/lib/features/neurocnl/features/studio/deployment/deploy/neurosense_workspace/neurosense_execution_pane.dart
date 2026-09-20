@@ -89,13 +89,21 @@ class _NeurosenseExecutionPaneState
                       height: 16,
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
-                  : const Icon(Icons.link, size: 18),
+                  : Icon(
+                      Icons.link,
+                      size: 18,
+                      color: Theme.of(context).colorScheme.onPrimary,
+                    ),
               label: Text(_busy ? 'Connecting…' : 'Connect sensor'),
             ),
             OutlinedButton.icon(
               key: const Key('neurosense-open-monitor'),
               onPressed: _openMonitor,
-              icon: const Icon(Icons.monitor_heart_outlined, size: 18),
+              icon: Icon(
+                Icons.monitor_heart_outlined,
+                size: 18,
+                color: Theme.of(context).colorScheme.primary,
+              ),
               label: const Text('Open NeuroSense'),
             ),
           ],

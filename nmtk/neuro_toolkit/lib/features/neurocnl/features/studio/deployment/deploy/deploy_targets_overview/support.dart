@@ -7,7 +7,6 @@ import 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/deplo
 import 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/deploy/codegen_preview_panel/codegen_preview_panel.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/deploy/deploy_target_catalog/support.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/deploy/lava_workspace/studio_lava_workspace.dart';
-import 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/deploy/neurosense_workspace/studio_neurosense_workspace.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/deploy/pynq_workspace/studio_pynq_workspace.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/deploy/sc_neurocore_fpga_workspace/studio_sc_neuro_core_fpga_workspace.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/deploy/voyager_workspace/studio_voyager_workspace.dart';
@@ -106,66 +105,6 @@ void showHardwareTargetDialog(
                     'voyager_axelera' => const StudioVoyagerWorkspace(
                       isCompact: false,
                     ),
-                    _ => const SizedBox.shrink(),
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    ),
-  );
-}
-
-/// Opens a live sensor source's own workspace — separate from
-/// [showHardwareTargetDialog] because sensor sources aren't in [deployTargets]
-/// and don't carry an SSH-paired device to display in the title bar.
-void showLiveSourceDialog(BuildContext context, String targetId) {
-  showDialog<void>(
-    context: context,
-    builder: (dialogContext) => Dialog(
-      insetPadding: NmtkDialogSurface.insetPadding(dialogContext),
-      shape: RoundedRectangleBorder(borderRadius: NmtkDesignTokens.dialogShape),
-      child: SafeArea(
-        child: ConstrainedBox(
-          constraints: NmtkDialogSurface.constraints(
-            dialogContext,
-            maxWidth: 1100,
-            maxHeight: 780,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 14, 8, 0),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        sensorSourceForId(targetId)?.label ?? targetId,
-                        style: Zeta.of(dialogContext).textStyles.titleMedium
-                            .copyWith(fontWeight: FontWeight.w700),
-                      ),
-                    ),
-                    Tooltip(
-                      message: 'Close',
-                      child: ZetaIconButton.text(
-                        icon: ZetaIcons.close,
-                        semanticLabel: 'Close',
-                        onPressed: () => Navigator.of(dialogContext).pop(),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Divider(height: 1),
-              Flexible(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
-                  child: switch (targetId) {
-                    'neurosense' => const StudioNeuroSenseWorkspace(),
                     _ => const SizedBox.shrink(),
                   },
                 ),

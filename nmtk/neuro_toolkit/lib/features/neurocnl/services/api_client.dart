@@ -1186,10 +1186,26 @@ class ApiClient extends BaseHttpClient {
   }
 
   // ── NeuroSense (suite API proxy) ───────────────────────────────
+  //
+  // The NeuroSense routes live at the suite root, not under the Studio API
+  // prefix, so any `/api/neurocnl`-style path on [baseUrl] is stripped first —
+  // exactly what [fetchDetectedHardware] does for Neurochip. Without this,
+  // every NeuroSense call doubled the prefix (`/api/neurocnl/api/neurosense/...`)
+  // and always 404'd.
+
+  Uri _neurosenseUri(String segment) {
+    final path = segment.startsWith('/') ? segment : '/$segment';
+    final parsed = Uri.parse(baseUrl);
+    final root = Uri(
+      scheme: parsed.scheme,
+      host: parsed.host,
+      port: parsed.hasPort ? parsed.port : null,
+    );
+    return Uri.parse('$root/api/neurosense$path');
+  }
 
   Future<dynamic> getNeurosenseJson(String segment) async {
-    final path = segment.startsWith('/') ? segment : '/$segment';
-    final uri = Uri.parse('$baseUrl/api/neurosense$path');
+    final uri = _neurosenseUri(segment);
     final headers = <String, String>{};
     if (apiKey.isNotEmpty) {
       headers['X-API-Key'] = apiKey;
@@ -1205,8 +1221,7 @@ class ApiClient extends BaseHttpClient {
     String segment,
     Map<String, dynamic> body,
   ) async {
-    final path = segment.startsWith('/') ? segment : '/$segment';
-    final uri = Uri.parse('$baseUrl/api/neurosense$path');
+    final uri = _neurosenseUri(segment);
     final headers = <String, String>{'Content-Type': 'application/json'};
     if (apiKey.isNotEmpty) {
       headers['X-API-Key'] = apiKey;

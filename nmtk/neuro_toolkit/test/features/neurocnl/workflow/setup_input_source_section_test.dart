@@ -32,5 +32,9 @@ void main() {
       container.read(workspaceProvider).workspaceSourceKind,
       SetupInputSourceSection.liveSensorKind,
     );
+    expect(
+      find.byKey(const Key('neurosense-configure-source')),
+      findsOneWidget,
+    );
   });
 }

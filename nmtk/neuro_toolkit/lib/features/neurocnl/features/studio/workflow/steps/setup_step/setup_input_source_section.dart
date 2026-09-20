@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
+import 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/deploy/neurosense_workspace/neurosense_setup_pane.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/workspace_provider.dart';
 
 /// Setup-stage chooser between file datasets and a live NeuroSense sensor feed.
@@ -57,12 +58,16 @@ class SetupInputSourceSection extends ConsumerWidget {
         Text(
           usingLiveSensor
               ? 'Using a live biosignal feed from NeuroSense. Configure the '
-                    'sensor under Deploy → Live Sources → NeuroSense.'
+                    'sensor below (device, channel, sample rate).'
               : 'Using a dataset file from examples or disk.',
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
             color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
+        if (usingLiveSensor) ...[
+          const SizedBox(height: 16),
+          const NeurosenseSetupSection(),
+        ],
       ],
     );
   }
