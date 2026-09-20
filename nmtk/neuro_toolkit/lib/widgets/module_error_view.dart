@@ -50,7 +50,7 @@ class ModuleErrorView extends StatelessWidget {
               'need to be started separately from the launcher.';
 
     return NmtkEmptyState(
-      title: '${module.name} Page Could Not Load',
+      title: '${module.name} page unavailable',
       message: [
         failure.message,
         'Requested URL: ${failure.uri}',
@@ -58,7 +58,8 @@ class ModuleErrorView extends StatelessWidget {
       ].join('\n\n'),
       icon:
           Icons.language_outlined, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
-      tone: NmtkTone.warning,
+      tone: NmtkTone.info,
+      compact: true,
       action: ConnectionErrorActions(
         onRetry: onRetry,
         retryLabel: 'Retry Load',

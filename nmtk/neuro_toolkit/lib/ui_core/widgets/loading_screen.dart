@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:neuro_toolkit/ui_core/motion_tokens.dart';
 import 'package:neuro_toolkit/ui_core/shell_tokens.dart';
+import 'package:neuro_toolkit/ui_core/widgets/status_banner.dart';
+import 'package:neuro_toolkit/ui_core/widgets/tone.dart';
 import 'package:zeta_flutter/zeta_flutter.dart';
 
 /// Readiness state for the [NmtkLoadingScreen].
@@ -254,28 +256,20 @@ class _DegradedContent extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final width = constraints.maxWidth.clamp(0.0, 280.0).toDouble();
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              ZetaIcons.warning_outline,
-              color: NmtkShellTokens.of(context).warningColor,
-              size: 36,
-            ),
-            const SizedBox(height: 10),
-            SizedBox(
-              width: width,
-              child: Text(
-                message,
-                textAlign: TextAlign.center,
-                style: Zeta.of(context).textStyles.bodyMedium.copyWith(
-                  fontSize: 13,
-                  color: textColor,
-                ),
+        final width = constraints.maxWidth.clamp(0.0, 360.0).toDouble();
+        return SizedBox(
+          width: width,
+          child: NmtkStatusBanner(
+            title: 'Limited availability',
+            content: Text(
+              message,
+              style: Zeta.of(context).textStyles.bodyMedium.copyWith(
+                color: textColor,
               ),
             ),
-          ],
+            tone: NmtkTone.warning,
+            icon: ZetaIcons.warning_outline,
+          ),
         );
       },
     );
@@ -297,35 +291,32 @@ class _FailedContent extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final width = constraints.maxWidth.clamp(0.0, 320.0).toDouble();
-        final tokens = NmtkShellTokens.of(context);
-        return Container(
+        final width = constraints.maxWidth.clamp(0.0, 360.0).toDouble();
+        return SizedBox(
           width: width,
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: tokens.errorColor.withValues(alpha: 0.08),
-            border: Border.all(
-              color: tokens.errorColor.withValues(alpha: 0.35),
-            ),
-            borderRadius: BorderRadius.circular(tokens.radiusMd),
-          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(ZetaIcons.error_outline, color: tokens.errorColor, size: 36),
-              const SizedBox(height: 12),
-              Text(
-                message,
-                textAlign: TextAlign.center,
-                style: Zeta.of(context).textStyles.bodyMedium.copyWith(
-                  fontSize: 14,
-                  color: textColor,
+              NmtkStatusBanner(
+                title: 'Startup issue',
+                content: Text(
+                  message,
+                  style: Zeta.of(context).textStyles.bodyMedium.copyWith(
+                    color: textColor,
+                  ),
                 ),
+                tone: NmtkTone.info,
+                icon: ZetaIcons.info,
+                actions: onRetry == null
+                    ? const []
+                    : [
+                        ZetaButton.outline(
+                          onPressed: onRetry,
+                          label: 'Retry',
+                          leadingIcon: ZetaIcons.refresh,
+                        ),
+                      ],
               ),
-              if (onRetry != null) ...[
-                const SizedBox(height: 16),
-                ZetaButton.negative(onPressed: onRetry, label: 'Retry'),
-              ],
             ],
           ),
         );

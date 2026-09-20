@@ -185,7 +185,7 @@ class _ServerConnectScreenState extends ConsumerState<ServerConnectScreen> {
             key: const Key('server-connect-error'),
             title: requiresAuth ? 'Could not sign in' : 'Could not connect',
             content: Text(state.failureCause!),
-            tone: NmtkTone.danger,
+            tone: NmtkTone.info,
           ),
         ],
         SizedBox(height: tokens.sectionGap),
@@ -256,18 +256,22 @@ class _ServerConnectScreenState extends ConsumerState<ServerConnectScreen> {
   }
 
   Widget _buildReconnectingPanel(NmtkShellTokens tokens) {
+    final theme = Theme.of(context);
     return NmtkSurfaceCard(
       key: const Key('server-connect-reconnecting'),
       child: Padding(
         padding: EdgeInsets.all(tokens.sectionGap),
-        child: const Row(
+        child: Row(
           children: [
-            ZetaProgressCircle(size: ZetaCircleSizes.s),
-            SizedBox(width: 12),
+            const ZetaProgressCircle(size: ZetaCircleSizes.s),
+            const SizedBox(width: 12),
             Expanded(
               child: Text(
                 'Reconnecting to your server…',
-                key: Key('server-connect-reconnecting-label'),
+                key: const Key('server-connect-reconnecting-label'),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
               ),
             ),
           ],

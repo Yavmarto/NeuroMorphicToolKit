@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:neuro_toolkit/ui_core/widgets/loading_screen.dart';
+import 'package:neuro_toolkit/ui_core/widgets/status_banner.dart';
 // ignore: unnecessary_import — explicit Zeta import for clarity over re-export
 import 'package:zeta_flutter/zeta_flutter.dart';
 
@@ -84,8 +85,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text(degradedMsg), findsOneWidget);
-      // loading_screen uses ZetaIcons.warning_outline (Zeta design system)
-      expect(find.byIcon(ZetaIcons.warning_outline), findsOneWidget);
+      expect(find.byType(NmtkStatusBanner), findsOneWidget);
+      expect(find.text('Limited availability'), findsOneWidget);
     });
 
     testWidgets('5. degraded state fits narrow viewports', (tester) async {
@@ -134,7 +135,29 @@ void main() {
         findsOneWidget,
       );
       expect(find.text('Retry'), findsOneWidget);
+      expect(find.byType(NmtkStatusBanner), findsOneWidget);
+      expect(find.text('Startup issue'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
+
+    testWidgets(
+      '7. failed state uses calm status banner instead of alarm poster',
+      (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: NmtkLoadingScreen(
+              state: NmtkReadinessState.failed,
+              errorMessage: 'Backend timed out.',
+              onRetry: () {},
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.byType(NmtkStatusBanner), findsOneWidget);
+        expect(find.text('Startup issue'), findsOneWidget);
+        expect(find.text('Backend timed out.'), findsOneWidget);
+      },
+    );
   });
 }

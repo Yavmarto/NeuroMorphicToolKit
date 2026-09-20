@@ -55,14 +55,15 @@ Widget buildModuleChild(
       key: ValueKey(module.id),
       child: launchBlocked
           ? NmtkEmptyState(
-              title: '${module.name} Could Not Start',
+              title: '${module.name} unavailable',
               message: [
                 module.statusMessage ?? 'This module could not be started.',
                 if (module.capabilityWarnings.isNotEmpty)
                   module.capabilityWarnings.join('\n'),
               ].join('\n\n'),
               icon: ZetaIcons.error_outline,
-              tone: NmtkTone.danger,
+              tone: NmtkTone.info,
+              compact: true,
               action: ConnectionErrorActions(
                 onRetry: () =>
                     workspace.activateModule(module.id, requestFocus: false),

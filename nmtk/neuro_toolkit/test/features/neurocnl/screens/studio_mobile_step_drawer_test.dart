@@ -78,7 +78,7 @@ void main() {
   }
 
   testWidgets(
-    'mobile Studio inside shell chrome shows one hamburger and no local drawer',
+    'mobile Studio inside shell chrome shows no shell hamburger and no local drawer',
     (WidgetTester tester) async {
       final mockApi = MockApiClient();
       when(mockApi.getTemplates()).thenAnswer((_) async => const []);
@@ -119,7 +119,9 @@ void main() {
 
       expect(find.text('Setup · Prepare'), findsOneWidget);
       expect(find.byIcon(Icons.menu), findsNothing);
-      expect(find.byTooltip('Open navigation'), findsOneWidget);
+      expect(find.byIcon(ZetaIcons.hamburger_menu_round), findsNothing);
+      expect(find.byTooltip('Open navigation'), findsNothing);
+      expect(find.byType(Drawer), findsNothing);
       expect(find.byType(StudioStepDrawer), findsNothing);
       expect(tester.takeException(), isNull);
     },

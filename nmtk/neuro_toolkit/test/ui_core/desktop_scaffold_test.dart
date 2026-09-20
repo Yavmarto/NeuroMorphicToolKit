@@ -374,12 +374,13 @@ void main() {
 
         expect(tester.takeException(), isNull);
         expect(find.byType(NavigationBar), findsNothing);
-        expect(find.byIcon(ZetaIcons.hamburger_menu_round), findsOneWidget);
+        expect(find.byIcon(ZetaIcons.hamburger_menu_round), findsNothing);
+        expect(find.byType(Drawer), findsNothing);
       },
     );
 
     testWidgets(
-      'mobile layout uses drawer when only one primary destination exists',
+      'mobile layout omits shell drawer when only one primary destination exists',
       (tester) async {
         tester.view.physicalSize = const Size(390, 844);
         tester.view.devicePixelRatio = 1.0;
@@ -406,7 +407,8 @@ void main() {
 
         expect(tester.takeException(), isNull);
         expect(find.byType(NavigationBar), findsNothing);
-        expect(find.byIcon(ZetaIcons.hamburger_menu_round), findsOneWidget);
+        expect(find.byIcon(ZetaIcons.hamburger_menu_round), findsNothing);
+        expect(find.byType(Drawer), findsNothing);
       },
     );
   });

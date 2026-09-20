@@ -35,9 +35,7 @@ class NmtkMobileScaffold extends StatefulWidget {
     this.openFileLabel = 'Open File',
     this.saveFileLabel = 'Save',
     this.saveFileAsLabel = 'Save As',
-    this.openNavigationTooltip = 'Open navigation',
     this.backTooltip = 'Back',
-    this.brandFallbackText = 'NMTK',
     this.appBar,
     this.floatingActionButton,
   });
@@ -76,17 +74,10 @@ class NmtkMobileScaffold extends StatefulWidget {
   /// Label for the "Save As" action sheet item.
   final String saveFileAsLabel;
 
-  /// Tooltip for the hamburger menu button that opens the drawer.
-  final String openNavigationTooltip;
-
   /// Tooltip for the back button.
   final String backTooltip;
 
-  /// Fallback brand text shown in the drawer header when [sidebarBrand] is
-  /// null.
-  final String brandFallbackText;
-
-  /// Overrides the default title/back/menu app bar with a caller-supplied
+  /// Overrides the default title/back app bar with a caller-supplied
   /// one (e.g. [NmtkTopAppBar]) — used when a screen needs consistent top
   /// chrome (like a Settings action) across both mobile and desktop layouts.
   final PreferredSizeWidget? appBar;
@@ -154,6 +145,7 @@ class _NmtkMobileScaffoldState extends State<NmtkMobileScaffold> {
         ),
       ),
       builder: (context) {
+        final zetaColors = Zeta.of(context).colors;
         return SafeArea(
           child: NmtkSurfaceCard(
             margin: EdgeInsets.all(tokens.sectionGap),
@@ -166,7 +158,7 @@ class _NmtkMobileScaffoldState extends State<NmtkMobileScaffold> {
               children: [
                 if (widget.onNewFile != null)
                   ZetaListItem(
-                    leading: const Icon(ZetaIcons.add),
+                    leading: Icon(ZetaIcons.add, color: zetaColors.mainDefault),
                     title: Text(widget.newFileLabel),
                     onTap: () {
                       Navigator.pop(context);
@@ -175,7 +167,10 @@ class _NmtkMobileScaffoldState extends State<NmtkMobileScaffold> {
                   ),
                 if (widget.onOpenFile != null)
                   ZetaListItem(
-                    leading: const Icon(ZetaIcons.folder_outline),
+                    leading: Icon(
+                      ZetaIcons.folder_outline,
+                      color: zetaColors.mainDefault,
+                    ),
                     title: Text(widget.openFileLabel),
                     onTap: () {
                       Navigator.pop(context);
@@ -184,7 +179,10 @@ class _NmtkMobileScaffoldState extends State<NmtkMobileScaffold> {
                   ),
                 if (widget.onSaveFile != null)
                   ZetaListItem(
-                    leading: const Icon(ZetaIcons.save),
+                    leading: Icon(
+                      ZetaIcons.save,
+                      color: zetaColors.mainDefault,
+                    ),
                     title: Text(widget.saveFileLabel),
                     onTap: () {
                       Navigator.pop(context);
@@ -193,7 +191,10 @@ class _NmtkMobileScaffoldState extends State<NmtkMobileScaffold> {
                   ),
                 if (widget.onSaveFileAs != null)
                   ZetaListItem(
-                    leading: const Icon(ZetaIcons.save),
+                    leading: Icon(
+                      ZetaIcons.save,
+                      color: zetaColors.mainDefault,
+                    ),
                     title: Text(widget.saveFileAsLabel),
                     onTap: () {
                       Navigator.pop(context);
@@ -211,18 +212,13 @@ class _NmtkMobileScaffoldState extends State<NmtkMobileScaffold> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final navAccent = NmtkShellTokens.of(
+      context,
+    ).paletteForMode(widget.mode).accent;
     final useBottomNavigation = _shouldUseBottomNavigation;
-    // Show the menu button whenever there is a drawer (not using bottom
-    // navigation) and there is at least one destination to show in it.
-    // Even a single-item drawer should be reachable via the hamburger button
-    // rather than relying on the undiscoverable left-edge swipe gesture.
-    final bool showMenuButton =
-        !useBottomNavigation && _mobileNavigationItems.isNotEmpty;
     final bool hasTitle =
         widget.pageTitle != null && widget.pageTitle!.isNotEmpty;
-    // The 3 dots settings menu is being removed as requested.
-    final bool hasAppBarContent =
-        hasTitle || widget.showBackButton || showMenuButton;
+    final bool hasAppBarContent = hasTitle || widget.showBackButton;
 
     return NmtkShellChromeScope(
       child: Scaffold(
@@ -235,24 +231,9 @@ class _NmtkMobileScaffoldState extends State<NmtkMobileScaffold> {
                     title: widget.pageTitle,
                     showBackButton: widget.showBackButton,
                     onBack: widget.onBack,
-                    showMenuButton: showMenuButton,
-                    openNavigationTooltip: widget.openNavigationTooltip,
                     backTooltip: widget.backTooltip,
                   )
                 : null),
-        drawer: useBottomNavigation
-            ? null
-            : _NmtkMobileDrawer(
-                navItems: widget.navItems,
-                selectedIndex: widget.selectedIndex,
-                onNavItemSelected: widget.onNavItemSelected,
-                footerNavItems: widget.footerNavItems,
-                onFooterNavItemSelected: widget.onFooterNavItemSelected,
-                scheme: scheme,
-                mode: widget.mode,
-                brand: widget.sidebarBrand,
-                brandFallbackText: widget.brandFallbackText,
-              ),
         body: SafeArea(
           top: false,
           child: Material(color: scheme.surface, child: widget.child),
@@ -268,7 +249,10 @@ class _NmtkMobileScaffoldState extends State<NmtkMobileScaffold> {
                     backgroundColor: scheme.primaryContainer,
                     foregroundColor: scheme.onPrimaryContainer,
                     // ZETA-MIGRATION-EXEMPT: no Zeta equivalent for document-edit icon
-                    child: const Icon(Icons.edit_document),
+                    child: Icon(
+                      Icons.edit_document,
+                      color: scheme.onPrimaryContainer,
+                    ),
                   )
                 : null),
         bottomNavigationBar:
@@ -280,8 +264,11 @@ class _NmtkMobileScaffoldState extends State<NmtkMobileScaffold> {
                 destinations: [
                   for (final item in _mobileNavigationItems)
                     NavigationDestination(
-                      icon: Icon(item.icon),
-                      selectedIcon: Icon(item.selectedIcon ?? item.icon),
+                      icon: Icon(item.icon, color: scheme.onSurfaceVariant),
+                      selectedIcon: Icon(
+                        item.selectedIcon ?? item.icon,
+                        color: navAccent,
+                      ),
                       label: item.label,
                     ),
                 ],

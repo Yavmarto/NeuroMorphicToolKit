@@ -102,32 +102,46 @@ class _ServerAccessGateState extends ConsumerState<ServerAccessGate> {
               padding: EdgeInsets.all(
                 NmtkShellTokens.of(context).sectionGap * 1.5,
               ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 360),
+                child: NmtkSurfaceCard(
+                  key: const Key('server-access-reconnecting'),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      ZetaProgressCircle(size: ZetaCircleSizes.s),
-                      SizedBox(width: 12),
-                      Flexible(
-                        child: Text(
-                          'Reconnecting to your server…',
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                      Row(
+                        children: [
+                          const ZetaProgressCircle(size: ZetaCircleSizes.s),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Reconnecting to your server…',
+                              key: const Key(
+                                'server-access-reconnecting-label',
+                              ),
+                              style: Theme.of(context).textTheme.bodyMedium
+                                  ?.copyWith(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
+                                  ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: NmtkShellTokens.of(context).sectionGap),
+                      // A reconnect that stalls must not trap the user behind a
+                      // modal barrier with no way out — desktop/web have no OS
+                      // back gesture. Cancel opens the sign-in popup instead.
+                      ZetaButton.text(
+                        key: const Key('server-access-reconnect-cancel'),
+                        label: 'Cancel',
+                        onPressed: _cancelReconnect,
                       ),
                     ],
                   ),
-                  SizedBox(height: NmtkShellTokens.of(context).sectionGap),
-                  // A reconnect that stalls must not trap the user behind a
-                  // modal barrier with no way out — desktop/web have no OS
-                  // back gesture. Cancel opens the sign-in popup instead.
-                  ZetaButton.text(
-                    key: const Key('server-access-reconnect-cancel'),
-                    label: 'Cancel',
-                    onPressed: _cancelReconnect,
-                  ),
-                ],
+                ),
               ),
             ),
           ),

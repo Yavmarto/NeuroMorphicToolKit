@@ -127,10 +127,11 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen>
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 480),
                 child: NmtkEmptyState(
-                  title: 'Could Not Load Workspace',
+                  title: 'Workspace unavailable',
                   message: nmtkUserFacingError(loadError),
                   icon: ZetaIcons.cloud_off,
-                  tone: NmtkTone.danger,
+                  tone: NmtkTone.info,
+                  compact: true,
                   action: ConnectionErrorActions(
                     onRetry: () {
                       ref.invalidate(moduleProvider);
@@ -170,13 +171,14 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen>
 
     if (eligibleModules.isEmpty) {
       final emptyState = NmtkEmptyState(
-        title: 'NeuroStudio Not Available',
+        title: 'Workspace unavailable',
         message:
-            'No module surface could be opened for this server. This usually '
-            'means the backend is still starting or the server is out of '
-            'reach — reconnect or set up your server to continue.',
+            'No module surface could be opened for this server. The backend '
+            'may still be starting, or the server may be out of reach. '
+            'Reconnect or choose a different server to continue.',
         icon: ZetaIcons.cloud_off,
-        tone: NmtkTone.warning,
+        tone: NmtkTone.info,
+        compact: true,
         action: ConnectionErrorActions(
           onRetry: () {
             ref.invalidate(moduleProvider);
@@ -279,7 +281,6 @@ class _ToolViewScreenState extends ConsumerState<ToolViewScreen>
             setState(() => _workspace.activeModuleId = mobileNavItems[i].id);
           }
         },
-        showBottomNavigation: false,
         // Only the active module's content is built here — unlike an
         // IndexedStack (which would build and keep every eligible module's
         // full subtree alive simultaneously, including full nested apps for
