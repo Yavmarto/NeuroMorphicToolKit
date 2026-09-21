@@ -169,7 +169,7 @@ void main() {
     test('detects DEV mode when modules dir is missing', () {
       mockEnv.isMacOS = true;
       mockEnv.resolvedExecutable =
-          '/Users/user/repo/nmtk/neuro_toolkit/build/macos/Build/Products/Debug/neuro_toolkit.app/Contents/MacOS/neuro_toolkit';
+          '/home/user/repo/nmtk/neuro_toolkit/build/macos/Build/Products/Debug/neuro_toolkit.app/Contents/MacOS/neuro_toolkit';
       // No modules dir setup
 
       expect(bundleManager.isBundled, isFalse);
@@ -220,7 +220,7 @@ void main() {
     test('falls back to system Python', () async {
       mockEnv.isMacOS = true;
       mockEnv.resolvedExecutable =
-          '/Users/user/repo/nmtk/neuro_toolkit/build/macos/Build/Products/Debug/neuro_toolkit.app/Contents/MacOS/neuro_toolkit';
+          '/home/user/repo/nmtk/neuro_toolkit/build/macos/Build/Products/Debug/neuro_toolkit.app/Contents/MacOS/neuro_toolkit';
 
       mockEnv.setupProcess('python3', [
         '--version',

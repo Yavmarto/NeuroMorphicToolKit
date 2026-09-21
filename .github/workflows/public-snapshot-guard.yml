@@ -1,0 +1,30 @@
+name: public-snapshot-guard
+
+# CEL-459-B: the published tree must stay the verified snapshot. This gate
+# re-runs the publish_public_snapshot.sh checks on every push / PR to `main`.
+# It runs only in the public mirror; the private repo keeps this file so the
+# gate is carried into the next snapshot export.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    if: github.repository == 'Yavmarto/NeuroMorphicToolKit'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify public snapshot
+        run: bash scripts/verify_public_snapshot.sh .
