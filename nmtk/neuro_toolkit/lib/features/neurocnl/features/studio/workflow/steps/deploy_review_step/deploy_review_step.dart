@@ -3,6 +3,7 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/deploy_results_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/studio_result_session_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/workspace/workspace_feature.dart';
@@ -47,7 +48,12 @@ class DeployReviewStep extends ConsumerWidget {
         : const <String>[];
     final showCompareBody = activeCompareTargets.length >= 2;
 
-    final showInlineHeader = MediaQuery.sizeOf(context).width < 600;
+    // Matches StudioLayoutMetrics' mobile-shell boundary, not the
+    // desktop-only "below stepper header row" threshold: StudioMobileShell
+    // never renders that header row, so this inline header is the only place
+    // the platform dropdown appears for the whole mobile-shell width range.
+    final showInlineHeader =
+        MediaQuery.sizeOf(context).width < NmtkShellTokens.compactBreakpoint;
     return Padding(
       padding: const EdgeInsets.fromLTRB(32, 16, 32, 32),
       child: Column(

@@ -591,7 +591,20 @@ class _NetworkCanvasState extends ConsumerState<NetworkCanvas>
                                           sceneOrigin: _networkWorld.origin,
                                           isVertical: isVertical,
                                           onTap: selectAndFocusCnl,
-                                          onDragStart: selectStructurally,
+                                          // On mobile, selecting a node pops
+                                          // the inspector bottom sheet (see
+                                          // CanvasScreen's ref.listen on
+                                          // canvasSelectedNodeIdProvider),
+                                          // which steals the pointer and
+                                          // aborts the drag the instant a
+                                          // pan gesture is recognized. Skip
+                                          // the drag-start selection there so
+                                          // a touch-drag can actually move
+                                          // the node; onTap still selects
+                                          // (and opens the sheet) normally.
+                                          onDragStart: isVertical
+                                              ? () {}
+                                              : selectStructurally,
                                           onDoubleTapDown:
                                               (PointerDeviceKind kind) {
                                                 _lastDoubleTapDownKind = kind;

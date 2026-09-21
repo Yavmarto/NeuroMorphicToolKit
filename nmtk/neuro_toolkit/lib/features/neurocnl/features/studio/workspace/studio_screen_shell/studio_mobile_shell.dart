@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:neuro_toolkit/features/neurocnl/features/studio/assistant/studio_assistant_host.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/workspace/pipeline_stage_area/pipeline_stage_area.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/workspace/presentation/workspace_tab_view_data.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/workspace/studio_screen_shell/studio_layout_metrics.dart';
@@ -87,6 +88,7 @@ class StudioMobileShell extends ConsumerWidget {
         : null;
 
     final shellProvidesChrome = NmtkShellChromeScope.of(context);
+    final openAssistant = StudioAssistantScope.maybeOf(context);
 
     return StudioOverlayMetrics(
       stepperBottom: 0,
@@ -101,6 +103,14 @@ class StudioMobileShell extends ConsumerWidget {
             style: Zeta.of(context).textStyles.titleLarge,
           ),
           actions: [
+            Tooltip(
+              message: 'Studio assistant',
+              child: ZetaIconButton.text(
+                icon: ZetaIcons.chat,
+                semanticLabel: 'Studio assistant',
+                onPressed: openAssistant,
+              ),
+            ),
             Tooltip(
               message: prevPhase != null ? 'Previous step' : 'No previous step',
               child: ZetaIconButton.text(
