@@ -128,3 +128,93 @@ class NeurosenseAcquisitionPreset {
     );
   }
 }
+
+/// Per-channel quality row from GET /api/neurosense/quality.
+class NeurosenseChannelQuality {
+  const NeurosenseChannelQuality({
+    required this.channel,
+    required this.label,
+    required this.snrDb,
+    required this.status,
+    this.suggestion,
+  });
+
+  final int channel;
+  final String label;
+  final double snrDb;
+  final String status;
+  final String? suggestion;
+
+  factory NeurosenseChannelQuality.fromJson(Map<String, dynamic> json) {
+    return NeurosenseChannelQuality(
+      channel: json['channel'] as int? ?? 0,
+      label: json['label'] as String? ?? '',
+      snrDb: (json['snr_db'] as num?)?.toDouble() ?? 0,
+      status: json['status'] as String? ?? 'marginal',
+      suggestion: json['suggestion'] as String?,
+    );
+  }
+}
+
+/// Signal quality summary from GET /api/neurosense/quality.
+class NeurosenseSignalQuality {
+  const NeurosenseSignalQuality({required this.channels});
+
+  final List<NeurosenseChannelQuality> channels;
+
+  factory NeurosenseSignalQuality.fromJson(Map<String, dynamic> json) {
+    final raw = json['channels'];
+    if (raw is! List) {
+      return const NeurosenseSignalQuality(channels: []);
+    }
+    return NeurosenseSignalQuality(
+      channels: raw
+          .whereType<Map<String, dynamic>>()
+          .map(NeurosenseChannelQuality.fromJson)
+          .toList(growable: false),
+    );
+  }
+}
+
+/// Spike encoding config from POST /api/neurosense/nir/import.
+class NeurosenseEncodingConfig {
+  const NeurosenseEncodingConfig({
+    required this.method,
+    this.refractoryPeriod,
+    this.temporalResolution,
+    this.rateMaxHz,
+    this.temporalPhaseBins,
+    this.deltaThreshold,
+  });
+
+  final String method;
+  final double? refractoryPeriod;
+  final double? temporalResolution;
+  final double? rateMaxHz;
+  final int? temporalPhaseBins;
+  final double? deltaThreshold;
+
+  factory NeurosenseEncodingConfig.fromJson(Map<String, dynamic> json) {
+    return NeurosenseEncodingConfig(
+      method: json['method'] as String? ?? 'rate',
+      refractoryPeriod: (json['refractory_period'] as num?)?.toDouble(),
+      temporalResolution: (json['temporal_resolution'] as num?)?.toDouble(),
+      rateMaxHz: (json['rate_max_hz'] as num?)?.toDouble(),
+      temporalPhaseBins: json['temporal_phase_bins'] as int?,
+      deltaThreshold: (json['delta_threshold'] as num?)?.toDouble(),
+    );
+  }
+
+  String get summary {
+    final parts = <String>['method: $method'];
+    if (rateMaxHz != null)
+      parts.add('rate max ${rateMaxHz!.toStringAsFixed(0)} Hz');
+    if (temporalPhaseBins != null) {
+      parts.add('phase bins $temporalPhaseBins');
+    }
+    if (deltaThreshold != null) {
+      parts.add('delta ${deltaThreshold!.toStringAsFixed(1)} µV');
+    }
+    return parts.join(' • ');
+  }
+}

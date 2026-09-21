@@ -34,6 +34,9 @@ void main() {
 
       BrainvizForce3DPainter buildPainter({
         Map<String, double>? activityOverride,
+        Map<String, double> pulse = const <String, double>{},
+        bool drawWires = true,
+        bool ringActivity = false,
       }) {
         return BrainvizForce3DPainter(
           graph: graph,
@@ -41,11 +44,14 @@ void main() {
           positionsRevision: layout.positionsRevision,
           projection: projection,
           activity: activityOverride ?? activity,
+          pulse: pulse,
+          drawWires: drawWires,
+          ringActivity: ringActivity,
           radii: radii,
-        correlationPairs: pairs,
-        nodeClusterIndices: null,
-        labelNodeIds: labels,
-        selectedId: null,
+          correlationPairs: pairs,
+          nodeClusterIndices: null,
+          labelNodeIds: labels,
+          selectedId: null,
           activityColorOf: (_) => Colors.red,
           labelStyle: const TextStyle(),
         );
@@ -64,6 +70,20 @@ void main() {
         ).shouldRepaint(first),
         isTrue,
       );
+
+      // A changed activity pulse must trigger a repaint even when the
+      // underlying activity is unchanged — that is what keeps active nodes
+      // visibly breathing instead of freezing.
+      expect(
+        buildPainter(
+          pulse: const <String, double>{'0': 1.25},
+        ).shouldRepaint(first),
+        isTrue,
+      );
+
+      // Variant switches (wires / rings) must also repaint.
+      expect(buildPainter(drawWires: false).shouldRepaint(first), isTrue);
+      expect(buildPainter(ringActivity: true).shouldRepaint(first), isTrue);
     },
   );
 

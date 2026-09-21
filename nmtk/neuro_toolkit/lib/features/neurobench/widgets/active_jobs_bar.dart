@@ -30,15 +30,16 @@ class _ActiveJobsBarState extends ConsumerState<ActiveJobsBar> {
 
     final theme = Theme.of(context);
     final tokens = NmtkShellTokens.of(context);
+    final isCompact =
+        MediaQuery.sizeOf(context).width < NmtkShellTokens.compactBreakpoint;
     final tone = switch (job.status) {
       BenchmarkJobStatus.failed => tokens.errorColor.withValues(alpha: 0.12),
       BenchmarkJobStatus.completed => tokens.healthyColor.withValues(
-          alpha: 0.12,
-        ),
+        alpha: 0.12,
+      ),
       BenchmarkJobStatus.cancelled => theme.colorScheme.surfaceContainerHighest,
       BenchmarkJobStatus.pending ||
-      BenchmarkJobStatus.running =>
-        tokens.runningColor.withValues(alpha: 0.12),
+      BenchmarkJobStatus.running => tokens.runningColor.withValues(alpha: 0.12),
     };
 
     return Material(
@@ -59,37 +60,72 @@ class _ActiveJobsBarState extends ConsumerState<ActiveJobsBar> {
               InkWell(
                 onTap: () => setState(() => _expanded = !_expanded),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 10,
+                  // Compact gets extra vertical padding so the tap target
+                  // (title + status stack on phones) still clears 44 px.
+                  padding: EdgeInsets.symmetric(
+                    horizontal: tokens.sectionGap,
+                    vertical: isCompact ? 14 : 10,
                   ),
                   child: Row(
                     children: [
                       Icon(
                         job.status.isTerminal
                             ? (job.status == BenchmarkJobStatus.failed
-                                ? ZetaIcons.error_outline
-                                : ZetaIcons.check_circle_outline)
+                                  ? ZetaIcons.error_outline
+                                  : ZetaIcons.check_circle_outline)
                             : ZetaIcons.sync,
                         size: 20,
                         color: theme.colorScheme.primary,
                       ),
                       const SizedBox(width: 12),
                       Expanded(
-                        child: Text(
-                          'Background run • ${job.id}',
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                        // On phones the status label moves under the job
+                        // title instead of squeezing it in a shared Row,
+                        // where a long job id had almost no room left.
+                        child: isCompact
+                            ? Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'Background run • ${job.id}',
+                                    style: theme.textTheme.titleSmall?.copyWith(
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    job.status.label,
+                                    style: theme.textTheme.labelMedium,
+                                  ),
+                                ],
+                              )
+                            : Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      'Background run • ${job.id}',
+                                      style: theme.textTheme.titleSmall
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  Text(
+                                    job.status.label,
+                                    style: theme.textTheme.labelLarge,
+                                  ),
+                                ],
+                              ),
                       ),
-                      Text(job.status.label, style: theme.textTheme.labelLarge),
                       const SizedBox(width: 8),
                       Icon(
                         _expanded
                             ? ZetaIcons.expand_more
                             : ZetaIcons.expand_less,
+                        color: theme.colorScheme.onSurfaceVariant,
                       ),
                     ],
                   ),
@@ -102,7 +138,9 @@ class _ActiveJobsBarState extends ConsumerState<ActiveJobsBar> {
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: tone,
-                    borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+                    borderRadius: BorderRadius.circular(
+                      NmtkShellTokens.of(context).radiusSm,
+                    ),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -181,9 +219,9 @@ class _JobDetailRow extends StatelessWidget {
           ),
           TextSpan(
             text: value,
-            style: Zeta.of(context).textStyles.bodySmall.copyWith(
-              fontWeight: FontWeight.w600,
-            ),
+            style: Zeta.of(
+              context,
+            ).textStyles.bodySmall.copyWith(fontWeight: FontWeight.w600),
           ),
         ],
       ),

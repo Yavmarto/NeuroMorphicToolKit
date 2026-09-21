@@ -95,16 +95,25 @@ Future<CanvasConnectPaletteResult?> showCanvasConnectPalette({
     return showModalBottomSheet<CanvasConnectPaletteResult>(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(NmtkShellTokens.of(context).radiusLg)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(NmtkShellTokens.of(context).radiusLg),
+        ),
       ),
       builder: (BuildContext sheetContext) {
+        final double keyboardInset = MediaQuery.viewInsetsOf(
+          sheetContext,
+        ).bottom;
+        final double maxHeight =
+            (MediaQuery.sizeOf(sheetContext).height - keyboardInset) * 0.8;
         return SafeArea(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxHeight: MediaQuery.of(sheetContext).size.height * 0.8,
+          child: Padding(
+            padding: EdgeInsets.only(bottom: keyboardInset),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: maxHeight),
+              child: SingleChildScrollView(child: content(sheetContext)),
             ),
-            child: content(sheetContext),
           ),
         );
       },
@@ -115,7 +124,11 @@ Future<CanvasConnectPaletteResult?> showCanvasConnectPalette({
     context: context,
     builder: (BuildContext dialogContext) {
       return Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusLg)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(
+            NmtkShellTokens.of(context).radiusLg,
+          ),
+        ),
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 560, maxHeight: 620),
           child: content(dialogContext),
@@ -220,7 +233,9 @@ class _CanvasConnectPaletteBodyState extends State<_CanvasConnectPaletteBody> {
                   physics: const NeverScrollableScrollPhysics(),
                   mainAxisSpacing: 10,
                   crossAxisSpacing: 10,
-                  childAspectRatio: 1.35,
+                  // Taller tiles so multi-port candidates (e.g. forwardPass)
+                  // do not overflow the grid cell.
+                  childAspectRatio: 1.0,
                   children: visible
                       .map(
                         (CanvasConnectPaletteEntry entry) =>
@@ -316,6 +331,9 @@ class _CanvasConnectPaletteTile extends StatelessWidget {
   }
 }
 
+/// Minimum tap target per [mobile_modal_standard.md].
+const double _kPalettePortRowMinHeight = 44;
+
 /// A dot + name pair matching the canvas port styling, tappable as its own
 /// target. Non-interactive visually — the dot is a plain circle rather than a
 /// [CanvasPortWidget], which owns connection gestures this context has no use
@@ -359,13 +377,19 @@ class _PaletteTilePortRow extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 3, horizontal: 2),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: isInput
-              ? [dot, const SizedBox(width: 4), text]
-              : [text, const SizedBox(width: 4), dot],
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: _kPalettePortRowMinHeight),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 2),
+          child: Align(
+            alignment: isInput ? Alignment.centerLeft : Alignment.centerRight,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: isInput
+                  ? [dot, const SizedBox(width: 4), text]
+                  : [text, const SizedBox(width: 4), dot],
+            ),
+          ),
         ),
       ),
     );

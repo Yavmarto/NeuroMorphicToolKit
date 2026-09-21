@@ -6,15 +6,21 @@
 #
 # Usage (as root, on the rig itself):
 #   sudo ./akida_driver_rebuild.sh --install-for <account>
+#   sudo ./akida_driver_rebuild.sh --install-recovery-timer
 #
 # --install-for also grants <account> a scoped NOPASSWD sudo rule for the
 # installed copy of this script only (mirrors app_managed_update.sh), so a
 # future kernel bump can be repaired without an interactive root session:
 #   sudo /usr/local/libexec/nmtk-akida-driver-rebuild
+#
+# --install-recovery-timer installs the monitored, repeatable recovery path
+# (CEL-460): a health wrapper that rebuilds the module only when the AKD1000 is
+# unbound, plus a systemd timer that runs it every 15 minutes and at boot. It is
+# idempotent, so re-running it after a kernel upgrade is safe.
 
 set -euo pipefail
 
-HELPER_VERSION="1"
+HELPER_VERSION="2"
 HELPER_SOURCE="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
 TESTING="${NMTK_AKIDA_REBUILD_TESTING:-0}"
 if [ "$TESTING" = "1" ]; then
@@ -35,6 +41,12 @@ default_src_dir() {
 SRC_DIR="${NMTK_AKIDA_SRC_DIR:-$(default_src_dir)}"
 DKMS_NAME="akida-dw-edma"
 DKMS_VERSION="1.0"
+# The recovery path (CEL-460): a systemd timer runs a tiny health wrapper that
+# rebuilds the module only when the AKD1000 is unbound. `--install-recovery-timer`
+# writes these; it is idempotent and safe to re-run after a kernel upgrade.
+RECOVERY_HELPER="${NMTK_AKIDA_RECOVERY_HELPER:-/usr/local/libexec/nmtk-akida-driver-health}"
+RECOVERY_SERVICE="${NMTK_AKIDA_RECOVERY_SERVICE:-/etc/systemd/system/nmtk-akida-driver-recovery.service}"
+RECOVERY_TIMER="${NMTK_AKIDA_RECOVERY_TIMER:-/etc/systemd/system/nmtk-akida-driver-recovery.timer}"
 
 fail() {
   printf 'error: %s\n' "$*" >&2
@@ -82,10 +94,77 @@ install_passwordless_helper() {
   printf '==> Future kernel bumps can be repaired via: sudo %s\n' "$INSTALLED_HELPER"
 }
 
+install_recovery_timer() {
+  case "$RECOVERY_HELPER" in
+    /*) ;;
+    *) fail "the recovery helper path must be absolute" ;;
+  esac
+  install -d -m 0755 "$(dirname "$RECOVERY_HELPER")"
+  cat >"$RECOVERY_HELPER" <<EOF
+#!/usr/bin/env bash
+# Installed by nmtk-akida-driver-rebuild (CEL-460). Probes the AKD1000 PCIe
+# driver and runs the DKMS rebuild helper only when the device is unbound, so
+# the periodic timer is cheap when the card is healthy.
+set -euo pipefail
+HELPER="$INSTALLED_HELPER"
+bound=0
+for driver in /sys/bus/pci/devices/*/driver; do
+  [ -e "\$driver" ] || continue
+  if [ "\$(basename "\$(readlink -f "\$driver")")" = "akida-pcie" ]; then
+    bound=1
+    break
+  fi
+done
+if [ "\$bound" = "1" ]; then
+  echo "akida-pcie is bound; no recovery needed"
+  exit 0
+fi
+echo "akida-pcie is unbound for \$(uname -r); rebuilding via \$HELPER" >&2
+exec "\$HELPER"
+EOF
+  chmod 0755 "$RECOVERY_HELPER"
+
+  install -d -m 0755 "$(dirname "$RECOVERY_SERVICE")"
+  cat >"$RECOVERY_SERVICE" <<EOF
+[Unit]
+Description=NMTK Akida PCIe driver recovery (rebuild the DKMS module when unbound)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=$RECOVERY_HELPER
+EOF
+  cat >"$RECOVERY_TIMER" <<EOF
+[Unit]
+Description=Periodically verify the NMTK Akida PCIe driver is bound
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=15min
+Unit=$(basename "$RECOVERY_SERVICE")
+
+[Install]
+WantedBy=timers.target
+EOF
+
+  if [ "$TESTING" != "1" ]; then
+    systemctl daemon-reload
+    systemctl enable --now "$(basename "$RECOVERY_TIMER")"
+  fi
+  printf '==> Akida driver recovery timer installed: %s\n' "$RECOVERY_TIMER"
+  printf '    It runs %s every 15 minutes and at boot.\n' "$RECOVERY_HELPER"
+}
+
 if [ "${1:-}" = "--install-for" ]; then
   [ "$#" -ge 2 ] || fail "--install-for needs an account name"
   install_passwordless_helper "$2"
   shift 2
+fi
+
+if [ "${1:-}" = "--install-recovery-timer" ]; then
+  install_recovery_timer
+  exit 0
 fi
 
 [ -d "$SRC_DIR" ] || fail "driver source not found at $SRC_DIR (set NMTK_AKIDA_SRC_DIR)"

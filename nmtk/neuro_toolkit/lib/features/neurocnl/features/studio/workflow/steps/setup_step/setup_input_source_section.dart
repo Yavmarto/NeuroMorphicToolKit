@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
-import 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/deploy/neurosense_workspace/neurosense_setup_pane.dart';
+import 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/deploy/neurosense_workspace/neurosense_setup_section.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/workspace_provider.dart';
+import 'package:neuro_toolkit/features/neurocnl/screens/neurosense_popup.dart';
 
 /// Setup-stage chooser between file datasets and a live NeuroSense sensor feed.
 class SetupInputSourceSection extends ConsumerWidget {
@@ -67,6 +68,16 @@ class SetupInputSourceSection extends ConsumerWidget {
         if (usingLiveSensor) ...[
           const SizedBox(height: 16),
           const NeurosenseSetupSection(),
+          const SizedBox(height: 8),
+          NmtkOutlinedButton(
+            key: const Key('setup-open-neurosense-panel'),
+            label: 'Open NeuroSense panel',
+            icon: Icons.open_in_new,
+            onPressed: () => showNeurosensePopup(
+              context,
+              initialTab: NeurosensePopupTab.devices,
+            ),
+          ),
         ],
       ],
     );

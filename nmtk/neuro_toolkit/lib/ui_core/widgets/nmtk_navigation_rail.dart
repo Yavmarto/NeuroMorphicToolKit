@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:neuro_toolkit/ui_core/models/shell_models.dart';
+import 'package:neuro_toolkit/ui_core/shell_tokens.dart';
 
 /// A customized NavigationRail matching NMTK design patterns.
 ///
@@ -28,6 +29,8 @@ class NmtkNavigationRail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final navAccent = NmtkShellTokens.of(context).commandPalette.accent;
 
     return NavigationRail(
       selectedIndex: selectedIndex,
@@ -41,8 +44,8 @@ class NmtkNavigationRail extends StatelessWidget {
       trailing: trailing,
       destinations: destinations.map((d) {
         return NavigationRailDestination(
-          icon: Icon(d.icon),
-          selectedIcon: Icon(d.selectedIcon ?? d.icon),
+          icon: Icon(d.icon, color: scheme.onSurfaceVariant),
+          selectedIcon: Icon(d.selectedIcon ?? d.icon, color: navAccent),
           label: Text(d.label),
         );
       }).toList(),

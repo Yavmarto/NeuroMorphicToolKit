@@ -18,6 +18,15 @@ const int kCoactivationDefaultWindowCapacity = 120;
 /// [PreviewPlayback].
 const double kCoactivationDefaultBinMs = 50.0;
 
+/// Minimum number of overlapping samples before a co-firing score is reported.
+/// Deliberately lower than [kCoactivationMinSamples]: a run with only a few
+/// captured epochs should still show which nodes fired together.
+const int kCoactivationMinCofiringSamples = 3;
+
+/// A node counts as "active" in a sample when its normalized rate reaches this
+/// value. Used only by the co-firing score, not by the Pearson correlation.
+const double kCoactivationActiveThreshold = 0.25;
+
 /// Short label for the correlation overlay.
 const String kCoactivationShortLabel = 'Co-active';
 
@@ -130,22 +139,88 @@ class CoactivationWindow {
     }
     return result;
   }
+
+  /// Jaccard co-firing score for a pair: of the samples where *either* node is
+  /// active (rate ≥ [activeThreshold]), the fraction where *both* are. Returns
+  /// `null` below the required overlap or when neither node ever fires.
+  ///
+  /// This is the direct "fire together" signal. Pearson washes out to ~0 for
+  /// two sparse spike trains even when they reliably fire in the same bins;
+  /// Jaccard does not, so co-active nodes actually get a wire.
+  double? cofiring(
+    String a,
+    String b, {
+    double activeThreshold = kCoactivationActiveThreshold,
+    int? minSamples,
+  }) {
+    if (a == b) return 1.0;
+    final seriesA = _series[a];
+    final seriesB = _series[b];
+    if (seriesA == null || seriesB == null) return null;
+
+    final required =
+        minSamples ??
+        math.min(this.minSamples, kCoactivationMinCofiringSamples);
+    final length = math.min(seriesA.length, seriesB.length);
+    var both = 0;
+    var either = 0;
+    var overlap = 0;
+    for (var i = 0; i < length; i += 1) {
+      final x = seriesA[i];
+      final y = seriesB[i];
+      if (x == null || y == null) continue;
+      overlap += 1;
+      final xActive = x >= activeThreshold;
+      final yActive = y >= activeThreshold;
+      if (xActive || yActive) either += 1;
+      if (xActive && yActive) both += 1;
+    }
+    if (overlap < required || either == 0) return null;
+    return both / either;
+  }
+
+  /// Symmetric co-firing matrix in the same shape as [correlationMatrix].
+  Map<String, Map<String, double>> cofiringMatrix({
+    double activeThreshold = kCoactivationActiveThreshold,
+  }) {
+    final ids = _series.keys.toList(growable: false);
+    final result = <String, Map<String, double>>{};
+    for (var i = 0; i < ids.length; i += 1) {
+      for (var j = i + 1; j < ids.length; j += 1) {
+        final score = cofiring(
+          ids[i],
+          ids[j],
+          activeThreshold: activeThreshold,
+        );
+        if (score == null || score <= 0) continue;
+        (result[ids[i]] ??= <String, double>{})[ids[j]] = score;
+        (result[ids[j]] ??= <String, double>{})[ids[i]] = score;
+      }
+    }
+    return result;
+  }
 }
 
 /// Immutable correlation result used by the renderer.
 class CoactivationSnapshot {
   const CoactivationSnapshot({
     this.correlations = const <String, Map<String, double>>{},
+    this.cofiring = const <String, Map<String, double>>{},
     this.threshold = kCoactivationClusterThreshold,
   });
 
   /// Symmetric node-id → node-id → Pearson `r`.
   final Map<String, Map<String, double>> correlations;
 
+  /// Symmetric node-id → node-id → Jaccard co-firing score in `0..1`. This is
+  /// the direct "fire together" signal the renderer draws wires from; it is
+  /// empty for snapshots built without a [CoactivationWindow].
+  final Map<String, Map<String, double>> cofiring;
+
   /// Threshold used to derive [clusters].
   final double threshold;
 
-  bool get isEmpty => correlations.isEmpty;
+  bool get isEmpty => correlations.isEmpty && cofiring.isEmpty;
 
   /// Correlation for a pair, or `null` when there is no evidence. A node
   /// correlated with itself is `1.0`.
@@ -154,12 +229,50 @@ class CoactivationSnapshot {
     return correlations[a]?[b] ?? correlations[b]?[a];
   }
 
+  /// Wire strength for a pair: the stronger of `|Pearson r|` and the Jaccard
+  /// co-firing score. Merged so a pair that reliably fires together still gets
+  /// a wire when Pearson is too weak to register. Symmetric; `0` when there is
+  /// no evidence.
+  double coactivation(String a, String b) {
+    if (a == b) return 1.0;
+    final r = correlations[a]?[b] ?? correlations[b]?[a];
+    final c = cofiring[a]?[b] ?? cofiring[b]?[a];
+    final magnitude = r == null ? 0.0 : r.abs();
+    return math.max(magnitude, c ?? 0.0);
+  }
+
+  /// Symmetric merged wire matrix: per pair, the stronger of `|Pearson r|` and
+  /// the co-firing score. Returns [correlations] unchanged when there is no
+  /// co-firing evidence.
+  Map<String, Map<String, double>> coactivationMatrix() {
+    if (cofiring.isEmpty) return correlations;
+    final result = <String, Map<String, double>>{};
+    void merge(String a, String b, double value) {
+      if (value <= 0 || a == b) return;
+      final rowA = result[a] ??= <String, double>{};
+      final rowB = result[b] ??= <String, double>{};
+      final existing = rowA[b] ?? rowB[a] ?? 0.0;
+      if (value <= existing) return;
+      rowA[b] = value;
+      rowB[a] = value;
+    }
+
+    correlations.forEach((a, row) {
+      row.forEach((b, r) => merge(a, b, r.abs()));
+    });
+    cofiring.forEach((a, row) {
+      row.forEach((b, c) => merge(a, b, c));
+    });
+    return result;
+  }
+
   factory CoactivationSnapshot.fromWindow(
     CoactivationWindow window, {
     double threshold = kCoactivationClusterThreshold,
   }) {
     return CoactivationSnapshot(
       correlations: window.correlationMatrix(),
+      cofiring: window.cofiringMatrix(),
       threshold: threshold,
     );
   }
@@ -189,11 +302,13 @@ class CoactivationSnapshot {
     );
   }
 
-  /// Union-find clusters over pairs whose correlation is at least
-  /// [threshold]. Singletons are omitted.
+  /// Union-find clusters over pairs whose merged co-activation strength
+  /// (`max(|Pearson r|, co-firing)`) is at least [threshold]. Singletons are
+  /// omitted.
   List<Set<String>> clustersAt(double threshold) {
-    final ids = <String>{...correlations.keys};
-    for (final inner in correlations.values) {
+    final matrix = coactivationMatrix();
+    final ids = <String>{...matrix.keys};
+    for (final inner in matrix.values) {
       ids.addAll(inner.keys);
     }
     if (ids.isEmpty) return const <Set<String>>[];
@@ -214,7 +329,7 @@ class CoactivationSnapshot {
       if (rootA != rootB) parent[rootA] = rootB;
     }
 
-    for (final entry in correlations.entries) {
+    for (final entry in matrix.entries) {
       for (final other in entry.value.entries) {
         if (entry.key.compareTo(other.key) >= 0) continue;
         if (other.value >= threshold) union(entry.key, other.key);

@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:neuro_toolkit/features/neurocnl/models/neurosense_sensor_target.dart';
@@ -50,5 +52,25 @@ class NeurosenseApiService {
 
   Future<void> disconnectDevice(String deviceId) async {
     await _client.postNeurosenseJson('/devices/$deviceId/disconnect', {});
+  }
+
+  Future<NeurosenseSignalQuality> getQuality() async {
+    final response = await _client.getNeurosenseJson('/quality');
+    if (response is! Map<String, dynamic>) {
+      return const NeurosenseSignalQuality(channels: []);
+    }
+    return NeurosenseSignalQuality.fromJson(response);
+  }
+
+  Future<NeurosenseEncodingConfig> importNir({
+    required String filename,
+    required Uint8List bytes,
+  }) async {
+    final response = await _client.postNeurosenseMultipart(
+      '/nir/import',
+      filename: filename,
+      bytes: bytes,
+    );
+    return NeurosenseEncodingConfig.fromJson(response);
   }
 }

@@ -29,46 +29,47 @@ class _CompareTargetsDialogState extends ConsumerState<CompareTargetsDialog> {
       insetPadding: NmtkDialogSurface.insetPadding(context),
       title: const Text('Compare targets'),
       content: ConstrainedBox(
+        // Cap alone (no nested fixed-width box): NmtkDialogSurface.constraints
+        // already returns screenWidth-derived maxWidth on compact viewports,
+        // so a hard-coded inner SizedBox(width: 360) would just fight it.
         constraints: NmtkDialogSurface.constraints(context, maxWidth: 360),
-        child: SizedBox(
-          width: 360,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                for (final id in reviewableTargets)
-                  Builder(
-                    builder: (context) {
-                      final hasResult = ref.watch(
-                        deployTargetHasResultProvider(id),
-                      );
-                      return CheckboxListTile(
-                        dense: true,
-                        controlAffinity: ListTileControlAffinity.leading,
-                        value: hasResult && _selected.contains(id),
-                        title: Text(targetLabel(id)),
-                        subtitle: hasResult
-                            ? null
-                            : Text(
-                                'Not run yet',
-                                style: textStyles.bodySmall.copyWith(
-                                  color: colors.mainSubtle,
-                                ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final id in reviewableTargets)
+                Builder(
+                  builder: (context) {
+                    final hasResult = ref.watch(
+                      deployTargetHasResultProvider(id),
+                    );
+                    return CheckboxListTile(
+                      // No `dense: true` — that drops the row below the
+                      // 44 px minimum tap target on touch/mobile.
+                      controlAffinity: ListTileControlAffinity.leading,
+                      value: hasResult && _selected.contains(id),
+                      title: Text(targetLabel(id)),
+                      subtitle: hasResult
+                          ? null
+                          : Text(
+                              'Not run yet',
+                              style: textStyles.bodySmall.copyWith(
+                                color: colors.mainSubtle,
                               ),
-                        onChanged: hasResult
-                            ? (checked) => setState(() {
-                                if (checked ?? false) {
-                                  _selected.add(id);
-                                } else {
-                                  _selected.remove(id);
-                                }
-                              })
-                            : null,
-                      );
-                    },
-                  ),
-              ],
-            ),
+                            ),
+                      onChanged: hasResult
+                          ? (checked) => setState(() {
+                              if (checked ?? false) {
+                                _selected.add(id);
+                              } else {
+                                _selected.remove(id);
+                              }
+                            })
+                          : null,
+                    );
+                  },
+                ),
+            ],
           ),
         ),
       ),

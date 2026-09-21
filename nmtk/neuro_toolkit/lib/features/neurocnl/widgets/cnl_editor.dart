@@ -1197,33 +1197,36 @@ class _NumericLiteralDialogState extends State<_NumericLiteralDialog> {
         ),
       ),
       title: const Text('Edit number'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            widget.linePreview,
-            style: Zeta.of(context).textStyles.bodyXSmall.copyWith(
-              color: AppTheme.textSecondary,
-              height: 1.4,
+      content: NmtkDialogSurface.wrapScrollable(
+        context,
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              widget.linePreview,
+              style: Zeta.of(context).textStyles.bodyXSmall.copyWith(
+                color: AppTheme.textSecondary,
+                height: 1.4,
+              ),
             ),
-          ),
-          const SizedBox(height: 12),
-          NmtkTextInput(
-            controller: _controller,
-            // ZETA-MIGRATION-TODO: autofocus dropped
-            keyboardType: const TextInputType.numberWithOptions(
-              decimal: true,
-              signed: true,
+            const SizedBox(height: 12),
+            NmtkTextInput(
+              controller: _controller,
+              // ZETA-MIGRATION-TODO: autofocus dropped
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+                signed: true,
+              ),
+              label: 'Value',
+              errorText: _errorText,
+              hintText:
+                  'Updates the number in the CNL editor and reruns parse/validate.',
+              // ZETA-MIGRATION-TODO: border has no ZetaTextInput equivalent
+              // ZETA-MIGRATION-TODO: onSubmitted dropped
             ),
-            label: 'Value',
-            errorText: _errorText,
-            hintText:
-                'Updates the number in the CNL editor and reruns parse/validate.',
-            // ZETA-MIGRATION-TODO: border has no ZetaTextInput equivalent
-            // ZETA-MIGRATION-TODO: onSubmitted dropped
-          ),
-        ],
+          ],
+        ),
       ),
       actions: [
         ZetaButton.text(

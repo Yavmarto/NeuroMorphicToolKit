@@ -5,6 +5,7 @@ import 'package:neuro_toolkit/features/neurocnl/models/detected_hardware_entry.d
 import 'package:neuro_toolkit/features/neurocnl/providers/api_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/feature_launch_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/hardware_auto_add.dart';
+import 'package:neuro_toolkit/features/neurocnl/services/speck_target_service.dart';
 
 /// The launcher's view of the backend this neurocnl surface is connected to.
 ///
@@ -16,13 +17,17 @@ final hardwareAutoAddScannerProvider = Provider<HardwareTargetAutoScanner>((
 ) {
   final api = ref.watch(apiClientProvider);
   final registry = ref.watch(studioTargetRegistryServiceProvider);
+  final speckTargets = ref.watch(speckTargetServiceProvider);
   final backendUri = ref.watch(featureLaunchContextProvider).backendUri;
   final backendHost = backendUri.host.trim().toLowerCase();
 
   String displayNameFor(DetectedHardwareEntry entry) {
     final name = entry.displayName.trim();
     if (name.isNotEmpty) return name;
-    return 'Akida ${entry.identifier.trim()}';
+    return switch (entry.chipType) {
+      'speck' => 'Speck ${entry.identifier.trim()}',
+      _ => 'Akida ${entry.identifier.trim()}',
+    };
   }
 
   return HardwareTargetAutoScanner(
@@ -43,6 +48,12 @@ final hardwareAutoAddScannerProvider = Provider<HardwareTargetAutoScanner>((
       serviceUser: '',
       sameHostAsBackend: true,
       deviceIdentifier: entry.identifier.trim(),
+    ),
+    fetchSpeckDevices: speckTargets.fetchDevices,
+    createSameHostSpeckDevice: (entry) => speckTargets.saveDevice(
+      displayName: displayNameFor(entry),
+      deviceIdentifier: entry.identifier.trim(),
+      sameHostAsBackend: true,
     ),
   );
 });

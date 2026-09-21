@@ -1,4 +1,5 @@
 import 'package:neuro_toolkit/features/neurocnl/models/detected_hardware_entry.dart';
+import 'package:neuro_toolkit/features/neurocnl/models/speck_paired_device.dart';
 import 'package:neuro_toolkit/ui_core/models/akida_deployment_model.dart';
 
 /// What one hardware scan did, for the caller to report.
@@ -16,7 +17,7 @@ class HardwareAutoAddResult {
   final int alreadyRegisteredCount;
 
   /// Detected-but-unregistered devices per chip type that have no paired-host
-  /// model yet (`speck` / `teensy`), keyed by chip type.
+  /// model yet (`teensy`), keyed by chip type.
   final Map<String, int> unsupportedByChipType;
 
   bool get addedAny => addedNames.isNotEmpty;
@@ -71,14 +72,13 @@ String chipTypeLabel(String chipType) => switch (chipType) {
 /// entry using the same-host no-credentials path — `AkidaHostAuthMode.none` +
 /// `sameHostAsBackend: true` — name only, no SSH credentials, because the
 /// device lives on the machine that already runs the backend.
-///
-/// Only `akida` has a paired-host model today; Speck and serial/Teensy hits are
-/// reported as detected-but-not-auto-addable (see CEL-120).
 class HardwareTargetAutoScanner {
   HardwareTargetAutoScanner({
     required this.detectDevices,
     required this.fetchAkidaHosts,
     required this.createSameHostAkidaHost,
+    required this.fetchSpeckDevices,
+    required this.createSameHostSpeckDevice,
   });
 
   /// Runs the backend scan; already-saved identifiers are passed through so
@@ -95,12 +95,22 @@ class HardwareTargetAutoScanner {
   final Future<AkidaPairedHost> Function(DetectedHardwareEntry entry)
   createSameHostAkidaHost;
 
+  final Future<List<SpeckPairedDevice>> Function() fetchSpeckDevices;
+
+  final Future<SpeckPairedDevice> Function(DetectedHardwareEntry entry)
+  createSameHostSpeckDevice;
+
   Future<HardwareAutoAddResult> run() async {
-    final existing = await fetchAkidaHosts();
-    final knownIdentifiers = existing
-        .map((host) => host.deviceIdentifier.trim())
-        .where((id) => id.isNotEmpty)
-        .toSet();
+    final akidaHosts = await fetchAkidaHosts();
+    final speckDevices = await fetchSpeckDevices();
+    final knownIdentifiers = <String>{
+      ...akidaHosts
+          .map((host) => host.deviceIdentifier.trim())
+          .where((id) => id.isNotEmpty),
+      ...speckDevices
+          .map((device) => device.deviceIdentifier.trim())
+          .where((id) => id.isNotEmpty),
+    };
 
     final detected = await detectDevices(
       registeredIdentifiers: knownIdentifiers.toList(growable: false),
@@ -125,8 +135,13 @@ class HardwareTargetAutoScanner {
             (unsupportedByChipType[entry.chipType] ?? 0) + 1;
         continue;
       }
-      final saved = await createSameHostAkidaHost(entry);
-      addedNames.add(saved.displayName);
+      if (entry.chipType == 'speck') {
+        final saved = await createSameHostSpeckDevice(entry);
+        addedNames.add(saved.displayName);
+      } else {
+        final saved = await createSameHostAkidaHost(entry);
+        addedNames.add(saved.displayName);
+      }
       knownIdentifiers.add(identifier);
     }
 

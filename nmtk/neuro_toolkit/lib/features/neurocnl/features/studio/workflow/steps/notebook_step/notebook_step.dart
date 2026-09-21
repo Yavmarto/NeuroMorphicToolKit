@@ -434,7 +434,11 @@ class _NotebookStepState extends ConsumerState<NotebookStep> {
             const SizedBox(height: 16),
             FilledButton.icon(
               onPressed: _generateAndLoad,
-              icon: const Icon(ZetaIcons.refresh, size: 16),
+              icon: Icon(
+                ZetaIcons.refresh,
+                size: 16,
+                color: Theme.of(context).colorScheme.onPrimary,
+              ),
               label: const Text('Retry'),
             ),
           ],

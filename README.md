@@ -15,7 +15,7 @@ Commercial neuromorphic hardware revenue was an estimated **~USD 50M in 2025**, 
 - **Zero-infrastructure start** — the desktop app installs or connects to a backend in one step; end users never touch a terminal.
 - **Honesty** — capability and fidelity are documented in the table below and in module READMEs, not hidden behind marketing copy.
 
-NMTK does **not** install physical hardware, shipped images do **not** bundle vendor SDKs, and we do **not** advertise mobile app stores or Kubernetes (both `not implemented` today).
+NMTK does **not** install physical hardware, shipped images do **not** bundle vendor SDKs, and we do **not** advertise mobile app stores (`not implemented` today).
 
 ---
 
@@ -34,8 +34,11 @@ NMTK does **not** install physical hardware, shipped images do **not** bundle ve
 | Akida / PYNQ / Teensy / Speck deploy | `needs hardware` | `approximate`–`unsupported` |
 | Neurosense live sensors | `needs hardware` | — |
 | Loihi hardware, Lava on-chip | `not implemented` | `unsupported` |
+| Kubernetes backend deploy | `works` (verified on a local `kind` cluster) | — |
 
 Measured round-trip leaderboard: [docs/hardware/support-matrix.md](./docs/hardware/support-matrix.md). Full primitive matrix: [neurocnl/docs/support_matrix.md](./neurocnl/docs/support_matrix.md).
+
+Kubernetes deploy mode is executed by [`nmtk/launcher_control/deployment_executor_kubernetes.py`](./nmtk/launcher_control/deployment_executor_kubernetes.py) with manifests rendered by [`deployment_k8s_renderer.py`](./nmtk/launcher_control/deployment_k8s_renderer.py). It is verified end to end (render → apply → rollout → health probe) against a real cluster by [`tests/integration/test_kubernetes_cluster_e2e.py`](./tests/integration/test_kubernetes_cluster_e2e.py); run it with `bash scripts/run_launcher_guardrails.sh --with-k8s`. LoadBalancer public endpoints are supplied by the cluster's cloud provider and are not exercised by the local verification.
 
 ---
 
@@ -176,8 +179,8 @@ Each module subdirectory carries its own `README.md`.
 
 Not implemented today.
 
-- **Kubernetes deployment mode.** A renderer exists (`nmtk/launcher_control/deployment_k8s_renderer.py`) and `modules.json` advertises the mode, but it is not a verified deployment path. Use Local or Docker.
 - **Mobile distribution.** The Flutter app builds for mobile from source, but only desktop artifacts are released; there is no App Store or Google Play listing.
+- **Cloud Kubernetes providers.** Kubernetes deploy mode is verified on a local `kind` cluster; managed-cloud LoadBalancer provisioning and Ingress DNS have not been exercised yet.
 - **Expanded suite documentation.** An API reference index, installation and troubleshooting guides, and a production playbook were previously listed here and do not exist.
 
 ---

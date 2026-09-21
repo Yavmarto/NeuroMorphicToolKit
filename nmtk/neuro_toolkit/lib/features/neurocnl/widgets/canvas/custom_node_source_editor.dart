@@ -508,7 +508,11 @@ class _CustomNodeSourceEditorState
           titleSpacing: 20,
           title: Row(
             children: [
-              const Icon(Icons.code, size: 20),
+              Icon(
+                Icons.code,
+                size: 20,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
               const SizedBox(width: 10),
               const Text('Node source'),
               const SizedBox(width: 12),
@@ -626,7 +630,11 @@ class _CustomNodeSourceEditorState
                             dimension: 16,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Icon(Icons.save, size: 18),
+                        : Icon(
+                            Icons.save,
+                            size: 18,
+                            color: Theme.of(context).colorScheme.onPrimary,
+                          ),
                     label: const Text('Save'),
                   ),
                 ] else
@@ -637,7 +645,11 @@ class _CustomNodeSourceEditorState
                             dimension: 16,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Icon(Icons.add, size: 18),
+                        : Icon(
+                            Icons.add,
+                            size: 18,
+                            color: Theme.of(context).colorScheme.onPrimary,
+                          ),
                     label: const Text('Save as custom'),
                   ),
               ],
@@ -826,7 +838,11 @@ class _AutocompletePopupState extends State<_AutocompletePopup> {
               padding: const EdgeInsets.symmetric(horizontal: 10),
               child: Row(
                 children: [
-                  const Icon(Icons.code, size: 15),
+                  Icon(
+                    Icons.code,
+                    size: 15,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(child: Text(prompt.word)),
                 ],

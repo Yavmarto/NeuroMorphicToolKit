@@ -167,6 +167,19 @@ class AppTheme {
       colorScheme: colorScheme,
       scaffoldBackgroundColor: NmtkDesignTokens.backgroundLight,
       iconTheme: IconThemeData(color: colorScheme.onSurface),
+      navigationBarTheme: NavigationBarThemeData(
+        iconTheme: WidgetStateProperty.resolveWith(
+          (states) => IconThemeData(
+            color: states.contains(WidgetState.selected)
+                ? colorScheme.primary
+                : colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ),
+      navigationRailTheme: NavigationRailThemeData(
+        selectedIconTheme: IconThemeData(color: colorScheme.primary),
+        unselectedIconTheme: IconThemeData(color: colorScheme.onSurfaceVariant),
+      ),
       textTheme: _buildTextTheme(ThemeData.light().textTheme),
       extensions: [_mergedSuiteTokens(colorScheme, Brightness.light, variant)],
     );
@@ -191,6 +204,19 @@ class AppTheme {
       colorScheme: colorScheme,
       scaffoldBackgroundColor: NmtkDesignTokens.backgroundDark,
       iconTheme: IconThemeData(color: colorScheme.onSurface),
+      navigationBarTheme: NavigationBarThemeData(
+        iconTheme: WidgetStateProperty.resolveWith(
+          (states) => IconThemeData(
+            color: states.contains(WidgetState.selected)
+                ? colorScheme.primary
+                : colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ),
+      navigationRailTheme: NavigationRailThemeData(
+        selectedIconTheme: IconThemeData(color: colorScheme.primary),
+        unselectedIconTheme: IconThemeData(color: colorScheme.onSurfaceVariant),
+      ),
       textTheme: _buildTextTheme(ThemeData.dark().textTheme),
       extensions: [_mergedSuiteTokens(colorScheme, Brightness.dark, variant)],
     );

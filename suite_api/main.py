@@ -27,7 +27,7 @@ from suite_api.domains.neurosim.router import router as neurosim_router
 from suite_api.errors import error_response
 from nmtk.http_metrics import attach_fastapi_metrics
 from suite_api.middleware import attach_middleware
-from suite_api.routers import health
+from suite_api.routers import health, system
 from suite_api.routers.studio_agent import router as studio_agent_router
 
 
@@ -112,6 +112,7 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
 
 
 app.include_router(health.router, prefix="/api/suite", tags=["health"])
+app.include_router(system.router, prefix="/api/suite", tags=["system"])
 app.include_router(studio_agent_router)
 app.include_router(neurocnl_router)
 app.include_router(neurosim_router)

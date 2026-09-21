@@ -42,140 +42,149 @@ class _ReportBuilderState extends ConsumerState<ReportBuilder> {
 
     return NmtkSection(
       title: 'Report Workbench',
-      child: SingleChildScrollView(
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  _stateChip(
-                    context,
-                    icon: ZetaIcons.analytics,
-                    label: latestResult == null
-                        ? 'Preview mode'
-                        : 'Result attached',
-                  ),
-                  _stateChip(
-                    context,
-                    icon: Icons
-                        .compare_arrows_outlined, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
-                    label: activeBaseline == null
-                        ? 'No baseline diff'
-                        : 'Baseline diff ready',
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              NmtkTextInput(
-                controller: _titleController,
-                label: 'Report Title',
-                // ZETA-MIGRATION-TODO: border has no ZetaTextInput equivalent
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _stateChip(
+                  context,
+                  icon: ZetaIcons.analytics,
+                  label: latestResult == null
+                      ? 'Preview mode'
+                      : 'Result attached',
+                ),
+                _stateChip(
+                  context,
+                  icon: Icons
+                      .compare_arrows_outlined, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
+                  label: activeBaseline == null
+                      ? 'No baseline diff'
+                      : 'Baseline diff ready',
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            NmtkTextInput(
+              controller: _titleController,
+              label: 'Report Title',
+              // ZETA-MIGRATION-TODO: border has no ZetaTextInput equivalent
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter a title';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 16),
+            benchmarksAsync.when(
+              data: (benchmarks) => DropdownButtonFormField<String>(
+                key: ValueKey(activeBenchmark?.id),
+                isExpanded: true,
+                initialValue: activeBenchmark?.id,
+                decoration: const InputDecoration(
+                  labelText: 'Select Benchmark',
+                  border: OutlineInputBorder(),
+                ),
+                selectedItemBuilder: (context) {
+                  return benchmarks
+                      .map(
+                        (b) => Align(
+                          alignment: AlignmentDirectional.centerStart,
+                          child: Text(b.name, overflow: TextOverflow.ellipsis),
+                        ),
+                      )
+                      .toList(growable: false);
+                },
+                items: benchmarks.map((b) {
+                  return DropdownMenuItem(value: b.id, child: Text(b.name));
+                }).toList(),
+                onChanged: (value) {
+                  context.go(
+                    NeurobenchRouteState(
+                      tab: widget.tab,
+                      benchmarkId: value,
+                      baselineId: activeBaseline?.id,
+                      resultId: selectedResult?.id,
+                      jobId: activeJobId,
+                    ).location,
+                  );
+                },
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter a title';
+                  if (value == null) {
+                    return 'Please select a benchmark';
                   }
                   return null;
                 },
               ),
-              const SizedBox(height: 16),
-              benchmarksAsync.when(
-                data: (benchmarks) => DropdownButtonFormField<String>(
-                  key: ValueKey(activeBenchmark?.id),
-                  initialValue: activeBenchmark?.id,
-                  decoration: const InputDecoration(
-                    labelText: 'Select Benchmark',
-                    border: OutlineInputBorder(),
-                  ),
-                  items: benchmarks.map((b) {
-                    return DropdownMenuItem(value: b.id, child: Text(b.name));
-                  }).toList(),
-                  onChanged: (value) {
-                    context.go(
-                      NeurobenchRouteState(
-                        tab: widget.tab,
-                        benchmarkId: value,
-                        baselineId: activeBaseline?.id,
-                        resultId: selectedResult?.id,
-                        jobId: activeJobId,
-                      ).location,
-                    );
-                  },
-                  validator: (value) {
-                    if (value == null) {
-                      return 'Please select a benchmark';
-                    }
-                    return null;
-                  },
-                ),
-                loading: () => const CircularProgressIndicator(),
-                error: (err, stack) => Text('Error loading benchmarks: $err'),
+              loading: () => const CircularProgressIndicator(),
+              error: (err, stack) => Text('Error loading benchmarks: $err'),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Included sections',
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 8),
+            CheckboxListTile(
+              value: _includeComparison,
+              onChanged: (value) {
+                setState(() {
+                  _includeComparison = value ?? false;
+                });
+              },
+              title: const Text('Comparison and regression diff'),
+              subtitle: const Text(
+                'Include baseline comparison when available.',
               ),
-              const SizedBox(height: 20),
-              Text(
-                'Included sections',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+              contentPadding: EdgeInsets.zero,
+            ),
+            CheckboxListTile(
+              value: _includeRobustness,
+              onChanged: (value) {
+                setState(() {
+                  _includeRobustness = value ?? false;
+                });
+              },
+              title: const Text('Robustness and perturbation sweeps'),
+              subtitle: const Text(
+                'Include current sweep views and placeholders.',
               ),
-              const SizedBox(height: 8),
-              CheckboxListTile(
-                value: _includeComparison,
-                onChanged: (value) {
-                  setState(() {
-                    _includeComparison = value ?? false;
-                  });
-                },
-                title: const Text('Comparison and regression diff'),
-                subtitle: const Text(
-                  'Include baseline comparison when available.',
-                ),
-                contentPadding: EdgeInsets.zero,
-              ),
-              CheckboxListTile(
-                value: _includeRobustness,
-                onChanged: (value) {
-                  setState(() {
-                    _includeRobustness = value ?? false;
-                  });
-                },
-                title: const Text('Robustness and perturbation sweeps'),
-                subtitle: const Text(
-                  'Include current sweep views and placeholders.',
-                ),
-                contentPadding: EdgeInsets.zero,
-              ),
-              CheckboxListTile(
-                value: _includeHistory,
-                onChanged: (value) {
-                  setState(() {
-                    _includeHistory = value ?? false;
-                  });
-                },
-                title: const Text('Run history'),
-                subtitle: const Text('Attach recent benchmark executions.'),
-                contentPadding: EdgeInsets.zero,
-              ),
-              const SizedBox(height: 16),
-              ZetaButton.primary(
-                onPressed: () {
-                  if (_formKey.currentState!.validate()) {
-                    NmtkSnackBars.success(
-                        context,
-                        latestResult == null
-                            ? 'Report preview prepared. Run the benchmark to generate a fully populated export.'
-                            : 'Generating report from the current result set...',
-                      );
-                  }
-                },
-                leadingIcon: ZetaIcons.note,
-                label: 'Generate Report',
-              ),
-            ],
-          ),
+              contentPadding: EdgeInsets.zero,
+            ),
+            CheckboxListTile(
+              value: _includeHistory,
+              onChanged: (value) {
+                setState(() {
+                  _includeHistory = value ?? false;
+                });
+              },
+              title: const Text('Run history'),
+              subtitle: const Text('Attach recent benchmark executions.'),
+              contentPadding: EdgeInsets.zero,
+            ),
+            const SizedBox(height: 16),
+            ZetaButton.primary(
+              onPressed: () {
+                if (_formKey.currentState!.validate()) {
+                  NmtkSnackBars.success(
+                    context,
+                    latestResult == null
+                        ? 'Report preview prepared. Run the benchmark to generate a fully populated export.'
+                        : 'Generating report from the current result set...',
+                  );
+                }
+              },
+              leadingIcon: ZetaIcons.note,
+              label: 'Generate Report',
+            ),
+          ],
         ),
       ),
     );
@@ -192,7 +201,9 @@ class _ReportBuilderState extends ConsumerState<ReportBuilder> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusChip),
+        borderRadius: BorderRadius.circular(
+          NmtkShellTokens.of(context).radiusChip,
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

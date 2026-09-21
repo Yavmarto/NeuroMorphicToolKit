@@ -319,24 +319,16 @@ class _AddHardwareTargetFormState extends ConsumerState<AddHardwareTargetForm> {
 
   @override
   Widget build(BuildContext context) {
-    final tokens = NmtkShellTokens.of(context);
-
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // No card/border wrapper here: this form already renders inside
+        // HardwareTargetDialog's dialog surface, so a second bordered,
+        // coloured container around the fields would be a card nested
+        // inside a card.
         Flexible(
-          child: SingleChildScrollView(
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppTheme.background,
-                border: Border.all(color: AppTheme.border),
-                borderRadius: BorderRadius.circular(tokens.radiusLg),
-              ),
-              child: _buildTypeSpecificForm(context),
-            ),
-          ),
+          child: SingleChildScrollView(child: _buildTypeSpecificForm(context)),
         ),
         if (widget.errorMessage != null) ...[
           const SizedBox(height: 12),
@@ -365,10 +357,12 @@ class _AddHardwareTargetFormState extends ConsumerState<AddHardwareTargetForm> {
           runSpacing: 8,
           alignment: WrapAlignment.end,
           children: [
-            ZetaButton.text(
-              onPressed: widget.isSaving ? null : widget.onCancel,
-              label: 'Cancel',
-            ),
+            // Never gated on isSaving: this is the only affordance that lets
+            // the user leave the dialog while a save is in flight — the
+            // dialog has no cancel/close button of its own while the form is
+            // showing, so disabling this one would strand the user in the
+            // loading state with no working back/cancel affordance.
+            ZetaButton.text(onPressed: widget.onCancel, label: 'Cancel'),
             if (widget.onSaveAndTest != null)
               ZetaButton.outline(
                 key: const Key('hardware-target-save-and-test'),
@@ -389,12 +383,11 @@ class _AddHardwareTargetFormState extends ConsumerState<AddHardwareTargetForm> {
     );
   }
 
-  /// A checkbox rendered on the form's coloured card.
+  /// A checkbox rendered directly on the dialog surface (no card wrapper).
   ///
-  /// The card that carries the form paints a background colour, and the
-  /// [ListTile] a [CheckboxListTile] builds paints its ink on the nearest
-  /// ancestor [Material] — which sits *above* that card, so the card would hide
-  /// the ripple. Current stable Flutter also trips a debug assertion over it.
+  /// The [ListTile] a [CheckboxListTile] builds paints its ink on the nearest
+  /// ancestor [Material], which may sit above an opaque ancestor and hide the
+  /// ripple; current stable Flutter also trips a debug assertion over it.
   /// Wrapping the tile in its own transparent [Material] is the
   /// framework-recommended fix and leaves the look unchanged.
   Widget _formCheckboxTile({
@@ -713,7 +706,11 @@ class _AddHardwareTargetFormState extends ConsumerState<AddHardwareTargetForm> {
               ZetaDropdownItem<ScNeuroCoreFamily>(
                 value: family,
                 label: family.label,
-                icon: Icon(family.icon, size: 16),
+                icon: Icon(
+                  family.icon,
+                  size: 16,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
           ],
           onChange: (item) => setState(() {
@@ -760,28 +757,28 @@ class _AddHardwareTargetFormState extends ConsumerState<AddHardwareTargetForm> {
               'Absolute path on the server running CNL Studio. Leave blank to use the server\'s \$PATH.',
         ),
         const SizedBox(height: 12),
-        Row(
-          children: [
-            Text(
-              'Deployment mode',
-              style: Theme.of(
-                context,
-              ).textTheme.labelMedium?.copyWith(color: AppTheme.textSecondary),
+        // Label above the control, not beside it — matching the FPGA family
+        // and toolchain dropdowns above. A side-by-side Row here does not
+        // wrap, so at the minimum supported mobile width the label and the
+        // two-segment control could not both fit on one line.
+        Text(
+          'Deployment mode',
+          style: Theme.of(
+            context,
+          ).textTheme.labelMedium?.copyWith(color: AppTheme.textSecondary),
+        ),
+        const SizedBox(height: 6),
+        ZetaSegmentedControl<ScNeuroCoreDeploymentMode>(
+          selected: _scDeploymentMode,
+          onChanged: (mode) => setState(() => _scDeploymentMode = mode),
+          segments: const [
+            ZetaButtonSegment<ScNeuroCoreDeploymentMode>(
+              value: ScNeuroCoreDeploymentMode.local,
+              child: Text('Local File'),
             ),
-            const SizedBox(width: 12),
-            ZetaSegmentedControl<ScNeuroCoreDeploymentMode>(
-              selected: _scDeploymentMode,
-              onChanged: (mode) => setState(() => _scDeploymentMode = mode),
-              segments: const [
-                ZetaButtonSegment<ScNeuroCoreDeploymentMode>(
-                  value: ScNeuroCoreDeploymentMode.local,
-                  child: Text('Local File'),
-                ),
-                ZetaButtonSegment<ScNeuroCoreDeploymentMode>(
-                  value: ScNeuroCoreDeploymentMode.network,
-                  child: Text('Network (SSH)'),
-                ),
-              ],
+            ZetaButtonSegment<ScNeuroCoreDeploymentMode>(
+              value: ScNeuroCoreDeploymentMode.network,
+              child: Text('Network (SSH)'),
             ),
           ],
         ),

@@ -25,6 +25,10 @@ class BrainvizForce3DPainter extends CustomPainter {
     required this.positionsRevision,
     required this.projection,
     required this.activity,
+    this.pulse = const <String, double>{},
+    this.drawWires = true,
+    this.ringActivity = false,
+    this.elapsedSeconds = 0.0,
     required this.radii,
     required this.correlationPairs,
     required this.nodeClusterIndices,
@@ -39,6 +43,22 @@ class BrainvizForce3DPainter extends CustomPainter {
   final int positionsRevision;
   final BrainvizPerspective projection;
   final Map<String, double> activity;
+
+  /// Per-node glow multiplier from the view's activity pulse. Empty when the
+  /// scene is static (animation disabled or nothing firing).
+  final Map<String, double> pulse;
+
+  /// Draw co-firing wires. Off for variants that explain co-firing through
+  /// motion or activity alone.
+  final bool drawWires;
+
+  /// Draw an expanding ring from each firing node, so nodes that fire together
+  /// visibly ring in step.
+  final bool ringActivity;
+
+  /// Animation clock in seconds, used to phase [ringActivity].
+  final double elapsedSeconds;
+
   final Map<String, double> radii;
   final List<({String a, String b, double strength})> correlationPairs;
   final Map<String, int>? nodeClusterIndices;
@@ -59,14 +79,16 @@ class BrainvizForce3DPainter extends CustomPainter {
       projectedNodes[node.id] = projection.project(position);
     }
 
-    final sortedPairs = correlationPairs.toList()
-      ..sort((a, b) {
-        final da = _pairDepth(a, projectedNodes);
-        final db = _pairDepth(b, projectedNodes);
-        return da.compareTo(db);
-      });
-    for (final pair in sortedPairs) {
-      _paintCorrelationEdge(canvas, pair, projectedNodes);
+    if (drawWires) {
+      final sortedPairs = correlationPairs.toList()
+        ..sort((a, b) {
+          final da = _pairDepth(a, projectedNodes);
+          final db = _pairDepth(b, projectedNodes);
+          return da.compareTo(db);
+        });
+      for (final pair in sortedPairs) {
+        _paintCorrelationEdge(canvas, pair, projectedNodes);
+      }
     }
 
     final glowDensityScales = _computeGlowDensityScales(projectedNodes);
@@ -209,8 +231,10 @@ class BrainvizForce3DPainter extends CustomPainter {
     )!;
 
     if (act > 0.02) {
+      final pulseScale = pulse[node.id] ?? 1.0;
+      final pulsedAct = (act * pulseScale).clamp(0.0, 1.0);
       final glowColor = activityColorOf(act);
-      final glowRadius = baseRadius + 3 + 10 * act;
+      final glowRadius = baseRadius + 3 + 7 * pulsedAct;
       final highlight = node.id == selectedId || act >= 0.75;
       canvas.drawCircle(
         center,
@@ -219,10 +243,27 @@ class BrainvizForce3DPainter extends CustomPainter {
           center: center,
           radius: glowRadius,
           color: glowColor,
-          intensity: (0.45 + 0.55 * act) * glowDensityScale,
+          intensity: (0.45 + 0.55 * pulsedAct) * glowDensityScale,
           blendMode: highlight ? BlendMode.plus : BlendMode.srcOver,
         ),
       );
+
+      // One shared clock drives every ring, so neurons that fire at the same
+      // time visibly ring in step. Quiet neurons emit nothing.
+      if (ringActivity) {
+        final phase = (elapsedSeconds * 1.2) % 1.0;
+        final ringRadius = baseRadius + 2 + 22 * phase;
+        final ringAlpha = ((1.0 - phase) * (0.3 + 0.6 * act) * depthAlpha)
+            .clamp(0.0, 1.0);
+        canvas.drawCircle(
+          center,
+          ringRadius,
+          Paint()
+            ..color = glowColor.withValues(alpha: ringAlpha)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 1.4 + 2.2 * act,
+        );
+      }
     }
 
     canvas.drawCircle(
@@ -247,6 +288,8 @@ class BrainvizForce3DPainter extends CustomPainter {
     }
 
     final highlight = center + Offset(-baseRadius * 0.28, -baseRadius * 0.32);
+    // Quiet nodes stay visible but dim; a firing node reads clearly brighter.
+    final activityOpacity = 0.55 + 0.45 * act;
     canvas.drawCircle(
       center,
       baseRadius,
@@ -259,13 +302,13 @@ class BrainvizForce3DPainter extends CustomPainter {
               shaded,
               Colors.white,
               0.35,
-            )!.withValues(alpha: depthAlpha),
-            shaded.withValues(alpha: depthAlpha),
+            )!.withValues(alpha: depthAlpha * activityOpacity),
+            shaded.withValues(alpha: depthAlpha * activityOpacity),
             Color.lerp(
               shaded,
               AppTheme.background,
               0.45,
-            )!.withValues(alpha: depthAlpha),
+            )!.withValues(alpha: depthAlpha * activityOpacity),
           ],
           const [0.0, 0.55, 1.0],
         ),
@@ -321,8 +364,12 @@ class BrainvizForce3DPainter extends CustomPainter {
       old.projection.size != projection.size ||
       old.projection.sceneScale != projection.sceneScale ||
       !mapEquals(old.activity, activity) ||
+      !mapEquals(old.pulse, pulse) ||
       !mapEquals(old.radii, radii) ||
       !_sameCorrelationPairs(old.correlationPairs, correlationPairs) ||
+      old.drawWires != drawWires ||
+      old.ringActivity != ringActivity ||
+      old.elapsedSeconds != elapsedSeconds ||
       old.selectedId != selectedId ||
       !setEquals(old.labelNodeIds, labelNodeIds) ||
       old.nodeClusterIndices != nodeClusterIndices;

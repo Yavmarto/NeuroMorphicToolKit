@@ -37,7 +37,7 @@ void main() {
     fakeBinary.writeAsStringSync('');
 
     final pathEnv =
-        '/usr/bin:/opt/homebrew/bin:${tempDir.path}:/Users/yoshi/.local/bin';
+        '/usr/bin:/opt/homebrew/bin:${tempDir.path}:/home/user/.local/bin';
     final resolved = StudioLocalHarness.binaryForProviderInPath(
       'claude',
       pathEnv,

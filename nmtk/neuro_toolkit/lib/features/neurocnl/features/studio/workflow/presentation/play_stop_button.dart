@@ -65,7 +65,10 @@ class _PlayStopButtonState extends State<PlayStopButton>
     final healthyColor = AppTheme.healthyColorOf(context);
 
     if (widget.isRunning) {
-      // Running state: animated stop button.
+      // Running state: animated stop button. Uses the "running" semantic
+      // (blue), not "healthy"/success (green) — a job in progress has not
+      // succeeded yet, and NmtkShellTokens reserves healthyColor for that.
+      final runningColor = NmtkShellTokens.of(context).runningColor;
       return Tooltip(
         message: widget.l10n.stopSimulation,
         child: InkWell(
@@ -84,14 +87,14 @@ class _PlayStopButtonState extends State<PlayStopButton>
                   child: CircularProgressIndicator(
                     strokeWidth: 2.5,
                     value: null,
-                    color: healthyColor.withValues(alpha: _pulseAnim.value),
+                    color: runningColor.withValues(alpha: _pulseAnim.value),
                   ),
                 ),
                 Icon(
                   ZetaIcons.stop,
                   key: const Key('stop-icon'),
                   size: 18,
-                  color: healthyColor,
+                  color: runningColor,
                 ),
               ],
             ),

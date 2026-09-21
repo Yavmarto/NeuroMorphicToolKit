@@ -18,6 +18,8 @@ export 'package:neuro_toolkit/src/features/module/presentation/module_notifier.d
     show moduleProvider;
 export 'package:neuro_toolkit/src/features/server_connection/presentation/server_connection_notifier.dart'
     show ServerConnectionPhase, ServerConnectionState, serverConnectionProvider;
+export 'package:neuro_toolkit/src/features/server_connection/presentation/system_resources_notifier.dart'
+    show SystemResourcesState, systemResourcesProvider;
 export 'package:neuro_toolkit/src/features/workspace/presentation/workspace_notifier.dart'
     show workspaceProvider;
 export 'package:neuro_toolkit/src/features/settings/presentation/settings_notifier.dart'

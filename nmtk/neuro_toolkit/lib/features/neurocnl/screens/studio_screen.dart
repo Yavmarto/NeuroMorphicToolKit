@@ -29,6 +29,7 @@ import 'package:neuro_toolkit/features/neurocnl/providers/spec_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/step_unlock_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/studio_result_session_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/studio_view_mode_provider.dart';
+import 'package:neuro_toolkit/features/neurocnl/providers/training_run_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/template_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/workspace_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/api_client.dart';
@@ -40,7 +41,9 @@ import 'package:neuro_toolkit/features/neurocnl/services/neurosim_handoff.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/neurosim_handoff_coordinator.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/platform_helper.dart'
     as platform;
+import 'package:neuro_toolkit/features/neurocnl/models/speck_paired_device.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/sc_neurocore_target_service.dart';
+import 'package:neuro_toolkit/features/neurocnl/services/speck_target_service.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/template_load_guard.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/workspace_payload_builder.dart';
 import 'package:neuro_toolkit/features/neurocnl/theme/app_theme.dart';
@@ -86,6 +89,7 @@ class StudioScreen extends ConsumerStatefulWidget {
 }
 
 class _StudioScreenState extends ConsumerState<StudioScreen>
+    with WidgetsBindingObserver
     implements StudioWorkspaceFileIoHost {
   late final WorkspaceFileIoController _fileIo = WorkspaceFileIoController(
     this,
@@ -191,6 +195,7 @@ class _StudioScreenState extends ConsumerState<StudioScreen>
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     // File-switch → cancel simulation + ensure pipeline results are hydrated.
     _workspaceListenerSub = ref.listenManual<WorkspaceState>(
       workspaceProvider,
@@ -304,12 +309,22 @@ class _StudioScreenState extends ConsumerState<StudioScreen>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _workspaceListenerSub.close();
     _canvasAutosaveListenerSub.close();
     _simulationAutosaveListenerSub.close();
     _resultSessionAutosaveListenerSub.close();
     _canvasAutosaveTimer?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      ref
+          .read(trainingRunControllerProvider.notifier)
+          .resyncRunningSubscriptions();
+    }
   }
 
   Widget _buildStepContent(int index) {
@@ -609,6 +624,25 @@ class _StudioScreenState extends ConsumerState<StudioScreen>
               )
               .toList(growable: false),
         );
+      case 'speck':
+        final devices = await ref
+            .read(speckTargetServiceProvider)
+            .fetchDevices();
+        return HardwareTargetDialogData(
+          targetType: targetType,
+          entries: devices
+              .map(
+                (device) => SavedHardwareTargetEntry(
+                  id: device.id,
+                  title: device.displayName,
+                  subtitle: device.deviceIdentifier,
+                  targetType: targetType,
+                  isDefault: device.isDefault,
+                  targetData: device,
+                ),
+              )
+              .toList(growable: false),
+        );
       default:
         // Lava (Loihi2) has no pairable device; the manage-targets dialog
         // is never opened for it.
@@ -702,6 +736,24 @@ class _StudioScreenState extends ConsumerState<StudioScreen>
           targetType: targetType,
           isDefault: saved.isDefault,
           targetData: saved,
+        );
+      case 'speck':
+        final device = await ref
+            .read(speckTargetServiceProvider)
+            .saveDevice(
+              deviceId: form.editingEntryId,
+              displayName: form.displayName,
+              deviceIdentifier: form.deviceIdentifier,
+              isDefault: form.isDefault,
+              sameHostAsBackend: true,
+            );
+        return SavedHardwareTargetEntry(
+          id: device.id,
+          title: device.displayName,
+          subtitle: device.deviceIdentifier,
+          targetType: targetType,
+          isDefault: device.isDefault,
+          targetData: device,
         );
       default:
         // Akida, PYNQ and SC-NeuroCore FPGA are the pairable targets; Lava
@@ -882,7 +934,8 @@ class _StudioScreenState extends ConsumerState<StudioScreen>
     }
 
     final content = StudioAssistantHost(
-      isMobile: MediaQuery.sizeOf(context).width < 900,
+      isMobile:
+          MediaQuery.sizeOf(context).width < NmtkShellTokens.compactBreakpoint,
       child: StudioKeyboardShortcutScope(
         onTriggerRun: _triggerRun,
         onSaveWorkspace: () =>
@@ -893,58 +946,58 @@ class _StudioScreenState extends ConsumerState<StudioScreen>
             _fileIo.runDesktopShortcutIfAllowed(_fileIo.openWorkspace),
         onNewFile: () => _fileIo.runDesktopShortcutIfAllowed(_fileIo.newFile),
         child: LayoutBuilder(
-        builder: (context, layoutConstraints) {
-          final metrics = StudioLayoutMetrics.forConstraints(
-            layoutConstraints: layoutConstraints,
-            tokens: context.nmtkTokens,
-            activeStep: activeStep,
-          );
-          if (metrics.isMobile) {
-            return StudioMobileShell(
+          builder: (context, layoutConstraints) {
+            final metrics = StudioLayoutMetrics.forConstraints(
+              layoutConstraints: layoutConstraints,
+              tokens: context.nmtkTokens,
+              activeStep: activeStep,
+            );
+            if (metrics.isMobile) {
+              return StudioMobileShell(
+                activeStep: activeStep,
+                unlockedSteps: unlockedSteps,
+                workspaceTabs: workspaceTabs,
+                splitPipelineStep: _splitPipelineStep,
+                metrics: metrics,
+                stepBuilder: _buildStepContent,
+                onPhaseSelected: (phase) => _handlePhaseSelected(
+                  phase,
+                  platformsReady: platformsReady,
+                  unlockedSteps: unlockedSteps,
+                ),
+                onCollapseSplit: _clearSplitPipelineStep,
+                onSaveWorkspace: _fileIo.saveWorkspace,
+                onShareToNeurohub: commitWorkspaceToNeurohub,
+                onEditServer: widget.onEditServer,
+              );
+            }
+            return StudioDesktopShell(
+              layoutConstraints: layoutConstraints,
               activeStep: activeStep,
               unlockedSteps: unlockedSteps,
               workspaceTabs: workspaceTabs,
               splitPipelineStep: _splitPipelineStep,
               metrics: metrics,
+              setupStepKey: _setupStepKey,
               stepBuilder: _buildStepContent,
+              frameBuilder: _buildWorkspaceFrame,
               onPhaseSelected: (phase) => _handlePhaseSelected(
                 phase,
                 platformsReady: platformsReady,
                 unlockedSteps: unlockedSteps,
               ),
+              onSplitLeft: _handleSplitLeft,
+              onSplitRight: _handleSplitRight,
               onCollapseSplit: _clearSplitPipelineStep,
+              onActiveFileSelected: (id) =>
+                  ref.read(workspaceProvider.notifier).setActiveFile(id),
+              onFileClosed: (id) =>
+                  ref.read(workspaceProvider.notifier).closeFile(id),
               onSaveWorkspace: _fileIo.saveWorkspace,
               onShareToNeurohub: commitWorkspaceToNeurohub,
-              onEditServer: widget.onEditServer,
+              workspaceHeaderAction: widget.workspaceHeaderAction,
             );
-          }
-          return StudioDesktopShell(
-            layoutConstraints: layoutConstraints,
-            activeStep: activeStep,
-            unlockedSteps: unlockedSteps,
-            workspaceTabs: workspaceTabs,
-            splitPipelineStep: _splitPipelineStep,
-            metrics: metrics,
-            setupStepKey: _setupStepKey,
-            stepBuilder: _buildStepContent,
-            frameBuilder: _buildWorkspaceFrame,
-            onPhaseSelected: (phase) => _handlePhaseSelected(
-              phase,
-              platformsReady: platformsReady,
-              unlockedSteps: unlockedSteps,
-            ),
-            onSplitLeft: _handleSplitLeft,
-            onSplitRight: _handleSplitRight,
-            onCollapseSplit: _clearSplitPipelineStep,
-            onActiveFileSelected: (id) =>
-                ref.read(workspaceProvider.notifier).setActiveFile(id),
-            onFileClosed: (id) =>
-                ref.read(workspaceProvider.notifier).closeFile(id),
-            onSaveWorkspace: _fileIo.saveWorkspace,
-            onShareToNeurohub: commitWorkspaceToNeurohub,
-            workspaceHeaderAction: widget.workspaceHeaderAction,
-          );
-        },
+          },
         ),
       ),
     );
@@ -1275,9 +1328,9 @@ class _StudioScreenState extends ConsumerState<StudioScreen>
           final refreshed = await _loadHardwareTargetDialogData(targetId);
           return refreshed.entries;
         },
-        // Akida is the only chip type with a paired-host model today; PYNQ is
+        // Akida and Speck are USB-attached to the backend host; PYNQ is
         // network-attached with no local scan (CEL-120), so it gets no action.
-        onScanHardware: targetId == 'akida'
+        onScanHardware: targetId == 'akida' || targetId == 'speck'
             ? () async {
                 final result = await ref
                     .read(hardwareAutoAddScannerProvider)

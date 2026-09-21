@@ -47,7 +47,11 @@ class DeployReviewEmptyState extends ConsumerWidget {
             textAlign: TextAlign.center,
             style: textStyles.bodyMedium.copyWith(color: colors.mainSubtle),
           ),
-          // No second "Back to Deploy" here: the step header always renders one.
+          // No local back control here: the step-flow shell's AppBar
+          // "Previous step" arrow (studio_mobile_shell.dart) is always
+          // rendered above this step's content and stays enabled — deployReview
+          // is never the first pipeline step — so every state of this widget
+          // already has a working back affordance without duplicating one here.
           if (targetsWithResults.isNotEmpty) ...[
             const SizedBox(height: 24),
             Text(

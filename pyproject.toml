@@ -15,6 +15,7 @@ markers = [
     "golden_path: Full golden-path integration tests (author → validate → simulate → inspect → persist). Requires neurocnl + neurobench services to be running.",
     "pynq_hardware: Hardware-only tests for the PYNQ-Z2 (sc-neurocore) FPGA board. Skipped unless PYNQ_HARDWARE_TEST=true. Must run on a self-hosted runner with the board physically attached.",
     "akida_hardware: Hardware-only tests for a physical BrainChip AKida device (USB). Skipped unless AKIDA_HARDWARE_TEST=true. Must run on a self-hosted runner with the USB chip enumerated.",
+    "kubernetes: Real Kubernetes integration tests that apply manifests to a live cluster. Skipped unless K8S_INTEGRATION_TEST=true points kubectl at a reachable cluster.",
 ]
 
 [tool.ruff.lint]

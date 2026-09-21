@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 import 'package:neuro_toolkit/models/backend_deployment.dart';
+import 'package:neuro_toolkit/models/system_resources.dart';
 import 'package:neuro_toolkit/models/pynq_launcher_action_result.dart';
 import 'package:neuro_toolkit/models/module.dart';
 import 'package:neuro_toolkit/models/workspace_session.dart';
@@ -233,6 +234,25 @@ class ControlApiService {
     } catch (_) {
       // Version reporting is strictly informational — a backend that cannot
       // answer must never break the screen that asked.
+      return null;
+    }
+  }
+
+  /// Live CPU, memory, optional GPU, and host stats for the server popup.
+  ///
+  /// Null when the backend is unreachable, too old to expose the route, or
+  /// returns an unexpected payload — the popup must degrade quietly.
+  Future<SystemResourcesSnapshot?> fetchSystemResources() async {
+    try {
+      final response = await _client
+          .get(suiteApiBaseUri.replace(path: '/api/suite/system/resources'))
+          .timeout(const Duration(seconds: 10));
+      if (response.statusCode != 200) {
+        return null;
+      }
+      final decoded = await _readJsonResponse(response);
+      return SystemResourcesSnapshot.fromJson(decoded);
+    } catch (_) {
       return null;
     }
   }

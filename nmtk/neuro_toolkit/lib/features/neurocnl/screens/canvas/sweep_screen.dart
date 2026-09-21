@@ -114,6 +114,7 @@ class _SweepScreenState extends ConsumerState<SweepScreen> {
       ),
     ];
 
+    // Allowed: single-topic surface
     final configPanel = NmtkSurfaceCard(
       expandChild: !compact,
       child: Form(
@@ -132,6 +133,7 @@ class _SweepScreenState extends ConsumerState<SweepScreen> {
       ),
     );
 
+    // Allowed: single-topic surface
     final resultsPanel = NmtkSurfaceCard(
       expandChild: true,
       child: _buildResultsView(sweepState, compact: compact),

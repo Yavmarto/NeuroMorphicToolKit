@@ -21,7 +21,8 @@ import 'package:neuro_toolkit/features/neurocnl/services/export_artifact.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/export_artifact_saver.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/file_picker_native_file_backend.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/platform_download_result.dart';
-import 'package:neuro_toolkit/features/neurocnl/services/platform_helper.dart' as platform;
+import 'package:neuro_toolkit/features/neurocnl/services/platform_helper.dart'
+    as platform;
 
 typedef DownloadFileCallback =
     Future<DownloadResult> Function(ExportArtifact artifact);
@@ -809,7 +810,7 @@ $previewHtml
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text(title),
-        content: Text(detail),
+        content: NmtkDialogSurface.wrapScrollable(dialogContext, Text(detail)),
         actions: [
           ZetaButton.text(
             onPressed: () => Navigator.of(dialogContext).pop(),

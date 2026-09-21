@@ -112,10 +112,13 @@ class _NmtkCommandPaletteState extends State<NmtkCommandPalette> {
     }
   }
 
+  static const double _minTapTarget = 44;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final tokens = NmtkShellTokens.of(context);
+    final viewInsets = MediaQuery.viewInsetsOf(context);
 
     return CallbackShortcuts(
       bindings: <ShortcutActivator, VoidCallback>{
@@ -129,33 +132,45 @@ class _NmtkCommandPaletteState extends State<NmtkCommandPalette> {
       },
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final paletteWidth = (constraints.maxWidth - 32).clamp(0.0, 600.0);
-          final paletteMaxHeight = (constraints.maxHeight - 32).clamp(
-            220.0,
-            450.0,
+          final margin = tokens.sectionGap;
+          final paletteWidth = (constraints.maxWidth - margin * 2).clamp(
+            0.0,
+            600.0,
           );
+          final paletteMaxHeight =
+              (constraints.maxHeight - margin * 2 - viewInsets.vertical).clamp(
+                220.0,
+                450.0,
+              );
 
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Container(
-                key: const ValueKey<String>('nmtk-command-palette-panel'),
-                width: paletteWidth,
-                constraints: BoxConstraints(maxHeight: paletteMaxHeight),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surface,
-                  borderRadius: BorderRadius.circular(tokens.radiusSm),
-                  border: Border.all(color: tokens.chromeBorder),
+          return SafeArea(
+            child: Center(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  margin,
+                  margin,
+                  margin,
+                  margin + viewInsets.bottom,
                 ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _buildSearchField(),
-                    const Divider(height: 1),
-                    Flexible(child: _buildResultsList(theme)),
-                    const Divider(height: 1),
-                    _buildFooterHints(),
-                  ],
+                child: Container(
+                  key: const ValueKey<String>('nmtk-command-palette-panel'),
+                  width: paletteWidth,
+                  constraints: BoxConstraints(maxHeight: paletteMaxHeight),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surface,
+                    borderRadius: BorderRadius.circular(tokens.radiusSm),
+                    border: Border.all(color: tokens.chromeBorder),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildSearchField(tokens),
+                      const Divider(height: 1),
+                      Flexible(child: _buildResultsList(theme, tokens)),
+                      const Divider(height: 1),
+                      _buildFooterHints(tokens),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -165,9 +180,9 @@ class _NmtkCommandPaletteState extends State<NmtkCommandPalette> {
     );
   }
 
-  Widget _buildSearchField() {
+  Widget _buildSearchField(NmtkShellTokens tokens) {
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(tokens.sectionGap),
       child: ZetaSearchBar(
         controller: _searchController,
         focusNode: _focusNode,
@@ -177,10 +192,10 @@ class _NmtkCommandPaletteState extends State<NmtkCommandPalette> {
     );
   }
 
-  Widget _buildResultsList(ThemeData theme) {
+  Widget _buildResultsList(ThemeData theme, NmtkShellTokens tokens) {
     if (_filteredCommands.isEmpty) {
       return Padding(
-        padding: const EdgeInsets.all(32),
+        padding: EdgeInsets.all(tokens.sectionGap * 2),
         child: Text(widget.emptyMessage),
       );
     }
@@ -190,12 +205,17 @@ class _NmtkCommandPaletteState extends State<NmtkCommandPalette> {
       itemBuilder: (context, index) {
         final cmd = _filteredCommands[index];
         final isSelected = index == _selectedIndex;
-        return _buildCommandTile(theme, cmd, isSelected);
+        return _buildCommandTile(theme, tokens, cmd, isSelected);
       },
     );
   }
 
-  Widget _buildCommandTile(ThemeData theme, NmtkCommand cmd, bool isSelected) {
+  Widget _buildCommandTile(
+    ThemeData theme,
+    NmtkShellTokens tokens,
+    NmtkCommand cmd,
+    bool isSelected,
+  ) {
     return Semantics(
       key: ValueKey<String>('nmtk-command-${cmd.id}'),
       button: true,
@@ -203,64 +223,77 @@ class _NmtkCommandPaletteState extends State<NmtkCommandPalette> {
       label: _semanticLabelFor(cmd),
       child: InkWell(
         onTap: () => _executeCommand(cmd),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? theme.colorScheme.primary.withValues(alpha: 0.1)
-                : null,
-          ),
-          child: Row(
-            children: [
-              Icon(
-                cmd.icon ??
-                    Icons
-                        .bolt_rounded, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
-                size: 18,
-                color: isSelected
-                    ? theme.colorScheme.primary
-                    : theme.colorScheme.onSurfaceVariant,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      cmd.label,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        fontWeight: isSelected ? FontWeight.w600 : null,
-                        color: isSelected ? theme.colorScheme.primary : null,
-                      ),
-                    ),
-                    if (cmd.description != null)
-                      Text(cmd.description!, style: theme.textTheme.bodySmall),
-                  ],
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: _minTapTarget),
+          child: Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: tokens.sectionGap,
+              vertical: tokens.compactGap,
+            ),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? theme.colorScheme.primary.withValues(alpha: 0.1)
+                  : null,
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  cmd.icon ??
+                      Icons
+                          .bolt_rounded, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
+                  size: 18,
+                  color: isSelected
+                      ? theme.colorScheme.primary
+                      : theme.colorScheme.onSurfaceVariant,
                 ),
-              ),
-              if (cmd.category != null)
-                Text(
-                  cmd.category!,
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant.withValues(
-                      alpha: 0.5,
-                    ),
+                SizedBox(width: tokens.compactGap + 4),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        cmd.label,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: isSelected ? FontWeight.w600 : null,
+                          color: isSelected ? theme.colorScheme.primary : null,
+                        ),
+                      ),
+                      if (cmd.description != null)
+                        Text(
+                          cmd.description!,
+                          style: theme.textTheme.bodySmall,
+                        ),
+                    ],
                   ),
                 ),
-            ],
+                if (cmd.category != null)
+                  Text(
+                    cmd.category!,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant.withValues(
+                        alpha: 0.5,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildFooterHints() {
-    return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+  Widget _buildFooterHints(NmtkShellTokens tokens) {
+    return Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: tokens.sectionGap,
+        vertical: tokens.compactGap,
+      ),
       child: Wrap(
-        spacing: 12,
-        runSpacing: 6,
-        children: [
+        spacing: tokens.compactGap + 4,
+        runSpacing: tokens.compactGap,
+        children: const [
           _ShortcutHint(keyLabel: '↑↓', actionLabel: 'to navigate'),
           _ShortcutHint(keyLabel: 'Enter', actionLabel: 'to select'),
           _ShortcutHint(keyLabel: 'Esc', actionLabel: 'to close'),

@@ -1240,6 +1240,31 @@ class ApiClient extends BaseHttpClient {
     return jsonDecode(response.body);
   }
 
+  Future<Map<String, dynamic>> postNeurosenseMultipart(
+    String segment, {
+    required String filename,
+    required Uint8List bytes,
+    String fieldName = 'file',
+  }) async {
+    final uri = _neurosenseUri(segment);
+    final request = http.MultipartRequest('POST', uri);
+    if (apiKey.isNotEmpty) {
+      request.headers['X-API-Key'] = apiKey;
+    }
+    request.files.add(
+      http.MultipartFile.fromBytes(fieldName, bytes, filename: filename),
+    );
+    final streamed = await rawHttpClient.send(request);
+    final body = await streamed.stream.bytesToString();
+    if (streamed.statusCode != _httpOk && streamed.statusCode != 201) {
+      throw ApiException(streamed.statusCode, body);
+    }
+    if (body.isEmpty) {
+      return const <String, dynamic>{};
+    }
+    return jsonDecode(body) as Map<String, dynamic>;
+  }
+
   // ── Helpers ────────────────────────────────────────────────────
 
   Future<Map<String, dynamic>> _post(String path, Map<String, dynamic> body) =>

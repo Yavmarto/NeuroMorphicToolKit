@@ -31,6 +31,7 @@ class HardwareTargetFormResult {
     this.scSshKeyPath = '',
     this.scToolchainBinPath = '',
     this.scOutputDirectory = '',
+    this.deviceIdentifier = '',
   });
 
   final String? editingEntryId;
@@ -67,4 +68,7 @@ class HardwareTargetFormResult {
   final String scSshKeyPath;
   final String scToolchainBinPath;
   final String scOutputDirectory;
+
+  /// USB serial / stable id for same-host Speck devices.
+  final String deviceIdentifier;
 }

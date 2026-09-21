@@ -180,7 +180,14 @@ class _SourceBadge extends StatelessWidget {
             .auto_awesome_outlined, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
     };
 
-    return ZetaAssistChip(label: label, leading: Icon(icon, size: 16));
+    return ZetaAssistChip(
+      label: label,
+      leading: Icon(
+        icon,
+        size: 16,
+        color: Zeta.of(context).colors.mainDefault,
+      ),
+    );
   }
 }
 
@@ -358,7 +365,10 @@ class _MetaChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ZetaAssistChip(label: label, leading: Icon(icon));
+    return ZetaAssistChip(
+      label: label,
+      leading: Icon(icon, color: Zeta.of(context).colors.mainDefault),
+    );
   }
 }
 

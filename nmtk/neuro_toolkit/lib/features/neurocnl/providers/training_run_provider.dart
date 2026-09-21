@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
 
 import 'package:neuro_toolkit/features/neurocnl/features/studio/workflow/steps/run_step_logic.dart';
 import 'package:neuro_toolkit/features/neurocnl/models/canvas/pipeline_dag.dart';
@@ -33,6 +35,22 @@ String slugifyWorkspaceName(String name) => name
     .toLowerCase()
     .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
     .replaceAll(RegExp(r'^-+|-+$'), '');
+
+/// Transport-level SSE/socket failures that can happen when the OS suspends
+/// the app — not evidence that the server-side job failed.
+bool isRecoverableTrainingStreamError(Object error) {
+  if (error is ApiException) return false;
+  if (error is http.ClientException) return true;
+  if (error is SocketException || error is IOException) return true;
+  if (error is TimeoutException) return true;
+  final message = error.toString().toLowerCase();
+  return message.contains('connection closed') ||
+      message.contains('connection reset') ||
+      message.contains('broken pipe');
+}
+
+bool _isActiveJobStatus(String status) =>
+    status == 'queued' || status == 'running';
 
 /// Orchestrates the Run step's job lifecycle: reattaching to server-side
 /// jobs, starting a run across every selected platform, and streaming
@@ -405,7 +423,15 @@ class TrainingRunController extends Notifier<void> {
         .listen(
           (event) => onEvent(platform, event, attemptId),
           onError: (Object e, StackTrace s) {
-            setErrorState(platform, e, s, attemptId);
+            unawaited(
+              handleStreamTransportLoss(
+                platform,
+                jobId,
+                attemptId,
+                transportError: e,
+                transportStack: s,
+              ),
+            );
           },
           onDone: () {
             if (!ref
@@ -418,17 +444,91 @@ class TrainingRunController extends Notifier<void> {
                     .platforms[platform]
                     ?.outcome ==
                 StudioPlatformOutcome.running) {
-              setErrorState(
-                platform,
-                'Run ended without progress events.',
-                null,
-                attemptId,
-              );
+              unawaited(handleStreamTransportLoss(platform, jobId, attemptId));
             }
           },
           cancelOnError: true,
         );
     _subscriptions[platform] = sub;
+  }
+
+  /// Re-subscribes to every platform still marked running — used when the app
+  /// returns to the foreground after the OS tore down SSE sockets.
+  void resyncRunningSubscriptions() {
+    final session = ref.read(studioResultSessionProvider);
+    final attemptId = session.attemptId;
+    if (attemptId == null || !session.isAnyRunning) return;
+
+    final jobIds = ref.read(trainingJobIdsProvider);
+    for (final entry in session.platforms.entries) {
+      if (entry.value.outcome != StudioPlatformOutcome.running) continue;
+      final jobRef = jobIds[entry.key];
+      if (jobRef == null) continue;
+      _subscriptions[entry.key]?.cancel();
+      subscribeToJob(entry.key, jobRef.jobId, attemptId);
+    }
+  }
+
+  /// After an SSE transport drop, reconcile against the server job record
+  /// before surfacing a run failure in the UI.
+  Future<void> handleStreamTransportLoss(
+    String platform,
+    String jobId,
+    String attemptId, {
+    Object? transportError,
+    StackTrace? transportStack,
+  }) async {
+    if (!ref
+        .read(studioResultSessionProvider.notifier)
+        .isCurrentAttempt(attemptId)) {
+      return;
+    }
+    if (transportError != null &&
+        !isRecoverableTrainingStreamError(transportError)) {
+      setErrorState(platform, transportError, transportStack, attemptId);
+      return;
+    }
+
+    final api = ref.read(apiClientProvider);
+    try {
+      final status = await api.getJobStatus(jobId);
+      if (!ref
+          .read(studioResultSessionProvider.notifier)
+          .isCurrentAttempt(attemptId)) {
+        return;
+      }
+      if (_isActiveJobStatus(status.status)) {
+        _subscriptions[platform]?.cancel();
+        subscribeToJob(platform, jobId, attemptId);
+        return;
+      }
+      if (status.status == 'complete') {
+        ref.read(studioResultSessionProvider.notifier).markComplete(platform);
+        return;
+      }
+      if (status.status == 'failed') {
+        setErrorState(
+          platform,
+          status.error ?? 'Training job failed',
+          null,
+          attemptId,
+        );
+        return;
+      }
+    } on Object catch (_) {
+      // Fall through to the transport error below.
+    }
+
+    if (transportError != null) {
+      setErrorState(platform, transportError, transportStack, attemptId);
+      return;
+    }
+    setErrorState(
+      platform,
+      'Run ended without progress events.',
+      null,
+      attemptId,
+    );
   }
 
   void onEvent(String platform, Map<String, dynamic> event, String attemptId) {

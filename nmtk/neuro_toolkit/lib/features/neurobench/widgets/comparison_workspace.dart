@@ -21,6 +21,8 @@ class ComparisonWorkspace extends ConsumerWidget {
     final currentResult = ref.watch(activeComparisonResultProvider);
     final compareSelection = ref.watch(compareSelectionProvider);
     final hasSelection = activeBaseline != null && currentResult != null;
+    final isCompact =
+        MediaQuery.sizeOf(context).width < NmtkShellTokens.compactBreakpoint;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -45,10 +47,10 @@ class ComparisonWorkspace extends ConsumerWidget {
                   onPressed: compareSelection.length < 2
                       ? null
                       : () => _applyCompareSelection(
-                            context,
-                            ref,
-                            compareSelection,
-                          ),
+                          context,
+                          ref,
+                          compareSelection,
+                        ),
                   leadingIcon: Icons
                       .compare_arrows_outlined, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
                   label: 'Apply selection',
@@ -65,42 +67,79 @@ class ComparisonWorkspace extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: BaselineSelector(
-                      tab: NeurobenchWorkbenchTab.compare,
+              // Two dropdown selectors side by side leave barely enough room
+              // to read either one on a phone width, so they stack on
+              // narrow screens instead of sharing a squeezed Row.
+              isCompact
+                  ? const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        BaselineSelector(tab: NeurobenchWorkbenchTab.compare),
+                        SizedBox(height: 16),
+                        ComparisonResultSelector(),
+                      ],
+                    )
+                  : const Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: BaselineSelector(
+                            tab: NeurobenchWorkbenchTab.compare,
+                          ),
+                        ),
+                        SizedBox(width: 16),
+                        Expanded(child: ComparisonResultSelector()),
+                      ],
                     ),
-                  ),
-                  SizedBox(width: 16),
-                  Expanded(child: ComparisonResultSelector()),
-                ],
-              ),
               if (hasSelection) ...[
                 const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: SelectionBadge(
-                        label: 'Baseline',
-                        value: activeBaseline.id,
+                isCompact
+                    ? Column(
+                        children: [
+                          SelectionBadge(
+                            label: 'Baseline',
+                            value: activeBaseline.id,
+                          ),
+                          const SizedBox(height: 8),
+                          Icon(
+                            Icons.compare_arrows_outlined,
+                            size: 20,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
+                          ), // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
+                          const SizedBox(height: 8),
+                          SelectionBadge(
+                            label: 'Current run',
+                            value: currentResult.id,
+                          ),
+                        ],
+                      )
+                    : Row(
+                        children: [
+                          Expanded(
+                            child: SelectionBadge(
+                              label: 'Baseline',
+                              value: activeBaseline.id,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Icon(
+                            Icons.compare_arrows_outlined,
+                            size: 20,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
+                          ), // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: SelectionBadge(
+                              label: 'Current run',
+                              value: currentResult.id,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    const Icon(
-                      Icons.compare_arrows_outlined,
-                      size: 20,
-                    ), // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: SelectionBadge(
-                        label: 'Current run',
-                        value: currentResult.id,
-                      ),
-                    ),
-                  ],
-                ),
                 const SizedBox(height: 16),
                 const ComparisonExportActions(),
               ],
@@ -181,8 +220,8 @@ class ComparisonResultSelector extends ConsumerWidget {
             child: Text(
               'No runs yet — run a benchmark from Configure & Run first.',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           );
         }
@@ -214,14 +253,17 @@ class ComparisonResultSelector extends ConsumerWidget {
               ).location,
             );
           },
-          items: results.map((result) {
-            final id =
-                result.id.length > 8 ? result.id.substring(0, 8) : result.id;
-            return DropdownMenuItem<BenchmarkResult>(
-              value: result,
-              child: Text('$id • ${result.timestamp}'),
-            );
-          }).toList(growable: false),
+          items: results
+              .map((result) {
+                final id = result.id.length > 8
+                    ? result.id.substring(0, 8)
+                    : result.id;
+                return DropdownMenuItem<BenchmarkResult>(
+                  value: result,
+                  child: Text('$id • ${result.timestamp}'),
+                );
+              })
+              .toList(growable: false),
         );
       },
       loading: () => const LinearProgressIndicator(),
@@ -256,9 +298,9 @@ class ComparisonExportActions extends ConsumerWidget {
 
       if (context.mounted) {
         NmtkSnackBars.success(
-            context,
-            'Export received (${content.length} bytes) — file saving is not yet wired on this platform.',
-          );
+          context,
+          'Export received (${content.length} bytes) — file saving is not yet wired on this platform.',
+        );
       }
     } catch (error) {
       if (context.mounted) {
@@ -269,22 +311,28 @@ class ComparisonExportActions extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Row(
-      children: [
-        ZetaButton.primary(
-          onPressed: () => _handleExport(context, ref, 'csv'),
-          leadingIcon: ZetaIcons.download,
-          label: 'Export CSV',
-        ),
-        const SizedBox(width: 12),
-        ZetaButton.outline(
-          onPressed: () => _handleExport(context, ref, 'json'),
-          leadingIcon:
-              Icons.code_outlined, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
-          label: 'Export JSON',
-        ),
-      ],
+    final isCompact =
+        MediaQuery.sizeOf(context).width < NmtkShellTokens.compactBreakpoint;
+    final csvButton = ZetaButton.primary(
+      onPressed: () => _handleExport(context, ref, 'csv'),
+      leadingIcon: ZetaIcons.download,
+      label: 'Export CSV',
     );
+    final jsonButton = ZetaButton.outline(
+      onPressed: () => _handleExport(context, ref, 'json'),
+      leadingIcon:
+          Icons.code_outlined, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
+      label: 'Export JSON',
+    );
+
+    if (isCompact) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [csvButton, const SizedBox(height: 8), jsonButton],
+      );
+    }
+
+    return Row(children: [csvButton, const SizedBox(width: 12), jsonButton]);
   }
 }
 
@@ -302,7 +350,9 @@ class SelectionBadge extends StatelessWidget {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: theme.colorScheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+        borderRadius: BorderRadius.circular(
+          NmtkShellTokens.of(context).radiusSm,
+        ),
         border: Border.all(color: theme.colorScheme.outlineVariant),
       ),
       child: Column(

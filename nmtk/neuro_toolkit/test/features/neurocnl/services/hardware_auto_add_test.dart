@@ -4,10 +4,13 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:nmtk_module_contracts/nmtk_module_contracts.dart';
 import 'package:neuro_toolkit/features/neurocnl/models/detected_hardware_entry.dart';
+import 'package:neuro_toolkit/features/neurocnl/models/speck_paired_device.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/api_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/feature_launch_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/hardware_auto_add_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/api_client.dart';
+import 'package:neuro_toolkit/features/neurocnl/services/hardware_auto_add.dart';
+import 'package:neuro_toolkit/features/neurocnl/services/speck_target_service.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/studio_target_registry_service.dart';
 import 'package:neuro_toolkit/ui_core/models/akida_deployment_model.dart';
 
@@ -102,6 +105,34 @@ class _FakeStudioTargetRegistryService extends StudioTargetRegistryService {
   }
 }
 
+class _FakeSpeckTargetService extends SpeckTargetService {
+  _FakeSpeckTargetService({this.existing = const <SpeckPairedDevice>[]});
+
+  final List<SpeckPairedDevice> existing;
+  final List<(String, String)> saved = <(String, String)>[];
+
+  @override
+  Future<List<SpeckPairedDevice>> fetchDevices() async => existing;
+
+  @override
+  Future<SpeckPairedDevice> saveDevice({
+    String? deviceId,
+    required String displayName,
+    required String deviceIdentifier,
+    bool isDefault = false,
+    bool sameHostAsBackend = true,
+  }) async {
+    saved.add((displayName, deviceIdentifier));
+    return SpeckPairedDevice(
+      id: deviceId ?? 'speck-created',
+      displayName: displayName,
+      deviceIdentifier: deviceIdentifier,
+      isDefault: isDefault,
+      sameHostAsBackend: sameHostAsBackend,
+    );
+  }
+}
+
 AkidaPairedHost _host({String id = 'h1', String deviceIdentifier = ''}) {
   return AkidaPairedHost(
     id: id,
@@ -140,12 +171,14 @@ DetectedHardwareEntry _akida(String identifier, {bool registered = false}) {
 void main() {
   late _FakeApiClient api;
   late _FakeStudioTargetRegistryService registry;
+  late _FakeSpeckTargetService speckRegistry;
 
   ProviderContainer makeContainer() {
     return ProviderContainer(
       overrides: [
         apiClientProvider.overrideWithValue(api),
         studioTargetRegistryServiceProvider.overrideWithValue(registry),
+        speckTargetServiceProvider.overrideWithValue(speckRegistry),
         featureLaunchContextProvider.overrideWith(
           () => SeededFeatureLaunchContextNotifier(
             NmtkFeatureLaunchContext(
@@ -164,6 +197,7 @@ void main() {
   setUp(() {
     api = _FakeApiClient(const <DetectedHardwareEntry>[]);
     registry = _FakeStudioTargetRegistryService();
+    speckRegistry = _FakeSpeckTargetService();
   });
 
   group('HardwareTargetAutoScanner (CEL-122)', () {
@@ -208,15 +242,11 @@ void main() {
       expect(registry.saved, isEmpty);
       expect(result.addedNames, isEmpty);
       expect(result.alreadyRegisteredCount, 1);
-      // The launcher asked the backend to annotate its saved device, proving
-      // the identifier round-trips on the way in.
       expect(api.registeredIdentifierCalls.single, ['SER-123']);
     });
 
     test('already-registered device does not create a duplicate even when the '
         'backend response omits the registration flag', () async {
-      // Defensive path: the launcher knows the identifier even if a stale
-      // backend reports already_registered=false.
       registry = _FakeStudioTargetRegistryService(
         existing: [_host(deviceIdentifier: 'SER-123')],
       );
@@ -230,7 +260,7 @@ void main() {
       expect(result.addedNames, isEmpty);
     });
 
-    test('Speck and Teensy hits are reported but not auto-added', () async {
+    test('Speck is auto-added and Teensy is reported unsupported', () async {
       api = _FakeApiClient(const [
         DetectedHardwareEntry(
           chipType: 'speck',
@@ -253,10 +283,12 @@ void main() {
 
       final result = await container.read(hardwareAutoAddScannerProvider).run();
 
-      expect(result.addedNames, ['Akida SER-9']);
+      expect(result.addedNames, ['Speck 2e0018', 'Akida SER-9']);
       expect(registry.saved, hasLength(1));
-      expect(result.unsupportedByChipType, {'speck': 1, 'teensy': 1});
-      expect(result.describe(), contains('detected but not auto-added'));
+      expect(speckRegistry.saved, hasLength(1));
+      expect(speckRegistry.saved.single, ('Speck 2e0018', '2e0018'));
+      expect(result.unsupportedByChipType, {'teensy': 1});
+      expect(result.describe(), contains('Teensy detected but not auto-added'));
     });
   });
 }

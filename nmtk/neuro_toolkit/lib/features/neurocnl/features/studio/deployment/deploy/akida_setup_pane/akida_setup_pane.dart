@@ -72,7 +72,11 @@ class AkidaSetupPane extends ConsumerWidget {
             FilledButton.icon(
               key: const Key('akida-pair-host'),
               onPressed: () => onManageHardwareTarget!('akida'),
-              icon: const Icon(Icons.settings_ethernet_outlined, size: 18),
+              icon: Icon(
+                Icons.settings_ethernet_outlined,
+                size: 18,
+                color: Theme.of(context).colorScheme.onPrimary,
+              ),
               label: const Text('Pair or select host'),
             ),
         ] else ...[
@@ -168,32 +172,28 @@ class AkidaSetupPane extends ConsumerWidget {
               ),
           ],
           const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
+          _stackableActionRow([
+            NmtkOutlinedButton(
+              onPressed: provider.isBusy
+                  ? null
+                  : () => notifier.checkReadiness(ref.read(specTextProvider)),
+              icon: ZetaIcons.check_circle_outline,
+              label: 'Recheck',
+            ),
+            if (onManageHardwareTarget != null)
               NmtkOutlinedButton(
+                onPressed: () => onManageHardwareTarget!('akida'),
+                label: 'Change host',
+              ),
+            if (needsInstall)
+              NmtkPrimaryButton(
                 onPressed: provider.isBusy
                     ? null
-                    : () => notifier.checkReadiness(ref.read(specTextProvider)),
-                icon: ZetaIcons.check_circle_outline,
-                label: 'Recheck',
+                    : notifier.installSelectedHost,
+                icon: ZetaIcons.download,
+                label: 'Install runtime',
               ),
-              if (onManageHardwareTarget != null)
-                NmtkOutlinedButton(
-                  onPressed: () => onManageHardwareTarget!('akida'),
-                  label: 'Change host',
-                ),
-              if (needsInstall)
-                NmtkPrimaryButton(
-                  onPressed: provider.isBusy
-                      ? null
-                      : notifier.installSelectedHost,
-                  icon: ZetaIcons.download,
-                  label: 'Install runtime',
-                ),
-            ],
-          ),
+          ]),
         ],
         const SizedBox(height: 20),
         Divider(color: colors.borderSubtle),
@@ -229,45 +229,28 @@ class AkidaSetupPane extends ConsumerWidget {
             ),
         ],
         const SizedBox(height: 8),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final stackActions = constraints.maxWidth < _stackActionsWidth;
-            final actions = <Widget>[
-              NmtkOutlinedButton(
-                onPressed: host == null || provider.isBusy
-                    ? null
-                    : onChooseBundle,
-                icon: ZetaIcons.upload,
-                label: 'Choose another',
-              ),
-              if (bundle == null)
-                NmtkOutlinedButton(
-                  onPressed: provider.isBusy ? null : onCreateDemo,
-                  icon: ZetaIcons.document,
-                  label: 'Create MNIST demo',
-                ),
-              NmtkOutlinedButton(
-                onPressed: provider.isBusy || host == null
-                    ? null
-                    : () => notifier.discoverLatestBundle(workspaceName),
-                icon: ZetaIcons.refresh,
-                label: 'Refresh bundle',
-              ),
-            ];
-            if (stackActions) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  for (var index = 0; index < actions.length; index++) ...[
-                    SizedBox(width: double.infinity, child: actions[index]),
-                    if (index != actions.length - 1) const SizedBox(height: 8),
-                  ],
-                ],
-              );
-            }
-            return Wrap(spacing: 8, runSpacing: 8, children: actions);
-          },
-        ),
+        _stackableActionRow([
+          NmtkOutlinedButton(
+            onPressed: host == null || provider.isBusy
+                ? null
+                : onChooseBundle,
+            icon: ZetaIcons.upload,
+            label: 'Choose another',
+          ),
+          if (bundle == null)
+            NmtkOutlinedButton(
+              onPressed: provider.isBusy ? null : onCreateDemo,
+              icon: ZetaIcons.document,
+              label: 'Create MNIST demo',
+            ),
+          NmtkOutlinedButton(
+            onPressed: provider.isBusy || host == null
+                ? null
+                : () => notifier.discoverLatestBundle(workspaceName),
+            icon: ZetaIcons.refresh,
+            label: 'Refresh bundle',
+          ),
+        ]),
         // Deploy-side progress only. A sample or benchmark run reports itself
         // in the execution pane, under the button that started it — this
         // column is often below the fold when that button is pressed.
@@ -301,6 +284,28 @@ class AkidaSetupPane extends ConsumerWidget {
           ],
         ),
       ],
+    );
+  }
+
+  /// A `Wrap` of actions on wide panes; a full-width stacked `Column` below
+  /// [_stackActionsWidth], matching the mobile modal standard's rule that
+  /// three-plus actions must not share one squeezed horizontal row.
+  static Widget _stackableActionRow(List<Widget> actions) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < _stackActionsWidth) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (var index = 0; index < actions.length; index++) ...[
+                actions[index],
+                if (index != actions.length - 1) const SizedBox(height: 8),
+              ],
+            ],
+          );
+        }
+        return Wrap(spacing: 8, runSpacing: 8, children: actions);
+      },
     );
   }
 }

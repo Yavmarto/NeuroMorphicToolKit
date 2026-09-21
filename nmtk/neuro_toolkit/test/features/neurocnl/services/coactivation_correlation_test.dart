@@ -187,13 +187,10 @@ void main() {
         'd': {'c': 0.5},
       });
       expect(pairs.length, 2);
-      expect(
-        pairs.map((pair) => (pair.a, pair.b, pair.strength)).toSet(),
-        {
-          ('a', 'b', 0.8),
-          ('c', 'd', 0.5),
-        },
-      );
+      expect(pairs.map((pair) => (pair.a, pair.b, pair.strength)).toSet(), {
+        ('a', 'b', 0.8),
+        ('c', 'd', 0.5),
+      });
     });
   });
 
@@ -280,6 +277,94 @@ void main() {
       final snapshot = CoactivationSnapshot.fromPlayback(playback, binMs: 50);
       expect(snapshot.correlation('a', 'b'), isNotNull);
       expect(snapshot.correlation('a', 'b')!, closeTo(1.0, 1e-9));
+    });
+  });
+
+  group('cofiring', () {
+    test('scores the fraction of active ticks where both nodes fire', () {
+      final window = CoactivationWindow(minSamples: 8);
+      // 'a' fires on ticks 0-2, 'b' on ticks 0-1. Either → 3 ticks,
+      // both → 2 ticks. 2/3.
+      window.addSample(const <String, double>{'a': 1.0, 'b': 1.0});
+      window.addSample(const <String, double>{'a': 1.0, 'b': 1.0});
+      window.addSample(const <String, double>{'a': 1.0, 'b': 0.0});
+      window.addSample(const <String, double>{'a': 0.0, 'b': 0.0});
+      window.addSample(const <String, double>{'a': 0.0, 'b': 0.0});
+      window.addSample(const <String, double>{'a': 0.0, 'b': 0.0});
+      expect(window.cofiring('a', 'b'), closeTo(2 / 3, 1e-9));
+    });
+
+    test('needs fewer samples than Pearson so short runs still wire', () {
+      final window = CoactivationWindow(minSamples: 8);
+      window.addSample(const <String, double>{'a': 1.0, 'b': 1.0});
+      window.addSample(const <String, double>{'a': 1.0, 'b': 1.0});
+      // Only two samples: below the co-firing floor of three.
+      expect(window.cofiring('a', 'b'), isNull);
+      window.addSample(const <String, double>{'a': 1.0, 'b': 1.0});
+      expect(window.cofiring('a', 'b'), closeTo(1.0, 1e-9));
+    });
+
+    test('is null when neither node ever fires', () {
+      final window = CoactivationWindow(minSamples: 4);
+      for (var i = 0; i < 4; i += 1) {
+        window.addSample(const <String, double>{'a': 0.0, 'b': 0.0});
+      }
+      expect(window.cofiring('a', 'b'), isNull);
+    });
+
+    test('fromWindow populates co-firing while Pearson stays constant', () {
+      final window = CoactivationWindow(minSamples: 8);
+      for (var i = 0; i < 4; i += 1) {
+        window.addSample(const <String, double>{'a': 0.0, 'b': 0.0});
+      }
+      for (var i = 0; i < 4; i += 1) {
+        window.addSample(const <String, double>{'a': 1.0, 'b': 1.0});
+      }
+      final snapshot = CoactivationSnapshot.fromWindow(window);
+      expect(snapshot.cofiring['a']!['b'], closeTo(1.0, 1e-9));
+      expect(snapshot.coactivationMatrix()['a']!['b'], closeTo(1.0, 1e-9));
+    });
+  });
+
+  group('coactivationMatrix merges Pearson and co-firing', () {
+    test('prefers the stronger of the two signals per pair', () {
+      const snapshot = CoactivationSnapshot(
+        correlations: <String, Map<String, double>>{
+          'a': <String, double>{'b': 0.2},
+          'b': <String, double>{'a': 0.2},
+        },
+        cofiring: <String, Map<String, double>>{
+          'a': <String, double>{'b': 0.9},
+          'b': <String, double>{'a': 0.9},
+        },
+      );
+      expect(snapshot.coactivationMatrix()['a']!['b'], closeTo(0.9, 1e-9));
+    });
+
+    test('uses |r| when Pearson is the stronger signal', () {
+      const snapshot = CoactivationSnapshot(
+        correlations: <String, Map<String, double>>{
+          'a': <String, double>{'b': -0.8},
+          'b': <String, double>{'a': -0.8},
+        },
+        cofiring: <String, Map<String, double>>{
+          'a': <String, double>{'b': 0.3},
+          'b': <String, double>{'a': 0.3},
+        },
+      );
+      expect(snapshot.coactivationMatrix()['a']!['b'], closeTo(0.8, 1e-9));
+    });
+
+    test('clusters include co-firing-only pairs', () {
+      const snapshot = CoactivationSnapshot(
+        cofiring: <String, Map<String, double>>{
+          'a': <String, double>{'b': 0.7},
+          'b': <String, double>{'a': 0.7},
+        },
+      );
+      expect(snapshot.clustersAt(0.5), <Set<String>>[
+        <String>{'a', 'b'},
+      ]);
     });
   });
 }

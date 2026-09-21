@@ -68,6 +68,12 @@ const List<DeployTargetData> deployTargets = [
     deployCapable: true,
   ),
   DeployTargetData(
+    id: 'speck',
+    label: 'Speck 2',
+    icon: Icons.sensors_outlined, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
+    deployCapable: true,
+  ),
+  DeployTargetData(
     id: 'pynq',
     label: 'PYNQ-Z2',
     icon: Icons

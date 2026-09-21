@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:neuro_toolkit/ui_core/contrast_utils.dart';
 import 'package:neuro_toolkit/ui_core/models/shell_models.dart';
 
 // ---------------------------------------------------------------------------
@@ -153,6 +154,7 @@ class NmtkShellTokens extends ThemeExtension<NmtkShellTokens> {
     Brightness brightness,
   ) {
     final isDark = brightness == Brightness.dark;
+    final commandAccentContainer = colorScheme.primaryContainer;
     return NmtkShellTokens(
       topAppBarHeight: 52,
       workspaceBarHeight: 48,
@@ -194,8 +196,11 @@ class NmtkShellTokens extends ThemeExtension<NmtkShellTokens> {
       liveColor: const Color(0xFFE11D48),
       commandPalette: NmtkShellModePalette(
         accent: colorScheme.primary,
-        accentContainer: colorScheme.primaryContainer,
-        accentForeground: colorScheme.onPrimaryContainer,
+        accentContainer: commandAccentContainer,
+        accentForeground: nmtkReadableForeground(
+          colorScheme.onPrimaryContainer,
+          commandAccentContainer,
+        ),
         frameTint: colorScheme.primary.withValues(alpha: isDark ? 0.18 : 0.08),
       ),
       studioPalette: NmtkShellModePalette(

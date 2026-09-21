@@ -169,7 +169,7 @@ class KubernetesDeploymentExecutor(DeploymentExecutor):
             raise RuntimeError(f"Rollout did not become ready: {err}")
 
     def _health_check(self, target: DeploymentTarget) -> None:
-        host = target.api_server or self._cluster_host(target)
+        host = self._cluster_host(target)
         port = target.backend_port or 9000
         url = f"http://{host}:{port}/api/suite/health"
         deadline = time.monotonic() + 120.0

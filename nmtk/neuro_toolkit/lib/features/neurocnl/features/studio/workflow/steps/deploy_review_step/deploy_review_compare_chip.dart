@@ -28,7 +28,11 @@ class DeployReviewCompareChip extends ConsumerWidget {
           ? 'View multiple targets side by side'
           : 'Needs results from at least 2 targets',
       child: FilterChip(
-        avatar: const Icon(ZetaIcons.columns, size: 16),
+        avatar: Icon(
+          ZetaIcons.columns,
+          size: 16,
+          color: Zeta.of(context).colors.mainDefault,
+        ),
         label: Text(compareMode ? 'Comparing $activeCount' : 'Compare'),
         selected: compareMode,
         onSelected: canCompare

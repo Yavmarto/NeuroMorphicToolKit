@@ -11,6 +11,7 @@ import 'package:neuro_toolkit/features/neurocnl/l10n/app_localizations.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/step_unlock_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/workspace_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/server_config_service.dart';
+import 'package:neuro_toolkit/ui_core/contrast_utils.dart';
 import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -33,13 +34,23 @@ void main() {
     );
   });
 
-  Widget wrap(Widget child, {List<Override> overrides = const []}) {
+  Widget wrap(
+    Widget child, {
+    List<Override> overrides = const [],
+    ThemeMode mode = ThemeMode.light,
+  }) {
     return ProviderScope(
       overrides: overrides,
-      child: MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        home: Scaffold(body: child),
+      child: NmtkZetaTheme.wrap(
+        initialThemeMode: mode,
+        builder: (context, light, dark, effective) => MaterialApp(
+          theme: light,
+          darkTheme: dark,
+          themeMode: effective,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(body: child),
+        ),
       ),
     );
   }
@@ -150,7 +161,8 @@ void main() {
           label: 'Claude Code',
           available: true,
           supportsMcpInstall: true,
-          mcpConfigHint: '~/Library/Application Support/Claude/claude_desktop_config.json',
+          mcpConfigHint:
+              '~/Library/Application Support/Claude/claude_desktop_config.json',
         ),
       ],
     );
@@ -176,7 +188,60 @@ void main() {
     expect(find.text('Install MCP'), findsOneWidget);
   });
 
-  testWidgets('StudioAssistantPanel shows timeline placeholder', (tester) async {
+  for (final mode in [ThemeMode.light, ThemeMode.dark]) {
+    testWidgets(
+      '$mode: StudioAssistantPanel chrome icons clear 3:1 on their surfaces',
+      (tester) async {
+        await tester.pumpWidget(
+          wrap(
+            StudioAssistantPanel(onClose: () {}),
+            mode: mode,
+            overrides: [
+              studioAgentNotifierProvider.overrideWith(
+                () => _FakeStudioAgentNotifier(const StudioAgentState()),
+              ),
+            ],
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        final colors = Zeta.of(
+          tester.element(find.byType(StudioAssistantPanel)),
+        ).colors;
+        final closeIcon = tester.widget<Icon>(find.byIcon(ZetaIcons.close));
+        expect(
+          nmtkContrastRatio(closeIcon.color!, colors.surfaceDefault),
+          greaterThanOrEqualTo(3.0),
+        );
+
+        final sendFinder = find.descendant(
+          of: find.byType(FilledButton).last,
+          matching: find.byIcon(ZetaIcons.send),
+        );
+        final sendElement = tester.element(sendFinder);
+        final sendIcon = tester.widget<Icon>(sendFinder);
+        final sendColor =
+            sendIcon.color ?? IconTheme.of(sendElement).color!;
+        final button = tester.widget<FilledButton>(
+          find.ancestor(
+            of: sendFinder,
+            matching: find.byType(FilledButton),
+          ),
+        );
+        final buttonBg =
+            button.style?.backgroundColor?.resolve({}) ??
+            Theme.of(sendElement).colorScheme.primary;
+        expect(
+          nmtkContrastRatio(sendColor, buttonBg),
+          greaterThanOrEqualTo(3.0),
+        );
+      },
+    );
+  }
+
+  testWidgets('StudioAssistantPanel shows timeline placeholder', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       wrap(
         const StudioAssistantPanel(),

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/assistant/build_timeline.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/assistant/studio_assistant_setup_bar.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/assistant/studio_agent_notifier.dart';
+import 'package:neuro_toolkit/ui_core/contrast_utils.dart';
 import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
 class StudioAssistantPanel extends ConsumerStatefulWidget {
@@ -48,6 +49,12 @@ class _StudioAssistantPanelState extends ConsumerState<StudioAssistantPanel> {
   @override
   Widget build(BuildContext context) {
     final colors = Zeta.of(context).colors;
+    final scheme = Theme.of(context).colorScheme;
+    final sendInk = nmtkReadableForeground(
+      scheme.onPrimary,
+      scheme.primary,
+      floor: 3.0,
+    );
     final agentState = ref.watch(studioAgentNotifierProvider);
     final canSend = !agentState.isStreaming && !agentState.isBootstrapping;
 
@@ -73,24 +80,22 @@ class _StudioAssistantPanelState extends ConsumerState<StudioAssistantPanel> {
                     IconButton(
                       tooltip: 'Close assistant',
                       onPressed: widget.onClose,
-                      icon: const Icon(ZetaIcons.close),
+                      icon: Icon(ZetaIcons.close, color: colors.mainSubtle),
                     ),
                 ],
               ),
             ),
             const StudioAssistantSetupBar(),
             const Divider(height: 1),
-            Expanded(
-              child: BuildTimeline(entries: agentState.timeline),
-            ),
+            Expanded(child: BuildTimeline(entries: agentState.timeline)),
             if (agentState.errorMessage != null)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 child: Text(
                   agentState.errorMessage!,
-                  style: Zeta.of(context).textStyles.bodySmall.copyWith(
-                    color: colors.mainNegative,
-                  ),
+                  style: Zeta.of(
+                    context,
+                  ).textStyles.bodySmall.copyWith(color: colors.mainNegative),
                 ),
               ),
             Padding(
@@ -103,9 +108,13 @@ class _StudioAssistantPanelState extends ConsumerState<StudioAssistantPanel> {
                       enabled: canSend,
                       minLines: 1,
                       maxLines: 4,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         hintText: 'Ask the assistant…',
-                        border: OutlineInputBorder(),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(
+                            NmtkShellTokens.of(context).radiusSm,
+                          ),
+                        ),
                       ),
                       onSubmitted: canSend ? (_) => _sendMessage() : null,
                     ),
@@ -119,7 +128,7 @@ class _StudioAssistantPanelState extends ConsumerState<StudioAssistantPanel> {
                             height: 18,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Icon(ZetaIcons.send, size: 18),
+                        : Icon(ZetaIcons.send, size: 18, color: sendInk),
                   ),
                 ],
               ),

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:neuro_toolkit/features/neurocnl/models/neurosense_sensor_target.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/neurosense_api_service.dart';
 import 'package:neuro_toolkit/features/neurocnl/widgets/shell_surface.dart';
+import 'package:neuro_toolkit/ui_core/shell_tokens.dart';
 
 /// Launcher-native NeuroSense surface: device scan and quick connect.
 class NeurosenseMonitorSurface extends ConsumerStatefulWidget {
@@ -32,7 +33,9 @@ class _NeurosenseMonitorSurfaceState
       _status = null;
     });
     try {
-      final devices = await ref.read(neurosenseApiServiceProvider).listDevices();
+      final devices = await ref
+          .read(neurosenseApiServiceProvider)
+          .listDevices();
       if (!mounted) return;
       setState(() {
         _devices = devices;
@@ -51,11 +54,13 @@ class _NeurosenseMonitorSurfaceState
   Future<void> _connect(NeurosenseDeviceInfo device) async {
     setState(() => _status = 'Connecting to ${device.name}…');
     try {
-      await ref.read(neurosenseApiServiceProvider).connectDevice(
-        device.id,
-        serialPort: device.serialPort,
-        allowExperimental: true,
-      );
+      await ref
+          .read(neurosenseApiServiceProvider)
+          .connectDevice(
+            device.id,
+            serialPort: device.serialPort,
+            allowExperimental: true,
+          );
       if (!mounted) return;
       setState(() => _status = 'Connected to ${device.name}.');
       await _scan();
@@ -67,6 +72,9 @@ class _NeurosenseMonitorSurfaceState
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final healthyColor = NmtkShellTokens.of(context).healthyColor;
+
     return Scaffold(
       body: ListView(
         padding: const EdgeInsets.all(16),
@@ -82,28 +90,28 @@ class _NeurosenseMonitorSurfaceState
             children: [
               FilledButton.icon(
                 onPressed: _loading ? null : _scan,
-                icon: const Icon(Icons.refresh, size: 18),
+                icon: Icon(Icons.refresh, size: 18, color: scheme.onPrimary),
                 label: Text(_loading ? 'Scanning…' : 'Scan devices'),
               ),
             ],
           ),
-          if (_status != null) ...[
-            const SizedBox(height: 12),
-            Text(_status!),
-          ],
+          if (_status != null) ...[const SizedBox(height: 12), Text(_status!)],
           const SizedBox(height: 16),
           for (final device in _devices)
             Card(
               child: ListTile(
                 leading: Icon(
                   device.connected ? Icons.sensors : Icons.sensors_off,
+                  color: device.connected
+                      ? healthyColor
+                      : scheme.onSurfaceVariant,
                 ),
                 title: Text(device.name),
                 subtitle: Text(
                   '${device.type} • ${device.channels} ch @ ${device.samplingRateHz} Hz',
                 ),
                 trailing: device.connected
-                    ? const Icon(Icons.check_circle_outline)
+                    ? Icon(Icons.check_circle_outline, color: healthyColor)
                     : TextButton(
                         onPressed: () => _connect(device),
                         child: const Text('Connect'),

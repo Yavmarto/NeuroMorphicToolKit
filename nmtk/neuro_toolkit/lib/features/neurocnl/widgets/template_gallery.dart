@@ -29,16 +29,30 @@ class TemplateGallery extends ConsumerStatefulWidget {
 
   /// Show the template gallery as a dialog.
   static Future<void> show(BuildContext context) {
-    return showDialog(
+    if (NmtkDialogSurface.isCompact(context)) {
+      return showDialog<void>(
+        context: context,
+        builder: (_) => Dialog.fullscreen(
+          backgroundColor: AppTheme.background,
+          child: const SafeArea(child: TemplateGallery()),
+        ),
+      );
+    }
+    return showDialog<void>(
       context: context,
-      builder: (_) => Dialog(
+      builder: (dialogContext) => Dialog(
         backgroundColor: AppTheme.background,
+        insetPadding: NmtkDialogSurface.insetPadding(dialogContext),
         shape: RoundedRectangleBorder(
           borderRadius: NmtkDesignTokens.dialogShape,
           side: const BorderSide(color: AppTheme.border),
         ),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 700, maxHeight: 600),
+          constraints: NmtkDialogSurface.constraints(
+            dialogContext,
+            maxWidth: 700,
+            maxHeight: 600,
+          ),
           child: const TemplateGallery(),
         ),
       ),
@@ -193,8 +207,9 @@ class _TemplateGalleryState extends ConsumerState<TemplateGallery> {
       );
     }
 
+    final tokens = NmtkShellTokens.of(context);
     return Padding(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(tokens.sectionGap),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -241,7 +256,11 @@ class _TemplateGalleryState extends ConsumerState<TemplateGallery> {
             controller: _searchController,
             onChange: (_) => setState(() {}),
             hintText: 'Search templates...',
-            prefix: const Icon(ZetaIcons.search, size: 18),
+            prefix: Icon(
+              ZetaIcons.search,
+              size: 18,
+              color: Zeta.of(context).colors.mainSubtle,
+            ),
           ),
           const SizedBox(height: 12),
 
@@ -347,9 +366,9 @@ class _TemplateGalleryState extends ConsumerState<TemplateGallery> {
                                   );
                             } else if (result.outcome == SaveOutcome.failed) {
                               NmtkSnackBars.error(
-                                  context,
-                                  result.message ?? 'File save failed.',
-                                );
+                                context,
+                                result.message ?? 'File save failed.',
+                              );
                             }
                           }
                         },

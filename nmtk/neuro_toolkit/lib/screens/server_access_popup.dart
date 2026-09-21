@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
+import 'package:neuro_toolkit/features/server/connect/connect_notifier.dart';
 import 'package:neuro_toolkit/features/server/provision/provision_service.dart';
+import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/screens/server_access_dialog_surface.dart';
 import 'package:neuro_toolkit/screens/server_access_sheet_surface.dart';
 import 'package:neuro_toolkit/screens/server_connect_screen.dart';
+import 'package:neuro_toolkit/screens/server_info_panel.dart';
 import 'package:neuro_toolkit/screens/server_setup_screen.dart';
 
 /// Shows the sign-in / set-up-a-new-server flow as an adaptive popup over the
@@ -74,15 +77,41 @@ class _ServerAccessFlowState extends ConsumerState<_ServerAccessFlow> {
     Navigator.of(context, rootNavigator: true).pop();
   }
 
+  bool _isConnectedSession(ConnectPhase phase) =>
+      phase == ConnectPhase.connected || phase == ConnectPhase.devOffline;
+
+  void _signOut() {
+    ref.read(connectNotifierProvider.notifier).logout();
+    setState(() => _mode = _FlowMode.connect);
+  }
+
   @override
   Widget build(BuildContext context) {
     final tokens = NmtkShellTokens.of(context);
+    final connectState = ref.watch(connectNotifierProvider);
+    final showServerInfo = _isConnectedSession(connectState.phase);
+
     final screen = switch (_mode) {
-      _FlowMode.connect => ServerConnectScreen(
-        initialHost: _provisionedHost ?? widget.initialHost,
-        embedded: true,
-        onNewServer: _showSetup,
-      ),
+      _FlowMode.connect =>
+        showServerInfo
+            ? Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const ServerInfoPanel(),
+                  SizedBox(height: tokens.sectionGap),
+                  ZetaButton.text(
+                    key: const Key('server-info-change-server'),
+                    onPressed: _signOut,
+                    label: 'Change server',
+                    leadingIcon: ZetaIcons.swap,
+                  ),
+                ],
+              )
+            : ServerConnectScreen(
+                initialHost: _provisionedHost ?? widget.initialHost,
+                embedded: true,
+                onNewServer: _showSetup,
+              ),
       _FlowMode.setup => ServerSetupScreen(
         initialHost: _provisionedHost ?? widget.initialHost,
         embedded: true,

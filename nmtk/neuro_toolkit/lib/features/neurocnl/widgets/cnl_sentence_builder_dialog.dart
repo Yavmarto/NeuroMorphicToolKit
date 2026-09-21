@@ -388,37 +388,64 @@ class _CnlSentenceBuilderDialogState extends State<CnlSentenceBuilderDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final compact = NmtkDialogSurface.isCompact(context);
+    final tokens = NmtkShellTokens.of(context);
+    final body = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildHeader(),
+        Divider(height: 1, color: Zeta.of(context).colors.borderDefault),
+        Expanded(
+          child: compact
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    SizedBox(
+                      height: 180,
+                      child: _buildConceptList(compact: true),
+                    ),
+                    Divider(
+                      height: 1,
+                      color: Zeta.of(context).colors.borderDefault,
+                    ),
+                    Expanded(child: _buildFormPanel()),
+                  ],
+                )
+              : Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _buildConceptList(compact: false),
+                    VerticalDivider(
+                      width: 1,
+                      color: Zeta.of(context).colors.borderDefault,
+                    ),
+                    Expanded(child: _buildFormPanel()),
+                  ],
+                ),
+        ),
+        Divider(height: 1, color: Zeta.of(context).colors.borderDefault),
+        _buildFooter(),
+      ],
+    );
+    if (compact) {
+      return Dialog.fullscreen(
+        backgroundColor: Zeta.of(context).colors.surfaceDefault,
+        child: SafeArea(child: body),
+      );
+    }
     return Dialog(
+      insetPadding: NmtkDialogSurface.insetPadding(context),
       backgroundColor: Zeta.of(context).colors.surfaceDefault,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(
-          NmtkShellTokens.of(context).radiusSm,
-        ),
+        borderRadius: BorderRadius.circular(tokens.radiusSm),
       ),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 700, maxHeight: 540),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _buildHeader(),
-            Divider(height: 1, color: Zeta.of(context).colors.borderDefault),
-            Expanded(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _buildConceptList(),
-                  VerticalDivider(
-                    width: 1,
-                    color: Zeta.of(context).colors.borderDefault,
-                  ),
-                  Expanded(child: _buildFormPanel()),
-                ],
-              ),
-            ),
-            Divider(height: 1, color: Zeta.of(context).colors.borderDefault),
-            _buildFooter(),
-          ],
+        constraints: NmtkDialogSurface.constraints(
+          context,
+          maxWidth: 700,
+          maxHeight: 540,
         ),
+        child: body,
       ),
     );
   }
@@ -455,9 +482,9 @@ class _CnlSentenceBuilderDialogState extends State<CnlSentenceBuilderDialog> {
     );
   }
 
-  Widget _buildConceptList() {
+  Widget _buildConceptList({required bool compact}) {
     return SizedBox(
-      width: 230,
+      width: compact ? double.infinity : 230,
       child: ListView.builder(
         padding: const EdgeInsets.symmetric(vertical: 6),
         itemCount: _kConcepts.length,

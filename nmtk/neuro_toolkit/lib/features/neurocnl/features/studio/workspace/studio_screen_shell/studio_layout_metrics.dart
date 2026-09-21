@@ -26,7 +26,8 @@ class StudioLayoutMetrics {
     required NmtkShellTokens tokens,
     required String activeStep,
   }) {
-    final isMobile = layoutConstraints.maxWidth < 600;
+    final isMobile =
+        layoutConstraints.maxWidth < NmtkShellTokens.compactBreakpoint;
     const stepperHeight = 60.0;
     const readableContentHeaderHeight = 88.0;
     final stepperMargin = tokens.compactGap;

@@ -8,6 +8,11 @@ import 'package:neuro_toolkit/features/neurocnl/features/studio/shared/studio_sh
 import 'package:neuro_toolkit/features/neurocnl/features/studio/deployment/deploy/pynq_setup_pane/pynq_weight_provenance.dart';
 
 class PynqSetupPane extends ConsumerWidget {
+  // Local pane-width threshold, not a screen-level breakpoint: this is the
+  // width of an embedded pane's action row, well narrower than
+  // NmtkShellTokens.compactBreakpoint. Matches AkidaSetupPane.
+  static const double _stackActionsWidth = 420;
+
   const PynqSetupPane({
     super.key,
     required this.provider,
@@ -64,7 +69,11 @@ class PynqSetupPane extends ConsumerWidget {
             FilledButton.icon(
               key: const Key('pynq-pair-board'),
               onPressed: () => onManageHardwareTarget!('pynq'),
-              icon: const Icon(Icons.settings_ethernet_outlined, size: 18),
+              icon: Icon(
+                Icons.settings_ethernet_outlined,
+                size: 18,
+                color: Theme.of(context).colorScheme.onPrimary,
+              ),
               label: const Text('Pair or select board'),
             ),
         ] else ...[
@@ -115,42 +124,59 @@ class PynqSetupPane extends ConsumerWidget {
               ),
           ],
           const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              NmtkOutlinedButton(
-                key: const Key('pynq-check-readiness'),
-                onPressed: provider.isBusy ? null : notifier.checkReadiness,
-                icon: ZetaIcons.check_circle_outline,
-                label: 'Check readiness',
-              ),
-              if (_needsProvision(board.state))
-                NmtkPrimaryButton(
-                  key: const Key('pynq-provision-board'),
-                  onPressed: provider.isBusy ? null : notifier.provisionBoard,
-                  icon: ZetaIcons.download,
-                  label: 'Install board runtime',
-                ),
-              if (_needsOverlay(board))
-                NmtkPrimaryButton(
-                  key: const Key('pynq-install-overlay'),
-                  onPressed: provider.isBusy ? null : notifier.installOverlay,
-                  icon: ZetaIcons.cloud_upload,
-                  label: 'Install overlay',
-                ),
-              NmtkOutlinedButton(
-                key: const Key('pynq-restart-runtime'),
-                onPressed: provider.isBusy ? null : notifier.restartRuntime,
-                icon: ZetaIcons.refresh,
-                label: 'Restart runtime',
-              ),
-              if (onManageHardwareTarget != null)
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final actions = <Widget>[
                 NmtkOutlinedButton(
-                  onPressed: () => onManageHardwareTarget!('pynq'),
-                  label: 'Change board',
+                  key: const Key('pynq-check-readiness'),
+                  onPressed: provider.isBusy ? null : notifier.checkReadiness,
+                  icon: ZetaIcons.check_circle_outline,
+                  label: 'Check readiness',
                 ),
-            ],
+                if (_needsProvision(board.state))
+                  NmtkPrimaryButton(
+                    key: const Key('pynq-provision-board'),
+                    onPressed: provider.isBusy
+                        ? null
+                        : notifier.provisionBoard,
+                    icon: ZetaIcons.download,
+                    label: 'Install board runtime',
+                  ),
+                if (_needsOverlay(board))
+                  NmtkPrimaryButton(
+                    key: const Key('pynq-install-overlay'),
+                    onPressed: provider.isBusy
+                        ? null
+                        : notifier.installOverlay,
+                    icon: ZetaIcons.cloud_upload,
+                    label: 'Install overlay',
+                  ),
+                NmtkOutlinedButton(
+                  key: const Key('pynq-restart-runtime'),
+                  onPressed: provider.isBusy ? null : notifier.restartRuntime,
+                  icon: ZetaIcons.refresh,
+                  label: 'Restart runtime',
+                ),
+                if (onManageHardwareTarget != null)
+                  NmtkOutlinedButton(
+                    onPressed: () => onManageHardwareTarget!('pynq'),
+                    label: 'Change board',
+                  ),
+              ];
+              if (constraints.maxWidth < _stackActionsWidth) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (var index = 0; index < actions.length; index++) ...[
+                      actions[index],
+                      if (index != actions.length - 1)
+                        const SizedBox(height: 8),
+                    ],
+                  ],
+                );
+              }
+              return Wrap(spacing: 8, runSpacing: 8, children: actions);
+            },
           ),
         ],
         const SizedBox(height: 20),

@@ -103,7 +103,13 @@ class _CanvasHandwritingOverlayState extends State<CanvasHandwritingOverlay> {
                           ? IconButton(
                               // ZETA-MIGRATION-EXEMPT: matches the pre-existing
                               // clear affordance this widget was extracted from.
-                              icon: const Icon(Icons.clear, size: 16),
+                              icon: Icon(
+                                Icons.clear,
+                                size: 16,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
                               padding: EdgeInsets.zero,
                               constraints: const BoxConstraints(
                                 minWidth: 24,
@@ -134,7 +140,9 @@ class _CanvasHandwritingOverlayState extends State<CanvasHandwritingOverlay> {
                               visualDensity: VisualDensity.compact,
                               label: Text(
                                 name,
-                                style: Zeta.of(context).textStyles.bodyXSmall.copyWith(fontSize: 11),
+                                style: Zeta.of(
+                                  context,
+                                ).textStyles.bodyXSmall.copyWith(fontSize: 11),
                               ),
                               onPressed: () => widget.onSubmitted(name),
                             ),

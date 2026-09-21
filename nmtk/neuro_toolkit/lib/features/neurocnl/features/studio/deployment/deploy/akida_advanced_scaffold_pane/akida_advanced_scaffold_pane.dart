@@ -7,6 +7,11 @@ import 'package:neuro_toolkit/features/neurocnl/providers/studio_akida_deploy_pr
 import 'package:neuro_toolkit/features/neurocnl/widgets/canvas/canvas_parameter_text_field.dart';
 
 class AkidaAdvancedScaffoldPane extends ConsumerWidget {
+  // Local pane-width threshold, not a screen-level breakpoint — mirrors the
+  // stacking threshold in AkidaSetupPane so the two panes behave the same
+  // way as the embedded pane narrows.
+  static const double _stackActionsWidth = 420;
+
   const AkidaAdvancedScaffoldPane({
     super.key,
     required this.provider,
@@ -45,43 +50,77 @@ class AkidaAdvancedScaffoldPane extends ConsumerWidget {
           spacing: 12,
           runSpacing: 12,
           children: [
-            SizedBox(
-              width: 200,
-              child: ZetaSegmentedControl<String>(
-                selected: provider.akidaVersion,
-                onChanged: provider.isBusy ? (_) {} : notifier.setAkidaVersion,
-                segments: const [
-                  ZetaButtonSegment<String>(
-                    value: 'akida1',
-                    child: Text('Akida 1', key: Key('akida-version-akida1')),
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Akida version',
+                  style: textStyles.labelSmall.copyWith(
+                    fontWeight: FontWeight.w700,
                   ),
-                  ZetaButtonSegment<String>(
-                    value: 'akida2',
-                    child: Text('Akida 2', key: Key('akida-version-akida2')),
+                ),
+                const SizedBox(height: 4),
+                SizedBox(
+                  width: 200,
+                  child: ZetaSegmentedControl<String>(
+                    selected: provider.akidaVersion,
+                    onChanged: provider.isBusy
+                        ? (_) {}
+                        : notifier.setAkidaVersion,
+                    segments: const [
+                      ZetaButtonSegment<String>(
+                        value: 'akida1',
+                        child: Text(
+                          'Akida 1',
+                          key: Key('akida-version-akida1'),
+                        ),
+                      ),
+                      ZetaButtonSegment<String>(
+                        value: 'akida2',
+                        child: Text(
+                          'Akida 2',
+                          key: Key('akida-version-akida2'),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            SizedBox(
-              width: 200,
-              child: ZetaSegmentedControl<int>(
-                selected: provider.bitWidth,
-                onChanged: provider.isBusy ? (_) {} : notifier.setBitWidth,
-                segments: const [
-                  ZetaButtonSegment<int>(
-                    value: 1,
-                    child: Text('1-bit', key: Key('akida-bit-width-1')),
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Bit width',
+                  style: textStyles.labelSmall.copyWith(
+                    fontWeight: FontWeight.w700,
                   ),
-                  ZetaButtonSegment<int>(
-                    value: 2,
-                    child: Text('2-bit', key: Key('akida-bit-width-2')),
+                ),
+                const SizedBox(height: 4),
+                SizedBox(
+                  width: 200,
+                  child: ZetaSegmentedControl<int>(
+                    selected: provider.bitWidth,
+                    onChanged: provider.isBusy ? (_) {} : notifier.setBitWidth,
+                    segments: const [
+                      ZetaButtonSegment<int>(
+                        value: 1,
+                        child: Text('1-bit', key: Key('akida-bit-width-1')),
+                      ),
+                      ZetaButtonSegment<int>(
+                        value: 2,
+                        child: Text('2-bit', key: Key('akida-bit-width-2')),
+                      ),
+                      ZetaButtonSegment<int>(
+                        value: 4,
+                        child: Text('4-bit', key: Key('akida-bit-width-4')),
+                      ),
+                    ],
                   ),
-                  ZetaButtonSegment<int>(
-                    value: 4,
-                    child: Text('4-bit', key: Key('akida-bit-width-4')),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ],
         ),
@@ -98,38 +137,58 @@ class AkidaAdvancedScaffoldPane extends ConsumerWidget {
           ),
         ],
         const SizedBox(height: 12),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            NmtkOutlinedButton(
-              onPressed: provider.isBusy
-                  ? null
-                  : () => notifier.checkReadiness(ref.read(specTextProvider)),
-              icon: Icons.fact_check_outlined,
-              label: 'Check topology',
-            ),
-            NmtkOutlinedButton(
-              onPressed: canGenerate
-                  ? () =>
-                        notifier.deploySelectedHost(ref.read(specTextProvider))
-                  : null,
-              icon: ZetaIcons.document,
-              label: 'Generate scaffold package',
-            ),
-            FilledButton.icon(
-              onPressed: canMap
-                  ? () => notifier.mapSelectedHost(ref.read(specTextProvider))
-                  : null,
-              icon: const Icon(ZetaIcons.memory, size: 18),
-              label: const Text('Map runtime'),
-            ),
-            NmtkOutlinedButton(
-              onPressed: canRun ? notifier.runSelectedHost : null,
-              icon: ZetaIcons.play,
-              label: 'Run placeholder inference',
-            ),
-          ],
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final actions = <Widget>[
+              NmtkOutlinedButton(
+                onPressed: provider.isBusy
+                    ? null
+                    : () =>
+                          notifier.checkReadiness(ref.read(specTextProvider)),
+                icon: Icons.fact_check_outlined,
+                label: 'Check topology',
+              ),
+              NmtkOutlinedButton(
+                onPressed: canGenerate
+                    ? () => notifier.deploySelectedHost(
+                        ref.read(specTextProvider),
+                      )
+                    : null,
+                icon: ZetaIcons.document,
+                label: 'Generate scaffold package',
+              ),
+              FilledButton.icon(
+                onPressed: canMap
+                    ? () =>
+                          notifier.mapSelectedHost(ref.read(specTextProvider))
+                    : null,
+                icon: Icon(
+                  ZetaIcons.memory,
+                  size: 18,
+                  color: Theme.of(context).colorScheme.onPrimary,
+                ),
+                label: const Text('Map runtime'),
+              ),
+              NmtkOutlinedButton(
+                onPressed: canRun ? notifier.runSelectedHost : null,
+                icon: ZetaIcons.play,
+                label: 'Run placeholder inference',
+              ),
+            ];
+            if (constraints.maxWidth < _stackActionsWidth) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (var index = 0; index < actions.length; index++) ...[
+                    actions[index],
+                    if (index != actions.length - 1)
+                      const SizedBox(height: 8),
+                  ],
+                ],
+              );
+            }
+            return Wrap(spacing: 8, runSpacing: 8, children: actions);
+          },
         ),
         if (provider.runResult != null) ...[
           const SizedBox(height: 12),

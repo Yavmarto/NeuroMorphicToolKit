@@ -20,8 +20,18 @@ import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 /// The two failing pairs were pinned with `skip` while tracked in CEL-92;
 /// the chrome now resolves its ink/accent from the actual bar color instead
 /// of theme-relative mainInverse, so those pairs are asserted below.
-const _obsidianNavy = Color(0xFF0B1F3A); // nir canvas bar
-const _obsidianGreen = Color(0xFF0B2116); // pipeline canvas bar
+const _obsidianNavy = Color(0xFF0B1F3A); // train pipeline canvas bar
+const _obsidianGreen = Color(0xFF0B2116); // eval pipeline canvas bar
+
+/// Third canvas bar variant: the architecture/NIR tab passes
+/// `tokens.studioPalette.accentContainer` (canvas_screen.dart) instead of a
+/// fixed "Obsidian Flow" color — unlike the two bars above, this bar color is
+/// theme-relative, so it takes a different value per app theme. Mirrors
+/// `NmtkShellTokens.fromColorScheme`'s `studioPalette.accentContainer`
+/// (lib/ui_core/shell_tokens.dart) so a token change here fails loudly instead
+/// of silently drifting from production.
+const _studioAccentContainerDark = Color(0xFF251A46);
+const _studioAccentContainerLight = Color(0xFFEDE9FE);
 
 Widget _host({required ThemeMode mode, required Widget home}) {
   return NmtkZetaTheme.wrap(
@@ -175,4 +185,59 @@ void main() {
       },
     );
   }
+
+  // Third canvas bar variant: the architecture/NIR tab (CanvasTab.architecture
+  // in canvas_screen.dart) — unlike the two fixed obsidian bars above, this
+  // bar is theme-relative (`tokens.studioPalette.accentContainer`), so each
+  // app theme resolves a *different* bar color rather than the same fixed
+  // color under both themes. This variant was not covered by the CEL-92
+  // regression suite even though the CEL-92 fix explicitly generalized to it
+  // (see the "studio accentContainer surfaces" comment in
+  // mobile_canvas_chrome.dart's `_CanvasBarColors.forBar`).
+  testWidgets(
+    'dark theme: icons clear 3:1 on the architecture (studio accentContainer) bar',
+    (tester) async {
+      await tester.pumpWidget(
+        _host(mode: ThemeMode.dark, home: _chrome(_studioAccentContainerDark)),
+      );
+      await tester.pumpAndSettle();
+      _expectLegible(
+        tester,
+        [
+          ZetaIcons.undo,
+          ZetaIcons.redo,
+          ZetaIcons.add,
+          ZetaIcons.delete,
+          Icons.auto_awesome,
+        ],
+        _studioAccentContainerDark,
+        'dark/architecture',
+      );
+    },
+  );
+
+  testWidgets(
+    'light theme: icons clear 3:1 on the architecture (studio accentContainer) bar',
+    (tester) async {
+      await tester.pumpWidget(
+        _host(
+          mode: ThemeMode.light,
+          home: _chrome(_studioAccentContainerLight),
+        ),
+      );
+      await tester.pumpAndSettle();
+      _expectLegible(
+        tester,
+        [
+          ZetaIcons.undo,
+          ZetaIcons.redo,
+          ZetaIcons.add,
+          ZetaIcons.delete,
+          Icons.auto_awesome,
+        ],
+        _studioAccentContainerLight,
+        'light/architecture',
+      );
+    },
+  );
 }

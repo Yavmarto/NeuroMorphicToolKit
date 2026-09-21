@@ -92,7 +92,14 @@ class _BenchmarkWorkbenchTabsState extends ConsumerState<BenchmarkWorkbenchTabs>
           controller: _tabController,
           tabs: _tabs
               .map(
-                (tab) => Tab(icon: Icon(tab.icon, size: 18), text: tab.label),
+                (tab) => Tab(
+                  icon: Icon(
+                    tab.icon,
+                    size: 18,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                  text: tab.label,
+                ),
               )
               .toList(growable: false),
         ),

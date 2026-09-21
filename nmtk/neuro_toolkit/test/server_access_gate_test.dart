@@ -4,7 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:neuro_toolkit/features/server/connect/connect_build_policy.dart';
 import 'package:neuro_toolkit/features/server/connect/connect_notifier.dart';
 import 'package:neuro_toolkit/features/server/connect/connect_service.dart';
+import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/screens/server_access_gate.dart';
+import 'package:neuro_toolkit/services/analytics_service.dart';
 
 /// Drives [connectNotifierProvider] for the gate tests.
 class _FakeConnectNotifier extends ConnectNotifier {
@@ -67,7 +69,10 @@ class _FakeConnectNotifier extends ConnectNotifier {
 
 Widget _harness(_FakeConnectNotifier notifier) {
   return ProviderScope(
-    overrides: [connectNotifierProvider.overrideWith(() => notifier)],
+    overrides: [
+      connectNotifierProvider.overrideWith(() => notifier),
+      analyticsServiceProvider.overrideWithValue(AnalyticsService()),
+    ],
     child: const MaterialApp(
       home: ServerAccessGate(
         child: Scaffold(body: Center(child: Text('WORKSPACE'))),

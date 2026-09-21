@@ -54,6 +54,13 @@ void main() {
   testWidgets('Regression trends screen exposes explicit back action', (
     WidgetTester tester,
   ) async {
+    // CEL-451: below compactBreakpoint the label shortens to "Back" so the
+    // title still fits; this test asserts the wide-layout affordance.
+    tester.view.physicalSize = const Size(900, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
     await tester.pumpWidget(
       const ProviderScope(
         child: MaterialApp(

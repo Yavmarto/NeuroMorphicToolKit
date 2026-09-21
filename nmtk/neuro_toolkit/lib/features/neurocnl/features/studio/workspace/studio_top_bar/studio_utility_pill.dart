@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
+import 'package:neuro_toolkit/features/neurocnl/screens/neurosense_popup.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/workspace/presentation/autosave_status_indicator.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/workspace/presentation/running_tasks_indicator.dart';
 import 'package:neuro_toolkit/features/neurocnl/features/studio/workspace/presentation/workspace_tab_file_view_data.dart';
@@ -57,6 +58,15 @@ class StudioUtilityPill extends StatelessWidget {
                   icon: ZetaIcons.save,
                   semanticLabel: 'Save workspace',
                   onPressed: onSaveActiveFile,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Tooltip(
+                message: 'Open NeuroSense',
+                child: ZetaIconButton.text(
+                  icon: Icons.sensors_outlined,
+                  semanticLabel: 'Open NeuroSense',
+                  onPressed: () => showNeurosensePopup(context),
                 ),
               ),
               const SizedBox(width: 8),

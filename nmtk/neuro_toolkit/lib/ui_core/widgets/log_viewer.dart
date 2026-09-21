@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import 'package:neuro_toolkit/ui_core/app_theme.dart';
 import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
-import 'package:neuro_toolkit/ui_core/zeta_theme.dart';
 
 /// State-management-independent live command transcript dialog.
 ///
@@ -30,6 +28,9 @@ class NmtkLogViewerDialog extends StatefulWidget {
 class _NmtkLogViewerDialogState extends State<NmtkLogViewerDialog> {
   final ScrollController _scrollController = ScrollController();
   bool _shouldFollow = true;
+
+  static const double _minTapTarget = 44;
+  static const double _titleActionsReserve = 120;
 
   @override
   void initState() {
@@ -78,13 +79,31 @@ class _NmtkLogViewerDialogState extends State<NmtkLogViewerDialog> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final media = MediaQuery.sizeOf(context);
-    final width = media.width < 720 ? media.width - 32 : 680.0;
-    final height = (media.height * 0.72).clamp(320.0, 720.0);
+    final tokens = NmtkShellTokens.of(context);
+    final media = MediaQuery.of(context);
+    final viewInsets = media.viewInsets;
+    final margin = tokens.sectionGap;
+    final isCompact = media.size.width < NmtkShellTokens.compactBreakpoint;
+    final dialogWidth = isCompact
+        ? media.size.width - margin * 2
+        : 680.0.clamp(0.0, media.size.width - margin * 2);
+    final availableHeight =
+        media.size.height - viewInsets.vertical - margin * 2;
+    final contentMaxHeight = (availableHeight - _titleActionsReserve).clamp(
+      160.0,
+      720.0,
+    );
     final output = widget.lines.isEmpty
         ? widget.emptyMessage
         : widget.lines.join('\n');
+
     return AlertDialog(
+      insetPadding: EdgeInsets.fromLTRB(
+        margin,
+        margin + viewInsets.top,
+        margin,
+        margin + viewInsets.bottom,
+      ),
       title: Row(
         children: [
           Expanded(child: Text(widget.title)),
@@ -98,9 +117,11 @@ class _NmtkLogViewerDialogState extends State<NmtkLogViewerDialog> {
       content: Semantics(
         label: 'Live sanitized raw SSH output',
         liveRegion: widget.isRunning,
-        child: SizedBox(
-          width: width,
-          height: height,
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: dialogWidth,
+            maxHeight: contentMaxHeight,
+          ),
           child: DecoratedBox(
             decoration: BoxDecoration(
               color: colors.surfaceContainerLowest,
@@ -110,7 +131,7 @@ class _NmtkLogViewerDialogState extends State<NmtkLogViewerDialog> {
             child: SingleChildScrollView(
               key: const Key('nmtk-log-viewer-scroll'),
               controller: _scrollController,
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(tokens.sectionGap),
               child: SelectableText(
                 output,
                 key: const Key('nmtk-log-viewer-output'),
@@ -124,15 +145,21 @@ class _NmtkLogViewerDialogState extends State<NmtkLogViewerDialog> {
         ),
       ),
       actions: [
-        ZetaButton.outline(
-          key: const Key('nmtk-log-viewer-copy'),
-          onPressed: widget.lines.isEmpty ? null : _copyOutput,
-          label: 'Copy output',
+        ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: _minTapTarget),
+          child: ZetaButton.outline(
+            key: const Key('nmtk-log-viewer-copy'),
+            onPressed: widget.lines.isEmpty ? null : _copyOutput,
+            label: 'Copy output',
+          ),
         ),
-        ZetaButton(
-          key: const Key('nmtk-log-viewer-close'),
-          onPressed: () => Navigator.of(context).pop(),
-          label: 'Close',
+        ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: _minTapTarget),
+          child: ZetaButton(
+            key: const Key('nmtk-log-viewer-close'),
+            onPressed: () => Navigator.of(context).pop(),
+            label: 'Close',
+          ),
         ),
       ],
     );

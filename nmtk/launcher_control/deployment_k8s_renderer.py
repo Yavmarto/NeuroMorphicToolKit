@@ -7,6 +7,7 @@ This module produces namespace-scoped YAML that can be piped directly to
 
 from __future__ import annotations
 
+import json
 import textwrap
 from pathlib import Path
 from string import Template
@@ -106,7 +107,7 @@ _DEPLOYMENT = Template(
                   env:
                     - name: PYTHONUNBUFFERED
                       value: "1"
-                  $env_block
+        $extra_env
                   resources:
                     requests:
                       memory: "256Mi"
@@ -213,8 +214,14 @@ def _render_env_block(env: dict[str, str], secret_name: str | None = None) -> st
 
 
 def _dict_to_yaml(data: dict[str, str]) -> str:
-    """Convert a flat dict into inline YAML key-value pairs."""
-    return "\n".join(f"  {k}: {v}" for k, v in data.items())
+    """Convert a flat dict into inline YAML key-value pairs.
+
+    Values are rendered as double-quoted YAML scalars. Kubernetes
+    ``ConfigMap`` and ``Secret`` data fields must be strings, so an unquoted
+    numeric value such as ``9000`` is rejected by the API server; JSON-escaped
+    quoting keeps every value a valid string scalar.
+    """
+    return "\n".join(f"  {k}: {json.dumps(str(v))}" for k, v in data.items())
 
 
 def _build_image(image: str, tag: str) -> str:
@@ -302,17 +309,14 @@ def render_manifests(
         )
 
     # 4. Deployment
-    env_block = ""
+    extra_env = ""
     if secrets:
-        env_block = _indent(
+        extra_env = _indent(
             _render_env_block(
                 {k: "__SECRET_REF__" for k in secrets}, secret_name=secret_name
             ),
-            prefix="                  ",
+            prefix="            ",
         )
-        env_block = "env:\n" + env_block
-    else:
-        env_block = "env: []"
 
     manifests["03-deployment.yaml"] = _DEPLOYMENT.substitute(
         name=app_name,
@@ -324,7 +328,7 @@ def render_manifests(
         container_port=container_port,
         configmap_name=configmap_name,
         health_path=health_path,
-        env_block=_indent(env_block, prefix="                  "),
+        extra_env=extra_env,
     )
 
     # 5. Service

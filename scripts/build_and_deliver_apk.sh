@@ -14,7 +14,7 @@
 #   --dmg-only     Only build/copy the macOS DMG (skip the Android APK)
 #   --skip-build   Skip the flutter build steps; copy existing artifacts
 #   --box-dir DIR  Copy artifacts to DIR after build (default: $NMTK_BOX_DIR or
-#                  ~/Library/CloudStorage/Box-Box/NMTK/Builds)
+#                  ~/Library/CloudStorage/Box-Box/2. NMTK/Builds)
 #   --version VER  Version string used in the DMG filename (default: dev)
 #   --sign ID      Codesign identity to pass through when building the DMG
 #   -h, --help     Show this help message

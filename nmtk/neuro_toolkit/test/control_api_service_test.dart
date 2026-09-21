@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:neuro_toolkit/models/system_resources.dart';
 import 'package:neuro_toolkit/services/control_api_service.dart';
 
 void main() {
@@ -185,6 +186,90 @@ void main() {
 
     test('returns null on a malformed body', () async {
       expect(await versionFrom((_) => http.Response('not json', 200)), isNull);
+    });
+  });
+
+  group('ControlApiService.fetchSystemResources', () {
+    Future<SystemResourcesSnapshot?> resourcesFrom(
+      http.Response Function(Uri) respond,
+    ) {
+      return ControlApiService(
+        baseUri: Uri.parse('http://192.168.2.90:8090'),
+        client: MockClient(
+          (http.Request request) async => respond(request.url),
+        ),
+      ).fetchSystemResources();
+    }
+
+    test('reads live host stats from suite_api', () async {
+      final snapshot = await resourcesFrom((uri) {
+        expect(
+          uri.toString(),
+          'http://192.168.2.90:9000/api/suite/system/resources',
+        );
+        return http.Response(
+          jsonEncode(<String, dynamic>{
+            'cpu': {'percent': 42.5, 'cores': 8},
+            'memory': {
+              'total': 16_000_000_000,
+              'used': 8_000_000_000,
+              'percent': 50.0,
+            },
+            'gpu': null,
+            'host': {
+              'hostname': 'nmtk-host',
+              'platform': 'Linux-6.8-x86_64',
+              'uptime': 100.0,
+            },
+          }),
+          200,
+        );
+      });
+
+      expect(snapshot?.cpuPercent, 42.5);
+      expect(snapshot?.memoryUsed, 8_000_000_000);
+      expect(snapshot?.hasGpu, isFalse);
+      expect(snapshot?.hostname, 'nmtk-host');
+    });
+
+    test('parses GPU stats when present', () async {
+      final snapshot = await resourcesFrom(
+        (_) => http.Response(
+          jsonEncode(<String, dynamic>{
+            'cpu': {'percent': 1.0, 'cores': 1},
+            'memory': {'total': 1, 'used': 1, 'percent': 1.0},
+            'gpu': [
+              {
+                'name': 'NVIDIA T4',
+                'memory_total': 16_000_000_000,
+                'memory_used': 4_000_000_000,
+                'utilization': 33,
+              },
+            ],
+            'host': {
+              'hostname': 'gpu-host',
+              'platform': 'Linux',
+              'uptime': 10.0,
+            },
+          }),
+          200,
+        ),
+      );
+
+      expect(snapshot?.hasGpu, isTrue);
+      expect(snapshot?.gpus?.single.name, 'NVIDIA T4');
+      expect(snapshot?.gpus?.single.utilization, 33);
+    });
+
+    test('returns null when the backend is unreachable or erroring', () async {
+      expect(await resourcesFrom((_) => http.Response('nope', 502)), isNull);
+      expect(
+        await ControlApiService(
+          baseUri: Uri.parse('http://192.168.2.90:8090'),
+          client: MockClient((_) async => throw http.ClientException('down')),
+        ).fetchSystemResources(),
+        isNull,
+      );
     });
   });
 

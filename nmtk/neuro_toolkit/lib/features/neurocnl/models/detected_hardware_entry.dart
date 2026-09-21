@@ -29,9 +29,9 @@ class DetectedHardwareEntry {
 
   /// Whether [chipType] has a paired-host model the launcher can auto-create.
   ///
-  /// Only Akida has one today; Speck and serial/Teensy detections are reported
-  /// but not auto-added until those paired-host models exist.
-  bool get isAutoAddable => chipType == 'akida';
+  /// Akida and Speck same-host USB devices auto-add today; serial/Teensy hits
+  /// are reported but not auto-added until those paired-host models exist.
+  bool get isAutoAddable => chipType == 'akida' || chipType == 'speck';
 
   factory DetectedHardwareEntry.fromJson(Map<String, dynamic> json) {
     return DetectedHardwareEntry(

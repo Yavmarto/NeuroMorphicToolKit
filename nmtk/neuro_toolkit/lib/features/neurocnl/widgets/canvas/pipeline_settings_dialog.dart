@@ -51,45 +51,49 @@ class _PipelineSettingsDialogState
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      insetPadding: NmtkDialogSurface.insetPadding(context),
       shape: RoundedRectangleBorder(borderRadius: NmtkDesignTokens.dialogShape),
       title: const Text('Pipeline Settings'),
-      content: Form(
-        key: formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextFormField(
-              controller: epochsController,
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              decoration: const InputDecoration(labelText: 'Epochs'),
-              validator: (value) {
-                final parsed = int.tryParse(value ?? '');
-                if (parsed == null || parsed < 1 || parsed > 2000) {
-                  return 'Enter a number between 1 and 2000';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              controller: seedController,
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              decoration: const InputDecoration(
-                labelText: 'Random Seed',
-                helperText:
-                    'Pins weight init / data shuffling for reproducible runs',
+      content: NmtkDialogSurface.wrapScrollable(
+        context,
+        Form(
+          key: formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextFormField(
+                controller: epochsController,
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                decoration: const InputDecoration(labelText: 'Epochs'),
+                validator: (value) {
+                  final parsed = int.tryParse(value ?? '');
+                  if (parsed == null || parsed < 1 || parsed > 2000) {
+                    return 'Enter a number between 1 and 2000';
+                  }
+                  return null;
+                },
               ),
-              validator: (value) {
-                final parsed = int.tryParse(value ?? '');
-                if (parsed == null || parsed < 0) {
-                  return 'Enter a non-negative integer';
-                }
-                return null;
-              },
-            ),
-          ],
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: seedController,
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                decoration: const InputDecoration(
+                  labelText: 'Random Seed',
+                  helperText:
+                      'Pins weight init / data shuffling for reproducible runs',
+                ),
+                validator: (value) {
+                  final parsed = int.tryParse(value ?? '');
+                  if (parsed == null || parsed < 0) {
+                    return 'Enter a non-negative integer';
+                  }
+                  return null;
+                },
+              ),
+            ],
+          ),
         ),
       ),
       actions: [

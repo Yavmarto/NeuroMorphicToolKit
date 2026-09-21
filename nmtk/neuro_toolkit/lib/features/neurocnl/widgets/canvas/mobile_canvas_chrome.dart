@@ -255,9 +255,11 @@ class CanvasChromeIconButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(
           NmtkShellTokens.of(context).radiusLg,
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(10),
-          child: Icon(icon, color: color, size: 20),
+        child: SizedBox(
+          // 44x44 minimum tap target (icon stays visually 20px via Center).
+          width: 44,
+          height: 44,
+          child: Center(child: Icon(icon, color: color, size: 20)),
         ),
       ),
     );

@@ -6,7 +6,7 @@ import 'package:zeta_flutter/zeta_flutter.dart' show ZetaButton;
 import 'package:neuro_toolkit/providers/riverpod_providers.dart';
 import 'package:neuro_toolkit/screens/tool_view.dart';
 import 'package:neuro_toolkit/src/features/module/domain/module_state.dart';
-import 'package:neuro_toolkit/ui_core/shell_tokens.dart';
+import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
 /// Hosts the launcher's single workspace surface and global lifecycle dialogs.
 class LauncherAppHost extends ConsumerStatefulWidget {
@@ -54,21 +54,11 @@ class _LauncherAppHostState extends ConsumerState<LauncherAppHost> {
     final releaseNotes = update.releaseNotes.trim().isEmpty
         ? 'No published release notes were found for this version.'
         : update.releaseNotes;
-    final tokens = NmtkShellTokens.of(context);
-    // CEL-421: release notes can be long. A ZetaDialog message is plain,
-    // non-scrollable text, so it clips on a short phone. Use a scrollable
-    // AlertDialog with the same actions and a token-scaled margin instead.
     showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder: (dialogContext) => AlertDialog(
-        scrollable: true,
-        insetPadding: EdgeInsets.symmetric(
-          horizontal: tokens.sectionGap,
-          vertical: tokens.sectionGap * 1.5,
-        ),
-        constraints: const BoxConstraints(maxWidth: 560),
-        title: const Text('Launcher Update Available'),
+      builder: (dialogContext) => NmtkContentDialog(
+        title: 'Launcher Update Available',
         content: SelectableText(
           'A new version of NeuroToolkit (${update.version}) is '
           'available.\n\nRelease Notes:\n$releaseNotes',

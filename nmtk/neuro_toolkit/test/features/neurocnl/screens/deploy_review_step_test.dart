@@ -9,6 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart' show Override;
 import 'package:mockito/mockito.dart';
 import 'package:neuro_toolkit/features/neurocnl/l10n/app_localizations.dart';
+import 'package:neuro_toolkit/features/neurocnl/features/studio/workflow/steps/deploy_review_step/support.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/api_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/deploy_results_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/workspace_provider.dart';
@@ -16,6 +17,7 @@ import 'package:neuro_toolkit/features/neurocnl/screens/studio_screen.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/server_config_service.dart';
 import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:zeta_flutter/zeta_flutter.dart' show ZetaIconButton;
 
 import '../providers_test.mocks.dart';
 
@@ -24,8 +26,9 @@ Future<ProviderContainer> _pumpReviewStep(
   required MockApiClient mockApi,
   required String target,
   List<Override> overrides = const <Override>[],
+  Size size = const Size(1440, 900),
 }) async {
-  tester.view.physicalSize = const Size(1440, 900);
+  tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
@@ -156,4 +159,122 @@ void main() {
     expect(find.text('Lava / Loihi2'), findsWidgets);
     expect(find.text('PYNQ-Z2'), findsWidgets);
   });
+
+  testWidgets(
+    'compare mode stacks targets in a scrollable list on a phone-width '
+    'viewport instead of squeezing them side by side',
+    (WidgetTester tester) async {
+      final container = await _pumpReviewStep(
+        tester,
+        mockApi: mockApi,
+        target: 'lava',
+        size: const Size(375, 667),
+        overrides: [
+          deployTargetHasResultProvider('lava').overrideWithValue(true),
+          deployTargetHasResultProvider('pynq').overrideWithValue(true),
+        ],
+      );
+
+      container.read(reviewCompareTargetsProvider.notifier).set(
+        const {'lava', 'pynq'},
+      );
+      container.read(reviewCompareModeProvider.notifier).set(true);
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Comparing 2'), findsOneWidget);
+      // Narrow layout stacks in a ListView, not the desktop Row.
+      expect(find.byType(ListView), findsOneWidget);
+      expect(
+        find.byType(Row).evaluate().any((element) {
+          final row = element.widget as Row;
+          return row.children.any((child) => child is VerticalDivider);
+        }),
+        isFalse,
+      );
+    },
+  );
+
+  testWidgets(
+    'target dropdown does not overflow on a phone-width viewport with a '
+    'long "not run yet" label',
+    (WidgetTester tester) async {
+      await _pumpReviewStep(
+        tester,
+        mockApi: mockApi,
+        target: 'lava',
+        size: const Size(375, 667),
+      );
+
+      expect(tester.takeException(), isNull);
+
+      // 'sc_neurocore_sim' renders as "SC-NeuroCore (Simulation) (not run
+      // yet)" — the longest label reviewableTargets can produce, and exactly
+      // the kind of text that overflowed the DropdownButton's Row before it
+      // got `isExpanded: true` and an ellipsis.
+      await tester.tap(find.byType(DropdownButton<String>));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      expect(
+        find.text('SC-NeuroCore (Simulation) (not run yet)'),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets(
+    'the shell back arrow stays enabled at the Review step on a '
+    'phone-width viewport in the empty state',
+    (WidgetTester tester) async {
+      await _pumpReviewStep(
+        tester,
+        mockApi: mockApi,
+        target: 'lava',
+        size: const Size(375, 667),
+      );
+
+      expect(tester.takeException(), isNull);
+      final backButtonFinder = find.widgetWithIcon(
+        ZetaIconButton,
+        Icons.arrow_back,
+      );
+      expect(backButtonFinder, findsOneWidget);
+      expect(
+        tester.widget<ZetaIconButton>(backButtonFinder).onPressed,
+        isNotNull,
+        reason:
+            'deployReview is the last pipeline step, so "Previous step" '
+            'must never be disabled — it is this step-flow\'s only back '
+            'affordance since there is no OS back gesture on desktop/web.',
+      );
+    },
+  );
+
+  testWidgets(
+    'the shell back arrow stays enabled at the Review step on a '
+    'phone-width viewport once a result renders',
+    (WidgetTester tester) async {
+      await _pumpReviewStep(
+        tester,
+        mockApi: mockApi,
+        target: 'lava',
+        size: const Size(375, 667),
+        overrides: [
+          deployTargetHasResultProvider('lava').overrideWithValue(true),
+        ],
+      );
+
+      expect(tester.takeException(), isNull);
+      final backButtonFinder = find.widgetWithIcon(
+        ZetaIconButton,
+        Icons.arrow_back,
+      );
+      expect(backButtonFinder, findsOneWidget);
+      expect(
+        tester.widget<ZetaIconButton>(backButtonFinder).onPressed,
+        isNotNull,
+      );
+    },
+  );
 }

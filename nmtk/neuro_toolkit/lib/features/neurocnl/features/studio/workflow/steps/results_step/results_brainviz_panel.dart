@@ -7,7 +7,7 @@ import 'package:neuro_toolkit/features/neurocnl/providers/coactivation_provider.
 import 'package:neuro_toolkit/features/neurocnl/providers/training_mode_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/services/coactivation_correlation.dart';
 import 'package:neuro_toolkit/features/neurocnl/utils/force_directed_layout.dart';
-import 'package:neuro_toolkit/features/neurocnl/widgets/brainviz_force_3d_view.dart';
+import 'package:neuro_toolkit/features/neurocnl/widgets/brainviz_variants.dart';
 import 'package:neuro_toolkit/features/neurocnl/widgets/canvas/spike_playback_transport.dart';
 
 /// Results-tab brainviz: per-neuron force-directed layout driven by the same
@@ -60,6 +60,11 @@ class _ResultsBrainvizPanelState extends ConsumerState<ResultsBrainvizPanel>
   int _displayBin = -1;
   Map<String, double> _displayActivity = const <String, double>{};
   String _loadedRasterId = '';
+  BrainvizVariant? _focusedVariant;
+
+  /// Above this node count the comparison grid is too expensive to run several
+  /// force layouts at once, so the panel falls back to a single variant.
+  static const int _compareNodeCap = 160;
 
   bool get _usesSharedClock => widget.playbackController != null;
 
@@ -223,14 +228,77 @@ class _ResultsBrainvizPanelState extends ConsumerState<ResultsBrainvizPanel>
         : _snapshot;
     final clusterIndices = coactivationClusterIndices(snapshot);
     final viewKey = useLive ? 'live-training' : _loadedRasterId;
+    final matrix = snapshot.coactivationMatrix();
+    final canCompare = graph.nodes.length <= _compareNodeCap;
+    final showCompare = _focusedVariant == null && canCompare;
 
-    return BrainvizForce3DView(
-      key: ValueKey(viewKey),
-      graph: graph,
-      activity: activity,
-      correlationMatrix: snapshot.correlations,
-      nodeClusterIndices: clusterIndices.isEmpty ? null : clusterIndices,
-      padding: 32,
+    final Widget body = showCompare
+        ? BrainvizVariantsView(
+            key: ValueKey('compare-$viewKey'),
+            graph: graph,
+            activity: activity,
+            matrix: matrix,
+            clusterIndices: clusterIndices.isEmpty ? null : clusterIndices,
+          )
+        : buildBrainvizVariant(
+            key: ValueKey('${_focusedVariant?.name ?? 'wires'}-$viewKey'),
+            variant: _focusedVariant ?? BrainvizVariant.wires,
+            graph: graph,
+            activity: activity,
+            matrix: matrix,
+            clusterIndices: clusterIndices.isEmpty ? null : clusterIndices,
+          );
+
+    return Column(
+      children: [
+        _buildModeBar(canCompare),
+        Expanded(child: body),
+      ],
+    );
+  }
+
+  Widget _buildModeBar(bool canCompare) {
+    return SizedBox(
+      height: 40,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        child: Row(
+          children: [
+            _modeChip(
+              label: 'Compare',
+              selected: _focusedVariant == null,
+              enabled: canCompare,
+              onSelected: () => setState(() => _focusedVariant = null),
+            ),
+            for (final variant in BrainvizVariant.values)
+              _modeChip(
+                label: variant.label,
+                selected: _focusedVariant == variant,
+                enabled: true,
+                onSelected: () => setState(() => _focusedVariant = variant),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _modeChip({
+    required String label,
+    required bool selected,
+    required bool enabled,
+    required VoidCallback onSelected,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+      child: ChoiceChip(
+        label: Text(label),
+        selected: selected,
+        onSelected: enabled ? (_) => onSelected() : null,
+        visualDensity: VisualDensity.compact,
+        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
     );
   }
 }

@@ -460,12 +460,15 @@ class ValidationPopup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final tokens = NmtkShellTokens.of(context);
+    final maxWidth = MediaQuery.sizeOf(context).width - (tokens.sectionGap * 2);
+    final maxHeight = MediaQuery.sizeOf(context).height * 0.6;
     return Material(
       // ZETA-MIGRATION-EXEMPT: transparent (no fill) — Zeta has no transparent token
       color: Colors.transparent,
       child: Container(
-        width: 340,
-        constraints: const BoxConstraints(maxHeight: 400),
+        width: maxWidth.clamp(0, 340),
+        constraints: BoxConstraints(maxHeight: maxHeight),
         decoration: BoxDecoration(
           color: AppTheme.surface,
           borderRadius: BorderRadius.circular(
@@ -562,11 +565,15 @@ class _PopupHeader extends StatelessWidget {
           const Spacer(),
           Tooltip(
             message: 'Dismiss',
-            child: ZetaIconButton.text(
-              onPressed: onClose,
-              icon: ZetaIcons.close,
-              size: ZetaWidgetSize.small,
-              semanticLabel: 'Dismiss',
+            child: SizedBox(
+              width: 44,
+              height: 44,
+              child: ZetaIconButton.text(
+                onPressed: onClose,
+                icon: ZetaIcons.close,
+                size: ZetaWidgetSize.small,
+                semanticLabel: 'Dismiss',
+              ),
             ),
           ),
         ],

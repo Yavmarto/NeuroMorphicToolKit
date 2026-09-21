@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
 import 'package:mockito/mockito.dart';
 
+import 'package:neuro_toolkit/features/neurocnl/models/job_status.dart';
 import 'package:neuro_toolkit/features/neurocnl/models/studio_result_session.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/api_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/notebook_meta_provider.dart';
@@ -168,6 +172,99 @@ void main() {
       );
     });
 
+    test(
+      'transport error reconnects when the server job is still running',
+      () async {
+        container
+            .read(studioResultSessionProvider.notifier)
+            .beginAttempt(
+              platforms: const ['snntorch_sim'],
+              provenance: const StudioResultProvenance(
+                workspaceName: 'W',
+                modelFingerprint: 'fp',
+              ),
+            );
+        final attemptId = container
+            .read(studioResultSessionProvider)
+            .attemptId!;
+        final firstController = StreamController<Map<String, dynamic>>();
+        var streamCalls = 0;
+        when(api.streamTrainingEvents('job-1')).thenAnswer((_) {
+          streamCalls++;
+          if (streamCalls == 1) {
+            return firstController.stream;
+          }
+          return Stream.fromIterable([
+            {'type': 'done'},
+          ]);
+        });
+        when(api.getJobStatus('job-1')).thenAnswer(
+          (_) async => const JobStatus<void>(jobId: 'job-1', status: 'running'),
+        );
+
+        container
+            .read(trainingRunControllerProvider.notifier)
+            .subscribeToJob('snntorch_sim', 'job-1', attemptId);
+        firstController.addError(
+          http.ClientException('Connection closed while receiving data'),
+        );
+        await pumpEventQueue();
+        await pumpEventQueue();
+        await pumpEventQueue();
+
+        final session = container.read(studioResultSessionProvider);
+        expect(
+          session.platforms['snntorch_sim']?.outcome,
+          StudioPlatformOutcome.complete,
+        );
+        expect(streamCalls, 2);
+        verify(api.getJobStatus('job-1')).called(1);
+      },
+    );
+
+    test(
+      'transport error marks failed when the server job already failed',
+      () async {
+        container
+            .read(studioResultSessionProvider.notifier)
+            .beginAttempt(
+              platforms: const ['snntorch_sim'],
+              provenance: const StudioResultProvenance(
+                workspaceName: 'W',
+                modelFingerprint: 'fp',
+              ),
+            );
+        final attemptId = container
+            .read(studioResultSessionProvider)
+            .attemptId!;
+        when(api.streamTrainingEvents('job-1')).thenAnswer(
+          (_) => Stream.error(
+            http.ClientException('Connection closed while receiving data'),
+          ),
+        );
+        when(api.getJobStatus('job-1')).thenAnswer(
+          (_) async => const JobStatus<void>(
+            jobId: 'job-1',
+            status: 'failed',
+            error: 'kernel died',
+          ),
+        );
+
+        container
+            .read(trainingRunControllerProvider.notifier)
+            .subscribeToJob('snntorch_sim', 'job-1', attemptId);
+        await pumpEventQueue();
+        await pumpEventQueue();
+        await pumpEventQueue();
+
+        final session = container.read(studioResultSessionProvider);
+        expect(
+          session.platforms['snntorch_sim']?.outcome,
+          StudioPlatformOutcome.error,
+        );
+      },
+    );
+
     test('a superseded attempt is ignored', () async {
       container
           .read(studioResultSessionProvider.notifier)
@@ -329,6 +426,65 @@ void main() {
         );
       },
     );
+  });
+
+  group('resyncRunningSubscriptions', () {
+    test('re-subscribes to every platform still marked running', () async {
+      container
+          .read(studioResultSessionProvider.notifier)
+          .beginAttempt(
+            platforms: const ['snntorch_sim'],
+            provenance: const StudioResultProvenance(
+              workspaceName: 'W',
+              modelFingerprint: 'fp',
+            ),
+          );
+      final attemptId = container.read(studioResultSessionProvider).attemptId!;
+      container
+          .read(trainingJobIdsProvider.notifier)
+          .setJobId('snntorch_sim', 'job-1');
+      final openStream = StreamController<Map<String, dynamic>>();
+      var streamCalls = 0;
+      when(api.streamTrainingEvents('job-1')).thenAnswer((_) {
+        streamCalls++;
+        if (streamCalls == 1) {
+          return openStream.stream;
+        }
+        return const Stream.empty();
+      });
+
+      container
+          .read(trainingRunControllerProvider.notifier)
+          .subscribeToJob('snntorch_sim', 'job-1', attemptId);
+      await pumpEventQueue();
+      expect(streamCalls, 1);
+
+      container
+          .read(trainingRunControllerProvider.notifier)
+          .resyncRunningSubscriptions();
+      await pumpEventQueue();
+      await pumpEventQueue();
+
+      expect(streamCalls, 2);
+    });
+  });
+
+  group('isRecoverableTrainingStreamError', () {
+    test('treats ClientException as recoverable', () {
+      expect(
+        isRecoverableTrainingStreamError(
+          http.ClientException('Connection closed while receiving data'),
+        ),
+        isTrue,
+      );
+    });
+
+    test('does not treat ApiException as recoverable', () {
+      expect(
+        isRecoverableTrainingStreamError(const ApiException(500, 'down')),
+        isFalse,
+      );
+    });
   });
 
   group('stopTraining / cancelSubscriptions', () {

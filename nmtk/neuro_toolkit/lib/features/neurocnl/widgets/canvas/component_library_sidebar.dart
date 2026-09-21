@@ -89,32 +89,36 @@ class _CategorySection extends StatelessWidget {
       children: [
         InkWell(
           onTap: onToggle,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            child: Row(
-              children: [
-                Icon(
-                  Icons
-                      .category_outlined, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
-                  size: 14,
-                  color: color,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    _titleForCategory(category),
-                    style: Zeta.of(context).textStyles.labelSmall.copyWith(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.5,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 44),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons
+                        .category_outlined, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
+                    size: 14,
+                    color: color,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _titleForCategory(category),
+                      style: Zeta.of(context).textStyles.labelSmall.copyWith(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.5,
+                      ),
                     ),
                   ),
-                ),
-                Icon(
-                  isExpanded ? ZetaIcons.expand_less : ZetaIcons.expand_more,
-                  size: 16,
-                ),
-              ],
+                  Icon(
+                    isExpanded ? ZetaIcons.expand_less : ZetaIcons.expand_more,
+                    size: 16,
+                    color: Zeta.of(context).colors.mainSubtle,
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -136,7 +140,9 @@ class _NirTypeTile extends ConsumerWidget {
       data: type,
       feedback: Material(
         elevation: 4,
-        borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+        borderRadius: BorderRadius.circular(
+          NmtkShellTokens.of(context).radiusSm,
+        ),
         child: _PaletteItemCard(type: type, isDragging: true),
       ),
       childWhenDragging: Opacity(
@@ -158,12 +164,14 @@ class _PaletteItemCard extends StatelessWidget {
     final color = nirCategoryColor(context, type.category);
     return Container(
       width: isDragging ? 180 : null,
-      height: 40,
+      height: 44,
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
         color: color.withValues(alpha: isDragging ? 0.15 : 0.08),
-        borderRadius: BorderRadius.circular(NmtkShellTokens.of(context).radiusSm),
+        borderRadius: BorderRadius.circular(
+          NmtkShellTokens.of(context).radiusSm,
+        ),
         border: isDragging ? Border.all(color: color, width: 1.5) : null,
       ),
       child: Row(

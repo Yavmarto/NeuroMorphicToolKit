@@ -22,37 +22,91 @@ class NmtkContentDialog extends StatelessWidget {
   final List<Widget> actions;
   final double maxWidth;
 
+  static const double _minTapTarget = 44;
+
   @override
   Widget build(BuildContext context) {
     final tokens = NmtkShellTokens.of(context);
     final colors = Zeta.of(context).colors;
+    final media = MediaQuery.of(context);
+    final viewInsets = media.viewInsets;
+    final margin = tokens.sectionGap;
+    final isCompact = media.size.width < NmtkShellTokens.compactBreakpoint;
+    final effectiveMaxWidth = isCompact
+        ? media.size.width - margin * 2
+        : maxWidth.clamp(0.0, media.size.width - margin * 2);
+    final maxDialogHeight =
+        media.size.height - viewInsets.vertical - margin * 2;
+    final stackActions = isCompact && actions.length > 2;
+
     return Dialog(
       backgroundColor: colors.surfaceDefault,
+      insetPadding: EdgeInsets.fromLTRB(
+        margin,
+        margin + viewInsets.top,
+        margin,
+        margin + viewInsets.bottom,
+      ),
       shape: RoundedRectangleBorder(borderRadius: NmtkDesignTokens.dialogShape),
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: maxWidth),
-        child: Padding(
-          padding: EdgeInsets.all(tokens.sectionGap),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(title, style: Zeta.of(context).textStyles.titleLarge),
-              SizedBox(height: tokens.sectionGap),
-              Flexible(child: content),
-              if (actions.isNotEmpty) ...[
+      child: SafeArea(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: effectiveMaxWidth,
+            maxHeight: maxDialogHeight,
+          ),
+          child: Padding(
+            padding: EdgeInsets.all(tokens.sectionGap),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(title, style: Zeta.of(context).textStyles.titleLarge),
                 SizedBox(height: tokens.sectionGap),
-                Wrap(
-                  alignment: WrapAlignment.end,
-                  spacing: tokens.compactGap,
-                  runSpacing: tokens.compactGap,
-                  children: actions,
+                Flexible(
+                  child: SingleChildScrollView(
+                    child: content,
+                  ),
                 ),
+                if (actions.isNotEmpty) ...[
+                  SizedBox(height: tokens.sectionGap),
+                  if (stackActions)
+                    _buildStackedActions(tokens)
+                  else
+                    _buildWrappedActions(tokens),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildWrappedActions(NmtkShellTokens tokens) {
+    return Wrap(
+      alignment: WrapAlignment.end,
+      spacing: tokens.compactGap,
+      runSpacing: tokens.compactGap,
+      children: actions.map(_ensureMinTapTarget).toList(),
+    );
+  }
+
+  Widget _buildStackedActions(NmtkShellTokens tokens) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (var i = 0; i < actions.length; i++) ...[
+          if (i > 0) SizedBox(height: tokens.compactGap),
+          _ensureMinTapTarget(actions[i]),
+        ],
+      ],
+    );
+  }
+
+  Widget _ensureMinTapTarget(Widget action) {
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: _minTapTarget),
+      child: action,
     );
   }
 }

@@ -40,6 +40,7 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
     final compact =
         MediaQuery.sizeOf(context).width < NmtkShellTokens.compactBreakpoint;
 
+    // Allowed: single-topic surface
     final configPanel = NmtkSurfaceCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -180,6 +181,7 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
                 ),
     );
 
+    // Allowed: single-topic surface
     final resultsPanel = NmtkSurfaceCard(
       expandChild: true,
       child: exportState.isLoading

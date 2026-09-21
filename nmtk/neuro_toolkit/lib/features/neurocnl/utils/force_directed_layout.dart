@@ -852,8 +852,13 @@ class ForceDirectedLayout3D {
 
 /// Incremental 3D force layout for the Results brainviz tab.
 class CorrelationForceBrainvizLayout3D {
-  CorrelationForceBrainvizLayout3D(CanvasGraph graph)
-    : _engine = ForceDirectedLayout3D(graph) {
+  CorrelationForceBrainvizLayout3D(
+    CanvasGraph graph, {
+    ForceDirectedLayoutConfig? config,
+  }) : _engine = ForceDirectedLayout3D(
+         graph,
+         config: config ?? kBrainvizForceLayoutConfig,
+       ) {
     _engine.relax(72);
   }
 

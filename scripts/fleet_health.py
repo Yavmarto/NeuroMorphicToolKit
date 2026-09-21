@@ -14,12 +14,18 @@ Rigs whose ``kind`` is ``ci-runner`` are checked against the GitHub Actions
 runners API instead of SSH, because they are reached through labels, not a
 fixed host login.
 
+For an Akida PCIe card whose driver is not bound, ``--repair`` runs the scoped
+``nmtk-akida-driver-rebuild`` DKMS helper on the rig over SSH and re-checks. The
+helper is idempotent and NOPASSWD-scoped to itself (CEL-374), so this is the
+repeatable recovery path for the failure that CEL-374 fixed by hand.
+
 Examples:
     python3 scripts/fleet_health.py
     python3 scripts/fleet_health.py --rig moosebun2
     python3 scripts/fleet_health.py --json
     python3 scripts/fleet_health.py --check-doc
     python3 scripts/fleet_health.py --print-target moosebun2
+    python3 scripts/fleet_health.py --rig moosebun2 --repair
 
 Exit codes:
     0  every checked rig is OK or only optionally degraded
@@ -110,6 +116,11 @@ def probe_akida_pci(vendor, device):
     return probe
 
 
+def probe_akida_helper():
+    path = "/usr/local/libexec/nmtk-akida-driver-rebuild"
+    return path if os.access(path, os.X_OK) else ""
+
+
 def collect_containers(engine):
     containers = []
     if not engine:
@@ -166,6 +177,10 @@ def main():
         "devNodes": sorted(glob.glob("/dev/akida*")),
         "akidaPci": probe_akida_pci("0x1e7c", "0xbca1"),
         "neurochipService": run(["systemctl", "is-active", "neurochip.service"]),
+        "akidaDriverHelper": probe_akida_helper(),
+        "dkmsStatus": (
+            run(["dkms", "status", "akida-dw-edma"]) if shutil.which("dkms") else ""
+        ),
         "containerEngine": engine,
         "containers": collect_containers(engine),
     }
@@ -310,7 +325,12 @@ def check_hardware(item: dict[str, Any], facts: dict[str, Any]) -> tuple[bool, s
             return False, f"PCI {probe.get('bdf')} present but no driver bound"
         if probe.get("memorySpaceEnabled") is False:
             return False, f"PCI {probe.get('bdf')} is wedged (memory space disabled)"
-        return True, f"PCI {probe.get('bdf')} bound to {probe.get('driver')}"
+        detail = f"PCI {probe.get('bdf')} bound to {probe.get('driver')}"
+        dkms = str(facts.get("dkmsStatus") or "").strip()
+        if dkms:
+            protected = "installed" in dkms.lower()
+            detail += f" | DKMS {'installed' if protected else 'NOT installed'}"
+        return True, detail
     if kind == "char_device":
         nodes = facts.get("devNodes") or []
         pattern = item.get("pattern", "/dev/akida*")
@@ -327,6 +347,29 @@ def check_hardware(item: dict[str, Any], facts: dict[str, Any]) -> tuple[bool, s
         reachable = tcp_reachable(host, port)
         return reachable, f"{host}:{port} {'reachable' if reachable else 'unreachable'}"
     return False, f"unknown hardware check kind: {kind}"
+
+
+def warn_on_missing_akida_dkms(
+    rig: dict[str, Any], facts: dict[str, Any], report: dict[str, Any]
+) -> None:
+    """Warn when the Akida PCI driver is bound but DKMS cannot rebuild it.
+
+    CEL-374: without a DKMS registration the out-of-tree ``akida-pcie`` module is
+    dropped on the next kernel bump, silently leaving the AKD1000 unbound. The
+    card still works today, so this is a warning, not a failure.
+    """
+    if not any(item.get("kind") == "pci" for item in rig.get("expectedHardware") or []):
+        return
+    probe = facts.get("akidaPci") or {}
+    if not probe.get("present") or not probe.get("driver"):
+        return
+    dkms = str(facts.get("dkmsStatus") or "").strip()
+    if dkms and "installed" not in dkms.lower():
+        report["warnings"].append(
+            "akida-pcie is bound but the akida-dw-edma DKMS module is not installed "
+            "for the running kernel; the next kernel update will drop the card "
+            "(run the nmtk-akida-driver-rebuild helper or fleet-health --repair)"
+        )
 
 
 def check_services(
@@ -515,6 +558,8 @@ def evaluate_rig(
                     f"{entry['id']} not present (optional): {detail}"
                 )
 
+    warn_on_missing_akida_dkms(rig, facts, report)
+
     prophesee_present = any(
         item.get("id") == "prophesee-evk" and entry["present"]
         for item, entry in zip(rig.get("expectedHardware") or [], report["hardware"])
@@ -535,6 +580,95 @@ def evaluate_rig(
     else:
         report["status"] = STATUS_OK
     return report
+
+
+AKIDA_DRIVER_HELPER = "/usr/local/libexec/nmtk-akida-driver-rebuild"
+
+
+def _akida_driver_unbound(report: dict[str, Any]) -> bool:
+    return any(
+        not entry.get("present") and "no driver bound" in str(entry.get("detail", ""))
+        for entry in report.get("hardware") or []
+    )
+
+
+def repair_akida_driver(
+    rig: dict[str, Any], inventory: dict[str, Any], ssh_bin: str, timeout: int
+) -> tuple[bool, str]:
+    """Run the scoped DKMS rebuild helper on a rig over SSH.
+
+    Idempotent: the installed helper rebuilds and reinstalls the out-of-tree
+    ``akida-pcie`` module for the running kernel and is NOPASSWD-scoped to itself
+    (CEL-374), so recovery needs no interactive root session.
+    """
+    target = resolve_target(rig, inventory)
+    if not target:
+        return False, "no SSH target configured"
+    remote = (
+        f"if [ -x {AKIDA_DRIVER_HELPER} ]; then "
+        f"sudo -n {AKIDA_DRIVER_HELPER}; "
+        f"else echo 'nmtk-akida-driver-rebuild is not installed' >&2; exit 127; fi"
+    )
+    command = [
+        ssh_bin,
+        "-o",
+        "BatchMode=yes",
+        "-o",
+        f"ConnectTimeout={timeout}",
+        "-o",
+        "StrictHostKeyChecking=accept-new",
+        target,
+        remote,
+    ]
+    try:
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            timeout=max(timeout, 10) + 600,
+            check=False,
+        )
+    except FileNotFoundError:
+        return False, f"{ssh_bin} not found"
+    except subprocess.TimeoutExpired:
+        return False, "driver repair timed out"
+    lines = (result.stdout or result.stderr or "").strip().splitlines()
+    detail = lines[-1] if lines else f"ssh exited {result.returncode}"
+    return result.returncode == 0, detail
+
+
+def repair_reports(
+    reports: list[dict[str, Any]],
+    inventory: dict[str, Any],
+    ssh_bin: str,
+    timeout: int,
+) -> list[dict[str, Any]]:
+    """Attempt an in-place Akida driver recovery for unbound rigs, then re-check."""
+    repaired: list[dict[str, Any]] = []
+    for report in reports:
+        if report.get("kind") == "ci-runner" or not _akida_driver_unbound(report):
+            repaired.append(report)
+            continue
+        rig = rig_by_id(inventory, report["id"])
+        ok, detail = repair_akida_driver(rig, inventory, ssh_bin, timeout)
+        attempt = {
+            "target": "akida-pcie-driver",
+            "success": ok,
+            "detail": detail,
+        }
+        if ok:
+            fresh = evaluate_rig(rig, inventory, ssh_bin, timeout)
+            fresh["repairs"] = [attempt]
+            repaired.append(fresh)
+        else:
+            report = dict(report)
+            report["repairs"] = [attempt]
+            report["failures"] = [
+                *report.get("failures", []),
+                f"akida-pcie driver repair failed: {detail}",
+            ]
+            repaired.append(report)
+    return repaired
 
 
 def gh_runner_status(
@@ -606,9 +740,7 @@ def evaluate_runner(
         "warnings": [],
         "error": error,
     }
-    if status == STATUS_UNKNOWN:
-        report["warnings"].append(error)
-    elif status != STATUS_OK:
+    if status == STATUS_UNKNOWN or status != STATUS_OK:
         report["warnings"].append(error)
     return report
 
@@ -684,6 +816,14 @@ def render_report(reports: list[dict[str, Any]]) -> None:
                 tag = "" if item["required"] else " (optional)"
                 print(f"    {mark}  {item['id']:<20} {item['detail']}{tag}")
 
+        for repair in report.get("repairs", []):
+            mark = (
+                color("[OK]  ", "32")
+                if repair.get("success")
+                else color("[FAIL]", "31")
+            )
+            print(f"    {mark}  repair {repair['target']}: {repair['detail']}")
+
         for runner in report.get("runners", []):
             busy = "busy" if runner["busy"] else "idle"
             print(
@@ -731,6 +871,14 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--json", action="store_true", help="print the report as JSON")
     parser.add_argument(
         "--strict", action="store_true", help="exit non-zero on a DEGRADED rig too"
+    )
+    parser.add_argument(
+        "--repair",
+        action="store_true",
+        help=(
+            "for a rig with an unbound Akida PCI driver, run the scoped "
+            "nmtk-akida-driver-rebuild helper over SSH and re-check"
+        ),
     )
     parser.add_argument(
         "--check-doc",
@@ -798,6 +946,8 @@ def main(argv: list[str] | None = None) -> int:
     reports = evaluate_all(
         inventory, args.ssh_bin, timeout, args.rig, not args.no_runner_api
     )
+    if args.repair:
+        reports = repair_reports(reports, inventory, args.ssh_bin, timeout)
 
     if args.json:
         print(json.dumps(reports, indent=2, sort_keys=True))

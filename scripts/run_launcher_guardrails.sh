@@ -11,6 +11,7 @@ ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT_DIR"
 
 RUN_INTEGRATION=false
+RUN_K8S=false
 FAIL_NAMES=()
 FAIL_OUTPUTS=()
 FAILURE_REPORT=""
@@ -20,11 +21,15 @@ for arg in "$@"; do
     --with-integration)
       RUN_INTEGRATION=true
       ;;
+    --with-k8s)
+      RUN_K8S=true
+      ;;
     --help|-h)
-      echo "Usage: ./scripts/run_launcher_guardrails.sh [--with-integration]"
+      echo "Usage: ./scripts/run_launcher_guardrails.sh [--with-integration] [--with-k8s]"
       echo ""
       echo "Runs launcher doctor, then launcher unit tests and launcher Flutter tests when doctor passes."
       echo "--with-integration also runs the root integration tests for suite-visible launcher changes."
+      echo "--with-k8s also runs the real-cluster Kubernetes executor tests (needs kubectl + a reachable cluster)."
       exit 0
       ;;
     *)
@@ -185,6 +190,14 @@ if [[ "$RUN_INTEGRATION" == true ]]; then
 
   print_header "Golden Path CI Gate"
   capture_stage "golden_path_tests" "$PYTHON3" -m pytest tests/integration/test_golden_path_1.py -m golden_path -v || STATUS=1
+fi
+
+if [[ "$RUN_K8S" == true ]]; then
+  print_header "Kubernetes Cluster Integration"
+  # Opt-in real-cluster verification of the Kubernetes deployment executor and
+  # manifest renderer. Needs kubectl pointed at a reachable cluster (the suite
+  # provisions a throwaway kind cluster when K8S_KIND_PROVISION=true).
+  capture_stage "kubernetes_cluster_integration" env K8S_INTEGRATION_TEST=true "$PYTHON3" -m pytest tests/integration/test_kubernetes_cluster_e2e.py -q || STATUS=1
 fi
 
 write_failure_report

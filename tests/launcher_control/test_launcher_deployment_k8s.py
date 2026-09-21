@@ -40,8 +40,8 @@ class TestLauncherDeploymentK8s(LauncherControlServiceTestBase):
             ],
         )
         self.assertIn("name: nmtk-test", manifests["00-namespace.yaml"])
-        self.assertIn("LOG_LEVEL: info", manifests["01-configmap.yaml"])
-        self.assertIn("API_KEY: secret-value", manifests["02-secret.yaml"])
+        self.assertIn('LOG_LEVEL: "info"', manifests["01-configmap.yaml"])
+        self.assertIn('API_KEY: "secret-value"', manifests["02-secret.yaml"])
         self.assertIn(
             "image: ghcr.io/yavmarto/neurocnl:v1.2.3",
             manifests["03-deployment.yaml"],
@@ -208,3 +208,104 @@ class TestLauncherDeploymentK8s(LauncherControlServiceTestBase):
                 for f in result.degraded_findings
             )
         )
+
+    def test_k8s_rendered_manifests_are_valid_yaml_with_string_data(self) -> None:
+        """Regression: the rendered set must parse and use string Config/Secret data.
+
+        A real apiserver rejected the pre-fix output twice over: unquoted numeric
+        ``ConfigMap`` values, and the secret ``env`` block emitted a duplicate,
+        mis-indented ``env:`` key. Assert the exact properties that failed so the
+        breakage is caught without a live cluster.
+        """
+        import yaml
+
+        from nmtk.launcher_control.deployment_contracts import DeploymentTarget
+        from nmtk.launcher_control.deployment_k8s_renderer import render_manifests
+
+        target = DeploymentTarget(
+            id="k8s-yaml",
+            display_name="K8s YAML",
+            target_type="kubernetes_cluster",
+            mode="kubernetes",
+            namespace="nmtk-yaml",
+            backend_port=9000,
+            image_tag="1.0",
+        )
+        manifests = render_manifests(
+            target,
+            app_name="nmtk-suite-api",
+            image="ghcr.io/yavmarto/neurocnl",
+            health_path="/api/suite/health",
+            container_port=9000,
+            replicas=1,
+            env={"LOG_LEVEL": "info"},
+            secret_env={"API_KEY": "secret-value"},
+        )
+
+        docs = {name: yaml.safe_load(text) for name, text in manifests.items()}
+        self.assertEqual(
+            {name: doc["kind"] for name, doc in docs.items()},
+            {
+                "00-namespace.yaml": "Namespace",
+                "01-configmap.yaml": "ConfigMap",
+                "02-secret.yaml": "Secret",
+                "03-deployment.yaml": "Deployment",
+                "04-service.yaml": "Service",
+            },
+        )
+
+        config_data = docs["01-configmap.yaml"]["data"]
+        self.assertEqual(config_data["SUITE_API_PORT"], "9000")
+        self.assertTrue(all(isinstance(value, str) for value in config_data.values()))
+
+        secret_data = docs["02-secret.yaml"]["stringData"]
+        self.assertTrue(all(isinstance(value, str) for value in secret_data.values()))
+
+        containers = docs["03-deployment.yaml"]["spec"]["template"]["spec"][
+            "containers"
+        ]
+        self.assertEqual(len(containers), 1)
+        env_entries = {entry["name"]: entry for entry in containers[0]["env"]}
+        self.assertEqual(env_entries["PYTHONUNBUFFERED"]["value"], "1")
+        self.assertEqual(
+            env_entries["API_KEY"]["valueFrom"]["secretKeyRef"]["name"],
+            "nmtk-suite-api-secrets",
+        )
+
+    def test_k8s_health_check_resolves_target_host_not_api_server(self) -> None:
+        """The health probe must target the backend host, never the kube API server."""
+        from nmtk.launcher_control.deployment_contracts import DeploymentTarget
+        from nmtk.launcher_control.deployment_executors import (
+            KubernetesDeploymentExecutor,
+        )
+
+        target = DeploymentTarget(
+            id="k8s-health",
+            display_name="K8s Health",
+            target_type="kubernetes_cluster",
+            mode="kubernetes",
+            namespace="nmtk-test",
+            host="backend.example.test",
+            backend_port=9000,
+            api_server="https://api.example.test:6443",
+        )
+        executor = KubernetesDeploymentExecutor(repo_root=self.repo_root)
+        opened: list[str] = []
+
+        class _Response:
+            status = 200
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, *exc: object) -> bool:
+                return False
+
+        def _open(url: str, *, timeout: float) -> _Response:
+            opened.append(url)
+            return _Response()
+
+        with mock.patch.object(executor, "_open_url", side_effect=_open):
+            executor._health_check(target)
+
+        self.assertEqual(opened, ["http://backend.example.test:9000/api/suite/health"])

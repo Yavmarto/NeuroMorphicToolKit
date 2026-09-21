@@ -14,16 +14,19 @@ import 'package:neuro_toolkit/ui_core/nmtk_ui_core.dart';
 
 import 'package:neuro_toolkit/screens/tool_view/module_uri_resolver.dart'
     as uri_resolver;
+import 'package:neuro_toolkit/screens/server_access_popup.dart';
 import 'package:neuro_toolkit/screens/tool_view/tool_view_workspace_controller.dart';
 
-/// Sends the user back to the sign-in/setup popup for a new server pick.
+/// Opens the server popup for the current session, or the sign-in flow when
+/// disconnected.
 ///
-/// Logs out of the current Connect session, which flips
-/// `connectNotifierProvider` to `idle`; `ServerAccessGate` (mounted above
-/// `LauncherAppHost`) reacts by overlaying the adaptive sign-in popup on the
-/// still-visible workspace. The request counter covers the case where logout
-/// is a no-op (already disconnected) so the popup still reopens on demand.
+/// When already connected, the popup shows live server stats without logging
+/// out. "Change server" inside the popup signs out and returns to sign-in.
 Future<void> showServerConnectionPopup(BuildContext context, WidgetRef ref) {
+  final phase = ref.read(connectNotifierProvider).phase;
+  if (phase == ConnectPhase.connected || phase == ConnectPhase.devOffline) {
+    return showServerAccessPopup(context);
+  }
   ref.read(connectNotifierProvider.notifier).logout();
   ref.read(serverAccessPopupRequestProvider.notifier).request();
   return Future<void>.value();

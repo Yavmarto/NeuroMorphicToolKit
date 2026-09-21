@@ -250,7 +250,7 @@ scripts/build_and_deliver_apk.sh
 Builds `nmtk/neuro_toolkit` as a **profile** build by default (`--debug` and `--release` are
 also available as flags), builds the macOS DMG first then the Android APK, and copies each
 artifact into the local Box sync folder (default
-`~/Library/CloudStorage/Box-Box/NMTK/Builds`; override with `--box-dir` or `NMTK_BOX_DIR`).
+`~/Library/CloudStorage/Box-Box/2. NMTK/Builds`; override with `--box-dir` or `NMTK_BOX_DIR`).
 Use `--apk-only` or `--dmg-only` to build just one, or `--skip-build` to copy existing artifacts.
 If Box is not installed or synced, the copy is skipped with a warning and the script still exits 0.
 A DMG build failure does not block APK delivery when both are requested.

@@ -34,6 +34,7 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
   Widget build(BuildContext context) {
     final exportState = ref.watch(exportProvider);
     return AlertDialog(
+      insetPadding: NmtkDialogSurface.insetPadding(context),
       title: const Text('Export Design'),
       actions: [
         ZetaButton.outline(

@@ -35,7 +35,14 @@ def container(service, health="healthy", state="running", config_files=OVERLAY_F
     }
 
 
-def facts(containers=None, akida_present=True, neurochip_service="active", lsusb=None):
+def facts(
+    containers=None,
+    akida_present=True,
+    neurochip_service="active",
+    lsusb=None,
+    akida_driver="akida",
+    dkms_status="",
+):
     if containers is None:
         containers = [
             container("suite_api"),
@@ -52,10 +59,12 @@ def facts(containers=None, akida_present=True, neurochip_service="active", lsusb
         "akidaPci": {
             "present": akida_present,
             "bdf": "0000:01:00.0" if akida_present else "",
-            "driver": "akida" if akida_present else "",
+            "driver": akida_driver if akida_present else "",
             "memorySpaceEnabled": True if akida_present else None,
         },
         "neurochipService": neurochip_service,
+        "akidaDriverHelper": "/usr/local/libexec/nmtk-akida-driver-rebuild",
+        "dkmsStatus": dkms_status,
         "containerEngine": "docker",
         "containers": containers,
     }
@@ -292,3 +301,98 @@ def test_single_rig_filter(tmp_path: Path):
     fake = write_fake_ssh(tmp_path, facts())
     res = run_script(inventory_path=path, ssh_bin=fake, args=("--rig", "rigtest"))
     assert res.returncode == 0
+
+
+def test_dkms_installed_reported_in_hardware_detail(tmp_path: Path):
+    path = write_inventory(tmp_path, inventory())
+    payload = facts(dkms_status="akida-dw-edma/1.0, 6.0.0-test, x86_64: installed")
+    fake = write_fake_ssh(tmp_path, payload)
+    res = run_script(inventory_path=path, ssh_bin=fake)
+    assert res.returncode == 0, res.stdout
+    assert "DKMS installed" in res.stdout
+    assert "DKMS module is not installed" not in res.stdout
+
+
+def test_missing_akida_dkms_warns_without_failing(tmp_path: Path):
+    path = write_inventory(tmp_path, inventory())
+    payload = facts(dkms_status="akida-dw-edma/1.0, 6.0.0-test, x86_64: built")
+    fake = write_fake_ssh(tmp_path, payload)
+    res = run_script(inventory_path=path, ssh_bin=fake)
+    assert res.returncode == 0, res.stdout
+    assert "DKMS NOT installed" in res.stdout
+    assert "akida-dw-edma DKMS module is not installed" in res.stdout
+
+
+def _write_repair_ssh(tmp_path: Path, unbound: dict, bound: dict, subdir: str) -> Path:
+    """Fake ssh: first probe is unbound, the repair runs the helper, next probe is bound."""
+    base = tmp_path / subdir
+    fake_bin = base / "bin"
+    fake_bin.mkdir(parents=True, exist_ok=True)
+    counter = base / "probe-count"
+    fake = fake_bin / "fake-repair-ssh"
+    fake.write_text(
+        f"""#!/bin/sh
+cmd="$*"
+if echo "$cmd" | grep -q "nmtk-akida-driver-rebuild"; then
+  echo "==> akida-pcie bound for kernel 6.0.0-test"
+  exit 0
+fi
+cat >/dev/null
+count=$(cat "{counter}" 2>/dev/null || echo 0)
+if [ "$count" -eq 0 ]; then
+  printf '%s\\n' '{json.dumps(unbound)}'
+  echo 1 > "{counter}"
+else
+  printf '%s\\n' '{json.dumps(bound)}'
+fi
+""",
+        encoding="utf-8",
+    )
+    fake.chmod(0o755)
+    return fake
+
+
+def test_repair_runs_helper_and_recovers_unbound_driver(tmp_path: Path):
+    path = write_inventory(tmp_path, inventory())
+    unbound = facts(akida_driver="")
+    bound = facts(akida_driver="akida-pcie")
+
+    without = run_script(
+        inventory_path=path,
+        ssh_bin=_write_repair_ssh(tmp_path, unbound, bound, subdir="without"),
+    )
+    assert without.returncode == 1
+    assert "no driver bound" in without.stdout
+
+    healed = run_script(
+        inventory_path=path,
+        ssh_bin=_write_repair_ssh(tmp_path, unbound, bound, subdir="healed"),
+        args=("--repair",),
+    )
+    assert healed.returncode == 0, healed.stdout
+    assert "repair akida-pcie-driver" in healed.stdout
+    assert "bound to akida-pcie" in healed.stdout
+
+
+def test_repair_reports_failure_when_helper_missing(tmp_path: Path):
+    path = write_inventory(tmp_path, inventory())
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir(exist_ok=True)
+    fake = fake_bin / "fake-fail-ssh"
+    fake.write_text(
+        f"""#!/bin/sh
+cmd="$*"
+if echo "$cmd" | grep -q "nmtk-akida-driver-rebuild"; then
+  echo "nmtk-akida-driver-rebuild is not installed" >&2
+  exit 127
+fi
+cat >/dev/null
+printf '%s\\n' '{json.dumps(facts(akida_driver=""))}'
+""",
+        encoding="utf-8",
+    )
+    fake.chmod(0o755)
+    res = run_script(inventory_path=path, ssh_bin=fake, args=("--repair",))
+    assert res.returncode == 1
+    assert "repair akida-pcie-driver" in res.stdout
+    assert "driver repair failed" in res.stdout

@@ -29,29 +29,25 @@ class AuthCredentialSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        Row(
-          children: [
-            Text(
-              'Auth method',
-              style: Theme.of(
-                context,
-              ).textTheme.labelMedium?.copyWith(color: AppTheme.textSecondary),
+        // Label above the control, not beside it — a side-by-side Row does not
+        // wrap, so at the minimum supported mobile width the label and the
+        // two-segment control cannot both fit on one line.
+        Text(
+          'Auth method',
+          style: Theme.of(
+            context,
+          ).textTheme.labelMedium?.copyWith(color: AppTheme.textSecondary),
+        ),
+        const SizedBox(height: 6),
+        ZetaSegmentedControl<String>(
+          selected: authMode,
+          onChanged: onAuthModeChanged,
+          segments: const [
+            ZetaButtonSegment<String>(
+              value: 'password',
+              child: Text('Password'),
             ),
-            const SizedBox(width: 12),
-            ZetaSegmentedControl<String>(
-              selected: authMode,
-              onChanged: onAuthModeChanged,
-              segments: const [
-                ZetaButtonSegment<String>(
-                  value: 'password',
-                  child: Text('Password'),
-                ),
-                ZetaButtonSegment<String>(
-                  value: 'ssh_key',
-                  child: Text('SSH Key'),
-                ),
-              ],
-            ),
+            ZetaButtonSegment<String>(value: 'ssh_key', child: Text('SSH Key')),
           ],
         ),
         const SizedBox(height: 12),

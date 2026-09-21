@@ -10,6 +10,7 @@ export 'shell_tokens.dart';
 export 'widgets/buttons.dart';
 export 'widgets/code_text_area.dart';
 export 'widgets/content_dialog.dart';
+export 'widgets/dialog_surface.dart';
 export 'widgets/empty_state.dart';
 export 'widgets/error_card.dart';
 export 'widgets/info_chip.dart';

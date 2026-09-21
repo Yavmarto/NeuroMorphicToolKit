@@ -41,21 +41,6 @@ Future<void> showNeurosenseConfigDialog(
   }
 }
 
-/// Inline sensor setup for the Studio Setup step (and reused by
-/// [StudioNeuroSenseWorkspace] when both setup + execution are shown).
-class NeurosenseSetupSection extends ConsumerWidget {
-  const NeurosenseSetupSection({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final config = ref.watch(neuroSenseSourceProvider);
-    return NeurosenseSetupPane(
-      config: config,
-      onConfigureSource: () => showNeurosenseConfigDialog(context, ref),
-    );
-  }
-}
-
 class NeurosenseSetupPane extends StatelessWidget {
   const NeurosenseSetupPane({
     super.key,

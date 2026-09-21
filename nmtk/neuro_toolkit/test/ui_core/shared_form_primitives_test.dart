@@ -43,6 +43,72 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Import requirements'), findsOneWidget);
     expect(find.text('Structured content'), findsOneWidget);
+    expect(find.byType(SingleChildScrollView), findsOneWidget);
+  });
+
+  testWidgets('content dialog fits narrow viewport with scrollable body', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(375, 667);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      ZetaProvider(
+        initialContrast: ZetaContrast.aa,
+        initialThemeMode: ThemeMode.dark,
+        builder: (context, light, dark, mode) => MaterialApp(
+          theme: light,
+          darkTheme: dark,
+          themeMode: mode,
+          home: Builder(
+            builder: (context) => ZetaButton(
+              label: 'Open',
+              onPressed: () => showDialog<void>(
+                context: context,
+                builder: (context) => NmtkContentDialog(
+                  title: 'Import requirements',
+                  content: Column(
+                    children: [
+                      for (var i = 0; i < 20; i++)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Text('Line $i'),
+                        ),
+                    ],
+                  ),
+                  actions: [
+                    ZetaButton.text(
+                      label: 'Cancel',
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                    ZetaButton.text(
+                      label: 'Save',
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                    ZetaButton(
+                      label: 'Import',
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 16));
+
+    await tester.tap(find.text('Open'));
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('Import requirements'), findsOneWidget);
+    expect(find.byType(SingleChildScrollView), findsOneWidget);
+    expect(find.text('Line 19'), findsOneWidget);
   });
 
   testWidgets('code text area edits with the registered monospace font', (

@@ -15,13 +15,18 @@ class RegressionTrendsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final resultsAsync = ref.watch(benchmarkResultsProvider(benchmarkId));
     final baselinesAsync = ref.watch(baselinesProvider);
+    final isCompact =
+        MediaQuery.sizeOf(context).width < NmtkShellTokens.compactBreakpoint;
 
     return Scaffold(
       appBar: AppBar(
         // ZETA-MIGRATION-EXEMPT: no Zeta app bar exists; this is the same
         // rationale nmtk_ui_core's own mobile scaffold uses for its
         // hamburger/title bar (see studio_screen.dart).
-        leadingWidth: 190,
+        // A 190px leading label leaves a ~375px phone almost no room for
+        // the "Trends: <id>" title, so it shrinks to just "Back" below the
+        // compact breakpoint while keeping the same back affordance.
+        leadingWidth: isCompact ? 96 : 190,
         leading: ZetaButton.text(
           onPressed: () {
             if (Navigator.of(context).canPop()) {
@@ -30,10 +35,10 @@ class RegressionTrendsScreen extends ConsumerWidget {
             }
             context.go('/');
           },
-          label: 'Back to Workbench',
+          label: isCompact ? 'Back' : 'Back to Workbench',
           leadingIcon: ZetaIcons.arrow_back,
         ),
-        title: Text('Trends: $benchmarkId'),
+        title: Text('Trends: $benchmarkId', overflow: TextOverflow.ellipsis),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -105,9 +110,10 @@ class _BaselineReferenceTable extends StatelessWidget {
           for (final b in baselines)
             ListTile(
               dense: true,
-              leading: const Icon(
+              leading: Icon(
                 Icons.science_outlined,
                 size: 18,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ), // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
               title: Text(b.targetId ?? b.id),
               subtitle: Text(b.params['framework']?.toString() ?? ''),
@@ -115,8 +121,8 @@ class _BaselineReferenceTable extends StatelessWidget {
                   ? Text(
                       '${((b.metrics['accuracy']!) * 100).toStringAsFixed(1)}%',
                       style: Zeta.of(context).textStyles.bodyMedium.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                        fontWeight: FontWeight.bold,
+                      ),
                     )
                   : null,
             ),
@@ -158,8 +164,8 @@ class _TrendsTable extends StatelessWidget {
                 ? Text(
                     '${(acc * 100).toStringAsFixed(1)}%',
                     style: Zeta.of(context).textStyles.bodyMedium.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                      fontWeight: FontWeight.bold,
+                    ),
                   )
                 : null,
           );

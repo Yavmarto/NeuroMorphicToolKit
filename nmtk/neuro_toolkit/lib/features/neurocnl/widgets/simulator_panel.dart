@@ -479,7 +479,7 @@ class SimulatorAvailabilityChip extends StatelessWidget {
     return Tooltip(
       message: capability.unavailableReason ?? 'Dependency not installed.',
       child: Chip(
-        avatar: const Icon(ZetaIcons.download, size: 12),
+        avatar: Icon(ZetaIcons.download, size: 12, color: tokens.degradedColor),
         label: Text(
           capability.requiresOptionalDependency != null
               ? 'Install ${capability.requiresOptionalDependency}'
@@ -993,11 +993,9 @@ class _ErrorSummaryButton extends StatelessWidget {
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Simulator Error'),
-          content: SizedBox(
-            width: 520,
-            child: SingleChildScrollView(
-              child: Text(formatSimulatorRunError(error)),
-            ),
+          content: NmtkDialogSurface.wrapScrollable(
+            context,
+            Text(formatSimulatorRunError(error)),
           ),
           actions: [
             ZetaButton.text(

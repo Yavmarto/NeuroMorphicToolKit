@@ -87,15 +87,13 @@ class NeurocnlInfoButton extends StatelessWidget {
               borderRadius: NmtkDesignTokens.dialogShape,
             ),
             title: Text(title),
-            content: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: SingleChildScrollView(
-                child: Text(
-                  message,
-                  style: Theme.of(
-                    dialogContext,
-                  ).textTheme.bodyMedium?.copyWith(height: 1.5),
-                ),
+            content: NmtkDialogSurface.wrapScrollable(
+              dialogContext,
+              Text(
+                message,
+                style: Theme.of(
+                  dialogContext,
+                ).textTheme.bodyMedium?.copyWith(height: 1.5),
               ),
             ),
             actions: [

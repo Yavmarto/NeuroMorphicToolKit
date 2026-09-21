@@ -32,23 +32,52 @@ class BrainvizForce3DView extends StatefulWidget {
     required this.graph,
     this.activity,
     this.correlationMatrix,
+    this.wireMatrix,
     this.nodeClusterIndices,
     this.selectedNodeId,
     this.onNodeSelected,
     this.animate = true,
     this.padding = 32,
     this.maxLabels = 8,
+    this.drawWires = true,
+    this.ringActivity = false,
+    this.useCorrelationDegree = true,
+    this.showLabels = true,
+    this.correlationAttraction,
   });
 
   final CanvasGraph graph;
   final Map<String, double>? activity;
+
+  /// Drives layout attraction between co-active nodes.
   final Map<String, Map<String, double>>? correlationMatrix;
+
+  /// Drives the drawn wires. Defaults to [correlationMatrix] when null, so a
+  /// caller can keep the physics but hide/clarify the wiring.
+  final Map<String, Map<String, double>>? wireMatrix;
   final Map<String, int>? nodeClusterIndices;
   final String? selectedNodeId;
   final ValueChanged<CanvasNode?>? onNodeSelected;
   final bool animate;
   final double padding;
   final int maxLabels;
+
+  /// Draw co-firing wires between nodes.
+  final bool drawWires;
+
+  /// Emit an expanding ring from each firing node.
+  final bool ringActivity;
+
+  /// Let correlation degree contribute to node size. Off to make an
+  /// activity-only view.
+  final bool useCorrelationDegree;
+
+  /// Draw node labels.
+  final bool showLabels;
+
+  /// Override the layout's co-activation attraction. Higher pulls co-active
+  /// nodes into tighter clusters; `null` keeps the default.
+  final double? correlationAttraction;
 
   @override
   State<BrainvizForce3DView> createState() => _BrainvizForce3DViewState();
@@ -61,6 +90,7 @@ class _BrainvizForce3DViewState extends State<BrainvizForce3DView>
   String? _internalSelectedId;
   OrbitCamera _camera = OrbitCamera.identity;
   double _lastScale = 1.0;
+  double _elapsedSeconds = 0.0;
   final Map<String, double> _smoothedActivity = <String, double>{};
   Map<String, Map<String, double>>? _cachedCorrelationMatrix;
   List<({String a, String b, double strength})>? _cachedCorrelationPairs;
@@ -93,6 +123,13 @@ class _BrainvizForce3DViewState extends State<BrainvizForce3DView>
       _cachedCorrelationMatrix = null;
       _cachedCorrelationPairs = null;
     }
+    if (widget.correlationAttraction != oldWidget.correlationAttraction) {
+      _rebuildLayout();
+    }
+    if (widget.wireMatrix != oldWidget.wireMatrix) {
+      _cachedCorrelationMatrix = null;
+      _cachedCorrelationPairs = null;
+    }
     if (!mapEquals(widget.activity, oldWidget.activity)) {
       _syncActivityTargets();
     }
@@ -106,7 +143,15 @@ class _BrainvizForce3DViewState extends State<BrainvizForce3DView>
   }
 
   void _rebuildLayout() {
-    _layout = CorrelationForceBrainvizLayout3D(widget.graph);
+    final attraction = widget.correlationAttraction;
+    _layout = CorrelationForceBrainvizLayout3D(
+      widget.graph,
+      config: attraction == null
+          ? null
+          : kBrainvizForceLayoutConfig.copyWith(
+              correlationAttraction: attraction,
+            ),
+    );
     _layout!.setCorrelations(widget.correlationMatrix);
     _syncActivityTargets();
   }
@@ -148,9 +193,25 @@ class _BrainvizForce3DViewState extends State<BrainvizForce3DView>
     return false;
   }
 
+  /// True while any node carries a non-trivial rate. Keeps the ticker alive so
+  /// active nodes breathe instead of freezing the instant the layout settles —
+  /// the difference between "lights up when it fires" and "one animation, then
+  /// a still image".
+  bool _hasActiveNodes() {
+    if (!widget.animate) return false;
+    final target = widget.activity;
+    if (target == null) return false;
+    for (final value in target.values) {
+      if (value > 0.02) return true;
+    }
+    return false;
+  }
+
   bool get _wantsAnimation =>
       widget.animate &&
-      (_activitySmoothingActive() || (_layout?.isSettled == false));
+      (_hasActiveNodes() ||
+          _activitySmoothingActive() ||
+          (_layout?.isSettled == false));
 
   void _restartTickerIfNeeded() {
     if (!_wantsAnimation) {
@@ -162,8 +223,9 @@ class _BrainvizForce3DViewState extends State<BrainvizForce3DView>
     _ticker ??= createTicker(_onTick)..start();
   }
 
-  void _onTick(Duration _) {
+  void _onTick(Duration elapsed) {
     if (!mounted) return;
+    _elapsedSeconds = elapsed.inMicroseconds / 1000000.0;
     var needsRepaint = false;
     final target = widget.activity;
     if (target != null) {
@@ -180,6 +242,9 @@ class _BrainvizForce3DViewState extends State<BrainvizForce3DView>
       _layout!.advance();
       needsRepaint = true;
     }
+    if (_hasActiveNodes()) {
+      needsRepaint = true;
+    }
     if (needsRepaint) {
       setState(() {});
     }
@@ -188,6 +253,22 @@ class _BrainvizForce3DViewState extends State<BrainvizForce3DView>
       _ticker?.dispose();
       _ticker = null;
     }
+  }
+
+  /// Per-node glow multiplier in roughly `0.85..1.35`, oscillating at a slow
+  /// rate and phase-offset per node. Amplitude scales with activity, so only
+  /// firing nodes visibly shimmer; quiet nodes stay a steady dim dot.
+  Map<String, double> _pulseByNode() {
+    if (!_hasActiveNodes()) return const <String, double>{};
+    final pulse = <String, double>{};
+    for (final entry in _smoothedActivity.entries) {
+      final act = entry.value.clamp(0.0, 1.0);
+      if (act <= 0.02) continue;
+      final phase = (entry.key.hashCode & 0x3ff) / 0x3ff * 2 * math.pi;
+      final wobble = 0.5 + 0.5 * math.sin(_elapsedSeconds * 4.0 + phase);
+      pulse[entry.key] = 0.85 + 0.5 * act * wobble;
+    }
+    return pulse;
   }
 
   String? get _selectedId => widget.selectedNodeId ?? _internalSelectedId;
@@ -266,7 +347,7 @@ class _BrainvizForce3DViewState extends State<BrainvizForce3DView>
     final result = <String, double>{};
     for (final node in widget.graph.nodes) {
       final activity = (_smoothedActivity[node.id] ?? 0.0).clamp(0.0, 1.0);
-      final degreeNorm = maxDegree <= 0
+      final degreeNorm = !widget.useCorrelationDegree || maxDegree <= 0
           ? 0.0
           : (degrees[node.id] ?? 0) / maxDegree;
       result[node.id] = math.max(activity, degreeNorm);
@@ -277,7 +358,7 @@ class _BrainvizForce3DViewState extends State<BrainvizForce3DView>
   Map<String, double> _nodeRadii() {
     final significance = _nodeSignificance();
     return significance.map(
-      (id, value) => MapEntry(id, 2.0 + 6.0 * value.clamp(0.0, 1.0)),
+      (id, value) => MapEntry(id, 4.0 + 12.0 * value.clamp(0.0, 1.0)),
     );
   }
 
@@ -321,9 +402,11 @@ class _BrainvizForce3DViewState extends State<BrainvizForce3DView>
 
     final zeta = Zeta.of(context);
     final tokens = NmtkShellTokens.of(context);
-    final matrix = widget.correlationMatrix ?? const {};
-    final pairs = _correlationPairsFor(matrix);
-    final labelIds = _labelNodeIds();
+    final matrix = widget.wireMatrix ?? widget.correlationMatrix ?? const {};
+    final pairs = widget.drawWires
+        ? _correlationPairsFor(matrix)
+        : const <({String a, String b, double strength})>[];
+    final labelIds = widget.showLabels ? _labelNodeIds() : const <String>{};
     final radii = _nodeRadii();
 
     return LayoutBuilder(
@@ -363,6 +446,10 @@ class _BrainvizForce3DViewState extends State<BrainvizForce3DView>
                             positionsRevision: layout.positionsRevision,
                             projection: projection,
                             activity: _smoothedActivity,
+                            pulse: _pulseByNode(),
+                            drawWires: widget.drawWires,
+                            ringActivity: widget.ringActivity,
+                            elapsedSeconds: _elapsedSeconds,
                             radii: radii,
                             correlationPairs: pairs,
                             nodeClusterIndices: widget.nodeClusterIndices,

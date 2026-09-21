@@ -1,4 +1,4 @@
-.PHONY: release help dev dev-a dev-i dev-web dev-native clean-all bump-version ci notices notices-check suite_api_dev check-devices check-flutter-devices check-fleet rig-verify rig-provision docker docker-a docker-i docker-all docker-ex docker-ex-deploy docker-ex-m docker-ex-a docker-ex-i docker-ex-down docker-ex-all docker-ex-all-m docker-ex-all-a docker-ex-all-i secrets-init macos-signing-check build-macos-dmg-signed webtop-build webtop-up webtop-down webtop webtop-trust voyager-compile-spike voyager-aipu-spike qnn-cpu-spike qnn-fetch-qairt jetson-compile-spike coral-compile-spike monitoring-up monitoring-down monitoring-smoke monitoring-logs monitoring-urls
+.PHONY: release help dev dev-a dev-i dev-web dev-native clean-all bump-version ci notices notices-check suite_api_dev check-devices check-flutter-devices check-fleet rig-verify rig-provision akida-driver-recovery docker docker-a docker-i docker-all docker-ex docker-ex-deploy docker-ex-m docker-ex-a docker-ex-i docker-ex-down docker-ex-all docker-ex-all-m docker-ex-all-a docker-ex-all-i secrets-init macos-signing-check build-macos-dmg-signed webtop-build webtop-up webtop-down webtop webtop-trust voyager-compile-spike voyager-aipu-spike qnn-cpu-spike qnn-fetch-qairt jetson-compile-spike coral-compile-spike monitoring-up monitoring-down monitoring-smoke monitoring-logs monitoring-urls
 
 # OS detection for Flutter device targeting
 OS := $(shell uname)
@@ -48,6 +48,7 @@ help:
 	@echo "  make check-devices            - Fleet health report for every edge test rig (ARGS='--json')"
 	@echo "  make check-fleet              - Alias for check-devices"
 	@echo "  make rig-verify RIG=<id>      - Read-only health report for one rig"
+	@echo "  make akida-driver-recovery RIG=<id> - Rebuild the Akida PCIe driver on a rig when it is unbound"
 	@echo "  make rig-provision RIG=<id>   - Sync, bring a rig up (overlays auto), then verify"
 	@echo "  make suite_api_dev            - Start unified suite_api backend on port 9000 (with reload)"
 	@echo "  make release-publish VERSION=x.y.z - Cut, push, watch CI and verify a full release"
@@ -436,6 +437,14 @@ check-flutter-devices:
 rig-verify:
 	@if [ -z "$(RIG)" ]; then echo "Error: RIG is not set. Use 'make rig-verify RIG=moosebun2'"; exit 1; fi
 	@python3 scripts/fleet_health.py --rig $(RIG) $(ARGS)
+
+# Monitored, repeatable recovery for the AKD1000 Akida PCIe driver (CEL-460):
+# report the rig, and when the driver is unbound, run the scoped DKMS rebuild
+# helper over SSH and re-check. Needs the nmtk-akida-driver-rebuild NOPASSWD
+# helper installed on the rig (scripts/dev/akida_driver_rebuild.sh --install-for).
+akida-driver-recovery:
+	@if [ -z "$(RIG)" ]; then echo "Error: RIG is not set. Use 'make akida-driver-recovery RIG=moosebun2'"; exit 1; fi
+	@python3 scripts/fleet_health.py --rig $(RIG) --repair $(ARGS)
 
 # Idempotent provisioning entry point: resolve the rig's SSH target from the
 # inventory, sync and bring it up with the right overlays auto-detected, then

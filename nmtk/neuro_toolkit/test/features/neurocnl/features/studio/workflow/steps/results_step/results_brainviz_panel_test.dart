@@ -7,6 +7,7 @@ import 'package:neuro_toolkit/features/neurocnl/models/canvas/canvas.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/canvas/canvas_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/training_mode_provider.dart';
 import 'package:neuro_toolkit/features/neurocnl/widgets/brainviz_force_3d_view.dart';
+import 'package:neuro_toolkit/features/neurocnl/widgets/brainviz_variants.dart';
 
 CanvasGraph _layerGraph() {
   return CanvasGraph(
@@ -35,43 +36,43 @@ Widget _wrap(Widget child, ProviderContainer container) {
   return UncontrolledProviderScope(
     container: container,
     child: MaterialApp(
-      home: Scaffold(
-        body: SizedBox(width: 640, height: 480, child: child),
-      ),
+      home: Scaffold(body: SizedBox(width: 640, height: 480, child: child)),
     ),
   );
 }
 
 void main() {
-  testWidgets('live training feed renders BrainvizForce3DView from canvas graph', (
-    tester,
-  ) async {
-    final container = ProviderContainer();
-    addTearDown(container.dispose);
+  testWidgets(
+    'live training feed renders BrainvizForce3DView from canvas graph',
+    (tester) async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
 
-    await tester.pumpWidget(
-      _wrap(
-        ResultsBrainvizPanel(
-          rasterId: 'empty',
-          raster: const <String, List<double>>{},
-          duration: 0,
-          liveTraining: true,
-          onPlaybackComplete: () {},
+      await tester.pumpWidget(
+        _wrap(
+          ResultsBrainvizPanel(
+            rasterId: 'empty',
+            raster: const <String, List<double>>{},
+            duration: 0,
+            liveTraining: true,
+            onPlaybackComplete: () {},
+          ),
+          container,
         ),
-        container,
-      ),
-    );
-    await tester.pump();
-    container.read(canvasProvider.notifier).setGraph(_layerGraph());
-    container.read(trainingModeProvider.notifier).setRates(
-      const <String, double>{'a': 0.8, 'b': 0.3},
-    );
-    await tester.pump();
+      );
+      await tester.pump();
+      container.read(canvasProvider.notifier).setGraph(_layerGraph());
+      container.read(trainingModeProvider.notifier).setRates(
+        const <String, double>{'a': 0.8, 'b': 0.3},
+      );
+      await tester.pump();
 
-    expect(find.byType(BrainvizForce3DView), findsOneWidget);
-    expect(find.text('Waiting for live training activations…'), findsNothing);
-    expect(tester.takeException(), isNull);
-  });
+      expect(find.byType(BrainvizVariantsView), findsOneWidget);
+      expect(find.byType(BrainvizForce3DView), findsWidgets);
+      expect(find.text('Waiting for live training activations…'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('shows waiting copy when liveTraining has no rates yet', (
     tester,
@@ -106,7 +107,7 @@ void main() {
       _wrap(
         ResultsBrainvizPanel(
           rasterId: 'n0',
-          raster: <String, List<double>>{
+          raster: const <String, List<double>>{
             '0': <double>[10, 50],
             '1': <double>[12, 52],
           },
@@ -118,6 +119,43 @@ void main() {
       ),
     );
 
+    expect(find.byType(BrainvizVariantsView), findsOneWidget);
+    expect(find.byType(BrainvizForce3DView), findsWidgets);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('compare shows every variant and a chip focuses one', (
+    tester,
+  ) async {
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    await tester.pumpWidget(
+      _wrap(
+        ResultsBrainvizPanel(
+          rasterId: 'n0',
+          raster: const <String, List<double>>{
+            '0': <double>[10, 50],
+            '1': <double>[12, 52],
+          },
+          duration: 100,
+          liveTraining: false,
+          onPlaybackComplete: () {},
+        ),
+        container,
+      ),
+    );
+
+    // Compare is the default: a card per variant, and every variant has a chip.
+    expect(find.byType(BrainvizVariantsView), findsOneWidget);
+    expect(find.byType(BrainvizForce3DView), findsWidgets);
+    expect(find.widgetWithText(ChoiceChip, 'Co-firing grid'), findsOneWidget);
+
+    // Focusing a variant collapses the grid to that one view.
+    await tester.tap(find.widgetWithText(ChoiceChip, 'Wires'));
+    await tester.pump();
+
+    expect(find.byType(BrainvizVariantsView), findsNothing);
     expect(find.byType(BrainvizForce3DView), findsOneWidget);
     expect(tester.takeException(), isNull);
   });

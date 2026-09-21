@@ -152,7 +152,13 @@ class NmtkTopAppBar extends StatelessWidget implements PreferredSizeWidget {
                         minimumSize: const Size(40, 40),
                       ),
                       onPressed: action.onPressed,
-                      icon: Icon(action.icon, size: 18),
+                      icon: Icon(
+                        action.icon,
+                        size: 18,
+                        color: isSelected
+                            ? palette.accentForeground
+                            : theme.colorScheme.onSurfaceVariant,
+                      ),
                     )
                   : ZetaButton.outline(
                       label: action.label!,
