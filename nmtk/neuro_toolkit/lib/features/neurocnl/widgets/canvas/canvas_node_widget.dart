@@ -12,6 +12,7 @@ import 'package:neuro_toolkit/features/neurocnl/providers/training_mode_provider
 import 'package:neuro_toolkit/features/neurocnl/theme/nir_node_styles.dart';
 import 'package:neuro_toolkit/features/neurocnl/utils/canvas_node_subtitle.dart';
 import 'package:neuro_toolkit/features/neurocnl/utils/canvas_projection_utils.dart';
+import 'package:neuro_toolkit/features/neurocnl/widgets/canvas/canvas_node_card_widget.dart';
 import 'package:neuro_toolkit/features/neurocnl/widgets/canvas/canvas_shared_widgets.dart';
 import 'package:neuro_toolkit/features/neurocnl/widgets/canvas/network_canvas.dart';
 
@@ -40,7 +41,7 @@ bool canvasNodeAcceptsConnection(
   return connectingPortType.isCompatibleWith(tgtType);
 }
 
-class CanvasNodeWidget extends ConsumerWidget {
+class CanvasNodeWidget extends CanvasNodeCardWidget {
   const CanvasNodeWidget({
     super.key,
     required this.node,
@@ -81,13 +82,17 @@ class CanvasNodeWidget extends ConsumerWidget {
   final String? hoverCandidateNodeId;
   final String? hoverCandidatePortId;
 
+  @override
   final VoidCallback onTap;
+  @override
   final VoidCallback onDragStart;
+  @override
   final VoidCallback? onDoubleTap;
 
   /// Reports the [PointerDeviceKind] of the second tap-down of a double-tap,
   /// fired just before [onDoubleTap]. Lets callers give stylus double-taps
   /// different semantics (e.g. delete-if-selected) from mouse/touch ones.
+  @override
   final ValueChanged<PointerDeviceKind>? onDoubleTapDown;
   final ValueChanged<String> onOutputPortTap;
   final ValueChanged<String> onInputPortTap;
@@ -105,6 +110,9 @@ class CanvasNodeWidget extends ConsumerWidget {
   final TransformationController transformationController;
   final Offset sceneOrigin;
   final bool isVertical;
+
+  @override
+  String get nodeId => node.id;
 
   /// True when [inputPort] on this node can accept the dragged connection.
   bool _isPortCompatible(NirPortDef inputPort) =>
@@ -172,16 +180,13 @@ class CanvasNodeWidget extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  CanvasNodeCardSpec buildSpec(BuildContext context, WidgetRef ref) {
     // Watched here (not by the parent) so a selection change only dirties
     // the node(s) whose membership actually flipped, not every node.
     final bool isSelected = ref.watch(
       canvasSelectedNodeIdsProvider.select(
         (Set<String> ids) => ids.contains(node.id),
       ),
-    );
-    final bool armedForDelete = ref.watch(
-      armedForDeleteNodeIdProvider.select((String? id) => id == node.id),
     );
     // Only non-null while the Run/Results step is live or scrubbing epochs —
     // the Architecture tab never writes trainingModeProvider, so this stays
@@ -204,82 +209,81 @@ class CanvasNodeWidget extends ConsumerWidget {
         ? null
         : spikeRateColor(spikeRate, Zeta.of(context).colors);
 
+    return (
+      cardSize: networkNodeSize(node, nodeType, compact: isVertical),
+      accentColor: accentColor,
+      icon:
+          nodeType?.icon ??
+          Icons.extension, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
+      title: resolvedName,
+      subtitle: nirNodeKeyParam(node, nodeType),
+      background: isGlowing
+          ? tokens.studioPalette.accent.withValues(alpha: 0.08)
+          : tokens.utilityPanelBackground,
+      isSelected: highlightSelected,
+      borderColor: highlightSelected ? null : spikeColor,
+      borderWidth: highlightSelected || spikeColor != null ? 2 : 1,
+      compact: isVertical,
+      collapsed: !node.isVisible,
+      isConnecting: connectingFromNodeId != null,
+      ports: <CanvasCardPort>[
+        ..._cardPorts(ref, isInput: true),
+        ..._cardPorts(ref, isInput: false),
+      ],
+      trailingBadge: spikeRate == null || spikeColor == null
+          ? null
+          : IgnorePointer(
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 5,
+                  vertical: 1,
+                ),
+                decoration: BoxDecoration(
+                  color: spikeColor.withValues(alpha: 0.85),
+                  borderRadius: NmtkDesignTokens.chipShape,
+                ),
+                child: Text(
+                  '${(spikeRate * 100).round()}%',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: Zeta.of(context).colors.mainInverse,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
+      onPanUpdate: (DragUpdateDetails details) {
+        final CanvasNode currentNode = ref
+            .read(canvasProvider)
+            .graph
+            .nodes
+            .firstWhere((CanvasNode n) => n.id == node.id);
+        ref
+            .read(canvasProvider.notifier)
+            .updateNodePosition(
+              node.id,
+              currentNode.position[0] + details.delta.dx,
+              currentNode.position[1] + details.delta.dy,
+            );
+      },
+      onPanEnd: (_) =>
+          ref.read(canvasProvider.notifier).snapNodeToGrid(node.id),
+      onLongPress: () =>
+          ref.read(armedForDeleteNodeIdProvider.notifier).set(node.id),
+      onDelete: () {
+        ref.read(canvasProvider.notifier).removeNode(node.id);
+        ref.read(armedForDeleteNodeIdProvider.notifier).set(null);
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
     return Positioned(
       left: node.position[0] + sceneOrigin.dx,
       top: node.position[1] + sceneOrigin.dy,
       child: RepaintBoundary(
-        child: CanvasNodeCard(
-          key: isGlowing ? ValueKey<String>('cnl-focus-node_${node.id}') : null,
-          nodeId: node.id,
-          cardSize: networkNodeSize(node, nodeType, compact: isVertical),
-          accentColor: accentColor,
-          icon:
-              nodeType?.icon ??
-              Icons.extension, // ZETA-MIGRATION-EXEMPT: no Zeta equivalent
-          title: resolvedName,
-          subtitle: nirNodeKeyParam(node, nodeType),
-          background: isGlowing
-              ? tokens.studioPalette.accent.withValues(alpha: 0.08)
-              : tokens.utilityPanelBackground,
-          isSelected: highlightSelected,
-          borderColor: highlightSelected ? null : spikeColor,
-          borderWidth: highlightSelected || spikeColor != null ? 2 : 1,
-          compact: isVertical,
-          collapsed: !node.isVisible,
-          isConnecting: connectingFromNodeId != null,
-          ports: <CanvasCardPort>[
-            ..._cardPorts(ref, isInput: true),
-            ..._cardPorts(ref, isInput: false),
-          ],
-          trailingBadge: spikeRate == null || spikeColor == null
-              ? null
-              : IgnorePointer(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 5,
-                      vertical: 1,
-                    ),
-                    decoration: BoxDecoration(
-                      color: spikeColor.withValues(alpha: 0.85),
-                      borderRadius: NmtkDesignTokens.chipShape,
-                    ),
-                    child: Text(
-                      '${(spikeRate * 100).round()}%',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: Zeta.of(context).colors.mainInverse,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ),
-          armedForDelete: armedForDelete,
-          onDelete: () {
-            ref.read(canvasProvider.notifier).removeNode(node.id);
-            ref.read(armedForDeleteNodeIdProvider.notifier).set(null);
-          },
-          onTap: onTap,
-          onDoubleTap: onDoubleTap,
-          onDoubleTapDown: onDoubleTapDown,
-          onPanStart: (_) => onDragStart(),
-          onPanUpdate: (DragUpdateDetails details) {
-            final CanvasNode currentNode = ref
-                .read(canvasProvider)
-                .graph
-                .nodes
-                .firstWhere((CanvasNode n) => n.id == node.id);
-            ref
-                .read(canvasProvider.notifier)
-                .updateNodePosition(
-                  node.id,
-                  currentNode.position[0] + details.delta.dx,
-                  currentNode.position[1] + details.delta.dy,
-                );
-          },
-          onPanEnd: (_) =>
-              ref.read(canvasProvider.notifier).snapNodeToGrid(node.id),
-          onLongPress: () =>
-              ref.read(armedForDeleteNodeIdProvider.notifier).set(node.id),
-        ),
+        key: isGlowing ? ValueKey<String>('cnl-focus-node_${node.id}') : null,
+        child: super.build(context, ref),
       ),
     );
   }

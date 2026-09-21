@@ -113,4 +113,76 @@ void main() {
     await gesture.up();
     await tester.pumpAndSettle();
   });
+
+  testWidgets(
+    'on a vertical (mobile) layout, dragging a node does not select it -- '
+    'see CEL-479/CEL-476',
+    (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(800, 1400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final ProviderContainer container = ProviderContainer(
+        overrides: [
+          canvas_sync.apiClientProvider.overrideWithValue(
+            _FakeCanvasApiClient(),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      const String nodeId = 'mobile_drag_node';
+      container
+          .read(canvasProvider.notifier)
+          .addPipelineDagNode(
+            PipelinePhaseId.train,
+            const PipelineDagNode(
+              id: nodeId,
+              type: PipelineDagNodeType.forwardPass,
+              x: 0,
+              y: 0,
+            ),
+          );
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            home: Scaffold(
+              body: PipelinePhaseCanvas(
+                phase: PipelinePhaseId.train,
+                isVertical: true,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      container.read(canvasProvider.notifier).requestWorkspaceRestoreFocus();
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      final Finder node = find.byKey(const ValueKey<String>('pnode_$nodeId'));
+      expect(node, findsOneWidget);
+      final Offset center = tester.getCenter(node);
+
+      final TestGesture gesture = await tester.startGesture(center);
+      await gesture.moveBy(const Offset(0, -60));
+      await gesture.moveBy(const Offset(0, -60));
+      await tester.pump();
+
+      expect(
+        container.read(canvasProvider).selectedNodeIds,
+        isEmpty,
+        reason:
+            'a mobile touch-drag must not select the node, or it would pop '
+            'the inspector sheet mid-drag',
+      );
+
+      await gesture.up();
+      await tester.pumpAndSettle();
+    },
+  );
 }

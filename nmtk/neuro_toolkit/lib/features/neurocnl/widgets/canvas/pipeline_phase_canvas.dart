@@ -17,8 +17,9 @@ import 'package:neuro_toolkit/features/neurocnl/utils/canvas_node_suggestions.da
 import 'package:neuro_toolkit/features/neurocnl/widgets/canvas/canvas_connect_palette.dart';
 import 'package:neuro_toolkit/features/neurocnl/widgets/canvas/canvas_edge_painting.dart';
 import 'package:neuro_toolkit/features/neurocnl/widgets/canvas/canvas_minimap.dart';
+import 'package:neuro_toolkit/features/neurocnl/widgets/canvas/canvas_node_card_widget.dart';
 import 'package:neuro_toolkit/features/neurocnl/widgets/canvas/canvas_shared_widgets.dart';
-import 'package:neuro_toolkit/features/neurocnl/widgets/canvas/canvas_stylus_layer.dart';
+import 'package:neuro_toolkit/features/neurocnl/widgets/canvas/canvas_surface_state.dart';
 import 'package:neuro_toolkit/features/neurocnl/widgets/canvas/canvas_viewport.dart';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -172,11 +173,9 @@ class PipelinePhaseCanvas extends ConsumerStatefulWidget {
       _PipelinePhaseCanvasState();
 }
 
-class _PipelinePhaseCanvasState extends ConsumerState<PipelinePhaseCanvas>
-    with
-        SingleTickerProviderStateMixin,
-        CanvasViewportMixin<PipelinePhaseCanvas>,
-        CanvasStylusMixin<PipelinePhaseCanvas> {
+class _PipelinePhaseCanvasState
+    extends CanvasSurfaceState<PipelinePhaseCanvas>
+    with SingleTickerProviderStateMixin<PipelinePhaseCanvas> {
   /// Scene-space pointer position while a connection drag is in progress.
   /// Null when no drag is active. Used for the live-wire preview.
   Offset? _currentConnectingPoint;
@@ -191,11 +190,6 @@ class _PipelinePhaseCanvasState extends ConsumerState<PipelinePhaseCanvas>
   /// construct it -- and call `vsync: this` -- while the widget is already
   /// deactivated, which crashes.
   late final AnimationController _viewportFollowController;
-  int _handledWorkspaceRestoreFocusRevision = 0;
-
-  bool get _isPrimaryModifierPressed =>
-      HardwareKeyboard.instance.isControlPressed ||
-      HardwareKeyboard.instance.isMetaPressed;
 
   /// The port tapped last, if the next tap on it should open the add-node
   /// palette. The port dot is the `+`: the first tap arms a connection, a second
@@ -246,7 +240,6 @@ class _PipelinePhaseCanvasState extends ConsumerState<PipelinePhaseCanvas>
 
   @override
   void dispose() {
-    canvasDisposeStylusLayer();
     _tc.dispose();
     _viewportFollowController.dispose();
     _focus.dispose();
@@ -381,7 +374,7 @@ class _PipelinePhaseCanvasState extends ConsumerState<PipelinePhaseCanvas>
                                     .selectEdge(edge.id);
                                 return;
                               }
-                              if (!_isPrimaryModifierPressed) {
+                              if (!isPrimaryModifierPressed) {
                                 _clearArmedPort();
                                 ref
                                     .read(canvasProvider.notifier)
@@ -451,27 +444,19 @@ class _PipelinePhaseCanvasState extends ConsumerState<PipelinePhaseCanvas>
                                                 connectingFromPort,
                                             connectingPortType:
                                                 connectingPortType,
-                                            onTap: () {
-                                              _focus.requestFocus();
-                                              final notifier = ref.read(
-                                                canvasProvider.notifier,
-                                              );
-                                              final additive =
-                                                  HardwareKeyboard
-                                                      .instance
-                                                      .isMetaPressed ||
-                                                  HardwareKeyboard
-                                                      .instance
-                                                      .isControlPressed;
-                                              if (additive) {
-                                                notifier.toggleNodeSelection(
-                                                  node.id,
-                                                  additive: true,
-                                                );
-                                              } else {
-                                                notifier.selectNode(node.id);
-                                              }
-                                            },
+                                            onTap: () =>
+                                                _selectPipelineNode(node.id),
+                                            // On mobile, selecting a node pops
+                                            // the inspector bottom sheet (see
+                                            // CanvasScreen's ref.listen on
+                                            // canvasSelectedNodeIdProvider) --
+                                            // see CanvasSurfaceState.
+                                            // dragStartGuard.
+                                            onDragStart: dragStartGuard(
+                                              isVertical: widget.isVertical,
+                                              selectStructurally: () =>
+                                                  _selectPipelineNode(node.id),
+                                            ),
                                             onDoubleTap: () {
                                               widget.onNodeDoubleTap?.call();
                                             },
@@ -699,12 +684,7 @@ class _PipelinePhaseCanvasState extends ConsumerState<PipelinePhaseCanvas>
   }
 
   void _scheduleWorkspaceRestoreFocus(int revision) {
-    if (revision == 0 || revision == _handledWorkspaceRestoreFocusRevision) {
-      return;
-    }
-    _handledWorkspaceRestoreFocusRevision = revision;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
+    scheduleWorkspaceRestoreFocus(revision, () {
       final PipelineDAG dag = ref
           .read(canvasProvider)
           .pipelinePhases
@@ -861,6 +841,22 @@ class _PipelinePhaseCanvasState extends ConsumerState<PipelinePhaseCanvas>
       }
     }
     return hit;
+  }
+
+  // ── Selection ─────────────────────────────────────────────────────────────
+
+  /// Selects [nodeId], toggling additively when the primary modifier is
+  /// held. Used both for the node's `onTap` and, guarded by
+  /// [CanvasSurfaceState.dragStartGuard], as its structural drag-start
+  /// selection -- see CEL-479.
+  void _selectPipelineNode(String nodeId) {
+    _focus.requestFocus();
+    final notifier = ref.read(canvasProvider.notifier);
+    if (isPrimaryModifierPressed) {
+      notifier.toggleNodeSelection(nodeId, additive: true);
+    } else {
+      notifier.selectNode(nodeId);
+    }
   }
 
   // ── Connection: tap-to-connect ────────────────────────────────────────────
@@ -1335,7 +1331,7 @@ class _PipelineEdgePainter extends CustomPainter {
 /// behaviour: pan from an output port to drag-to-connect with live-wire
 /// preview, or tap to toggle the active connection source; tap an input port
 /// to complete a pending connection.
-class _PipelineDagNodeWidget extends ConsumerWidget {
+class _PipelineDagNodeWidget extends CanvasNodeCardWidget {
   const _PipelineDagNodeWidget({
     super.key,
     required this.node,
@@ -1346,6 +1342,7 @@ class _PipelineDagNodeWidget extends ConsumerWidget {
     required this.connectingFromPort,
     this.connectingPortType,
     required this.onTap,
+    required this.onDragStart,
     this.onDoubleTap,
     required this.onPanUpdate,
     required this.onOutputPortTap,
@@ -1379,7 +1376,11 @@ class _PipelineDagNodeWidget extends ConsumerWidget {
     return srcType == inputPort.type;
   }
 
+  @override
   final VoidCallback onTap;
+  @override
+  final VoidCallback onDragStart;
+  @override
   final VoidCallback? onDoubleTap;
   final void Function(DragUpdateDetails) onPanUpdate;
   final void Function(String portId) onOutputPortTap;
@@ -1402,13 +1403,13 @@ class _PipelineDagNodeWidget extends ConsumerWidget {
       armedPortNodeId == node.id && armedPortId == portId;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  String get nodeId => node.id;
+
+  @override
+  CanvasNodeCardSpec buildSpec(BuildContext context, WidgetRef ref) {
     final tokens = NmtkShellTokens.of(context);
     final accent = pipelineCategoryColor(node.type.category);
     final Size cardSize = pipelineDagNodeSize(node, compact: isVertical);
-    final bool armedForDelete = ref.watch(
-      armedForDeleteNodeIdProvider.select((String? id) => id == node.id),
-    );
 
     // Input ports get [onTap] only — with no pan recognizer registered, a drag
     // that starts over an input port still pans the canvas. Output ports also
@@ -1458,8 +1459,7 @@ class _PipelineDagNodeWidget extends ConsumerWidget {
         ),
     ];
 
-    return CanvasNodeCard(
-      nodeId: node.id,
+    return (
       cardSize: cardSize,
       accentColor: accent,
       icon: pipelineCategoryIcon(node.type.category),
@@ -1467,26 +1467,26 @@ class _PipelineDagNodeWidget extends ConsumerWidget {
       subtitle: pipelineNodeKeyParam(node),
       background: tokens.utilityPanelBackground,
       isSelected: isSelected,
+      borderColor: null,
+      borderWidth: null,
       compact: isVertical,
+      collapsed: false,
       isConnecting: connectingFromNodeId != null,
       ports: <CanvasCardPort>[
         ...portsFor(node.type.inputPorts, isInput: true),
         ...portsFor(node.type.outputPorts, isInput: false),
       ],
-      armedForDelete: armedForDelete,
-      onDelete: () {
-        ref.read(canvasProvider.notifier).removePipelineDagNode(phase, node.id);
-        ref.read(armedForDeleteNodeIdProvider.notifier).set(null);
-      },
-      onTap: onTap,
-      onDoubleTap: onDoubleTap,
-      onPanStart: (_) => onTap(),
+      trailingBadge: null,
       onPanUpdate: onPanUpdate,
       onPanEnd: (_) => ref
           .read(canvasProvider.notifier)
           .snapPipelineDagNodeToGrid(phase, node.id),
       onLongPress: () =>
           ref.read(armedForDeleteNodeIdProvider.notifier).set(node.id),
+      onDelete: () {
+        ref.read(canvasProvider.notifier).removePipelineDagNode(phase, node.id);
+        ref.read(armedForDeleteNodeIdProvider.notifier).set(null);
+      },
     );
   }
 }

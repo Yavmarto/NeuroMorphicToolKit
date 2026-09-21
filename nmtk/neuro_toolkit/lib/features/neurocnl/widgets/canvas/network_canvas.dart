@@ -21,7 +21,7 @@ import 'package:neuro_toolkit/features/neurocnl/widgets/canvas/canvas_edge_paint
 import 'package:neuro_toolkit/features/neurocnl/widgets/canvas/canvas_minimap.dart';
 import 'package:neuro_toolkit/features/neurocnl/widgets/canvas/canvas_node_widget.dart';
 import 'package:neuro_toolkit/features/neurocnl/widgets/canvas/canvas_shared_widgets.dart';
-import 'package:neuro_toolkit/features/neurocnl/widgets/canvas/canvas_stylus_layer.dart';
+import 'package:neuro_toolkit/features/neurocnl/widgets/canvas/canvas_surface_state.dart';
 import 'package:neuro_toolkit/features/neurocnl/widgets/canvas/canvas_viewport.dart';
 import 'package:neuro_toolkit/features/neurocnl/widgets/canvas/connection_painter.dart';
 import 'package:neuro_toolkit/features/neurocnl/widgets/canvas/network_canvas_connections.dart';
@@ -212,11 +212,9 @@ class NetworkCanvas extends ConsumerStatefulWidget {
 bool _computeIsVertical(BuildContext context) =>
     MediaQuery.sizeOf(context).width < NmtkShellTokens.compactBreakpoint;
 
-class _NetworkCanvasState extends ConsumerState<NetworkCanvas>
+class _NetworkCanvasState extends CanvasSurfaceState<NetworkCanvas>
     with
-        SingleTickerProviderStateMixin,
-        CanvasViewportMixin<NetworkCanvas>,
-        CanvasStylusMixin<NetworkCanvas>,
+        SingleTickerProviderStateMixin<NetworkCanvas>,
         NetworkCanvasViewportMixin<NetworkCanvas>,
         NetworkCanvasConnectionMixin<NetworkCanvas>,
         NetworkCanvasNodePlacementMixin<NetworkCanvas> {
@@ -224,7 +222,6 @@ class _NetworkCanvasState extends ConsumerState<NetworkCanvas>
       TransformationController();
   final FocusNode _focusNode = FocusNode();
   bool _isVertical = false;
-  int _handledWorkspaceRestoreFocusRevision = 0;
 
   /// Drives the animated pan-to-node triggered when a new node is added --
   /// see [NetworkCanvasViewportMixin.networkFollowPendingViewportFocus].
@@ -257,10 +254,6 @@ class _NetworkCanvasState extends ConsumerState<NetworkCanvas>
       defaultTargetPlatform == TargetPlatform.windows ||
       defaultTargetPlatform == TargetPlatform.linux;
 
-  bool get _isPrimaryModifierPressed =>
-      HardwareKeyboard.instance.isControlPressed ||
-      HardwareKeyboard.instance.isMetaPressed;
-
   @override
   void initState() {
     super.initState();
@@ -283,7 +276,6 @@ class _NetworkCanvasState extends ConsumerState<NetworkCanvas>
 
   @override
   void dispose() {
-    canvasDisposeStylusLayer();
     _transformationController.removeListener(networkHandleViewportChanged);
     _transformationController.dispose();
     _viewportFollowController.dispose();
@@ -439,7 +431,7 @@ class _NetworkCanvasState extends ConsumerState<NetworkCanvas>
                                               nirTypeMap,
                                             );
                                         if (tappedNode != null) {
-                                          if (_isPrimaryModifierPressed) {
+                                          if (isPrimaryModifierPressed) {
                                             canvasNotifier.toggleNodeSelection(
                                               tappedNode.id,
                                               additive: true,
@@ -462,7 +454,7 @@ class _NetworkCanvasState extends ConsumerState<NetworkCanvas>
                                           canvasNotifier.selectEdge(
                                             tappedEdge.id,
                                           );
-                                        } else if (!_isPrimaryModifierPressed) {
+                                        } else if (!isPrimaryModifierPressed) {
                                           _pendingCnlFocusNodeId = null;
                                           networkClearArmedPort();
                                           canvasNotifier.clearSelection();
@@ -543,7 +535,7 @@ class _NetworkCanvasState extends ConsumerState<NetworkCanvas>
                                           final notifier = ref.read(
                                             canvasProvider.notifier,
                                           );
-                                          if (_isPrimaryModifierPressed) {
+                                          if (isPrimaryModifierPressed) {
                                             notifier.toggleNodeSelection(
                                               node.id,
                                               additive: true,
@@ -555,7 +547,7 @@ class _NetworkCanvasState extends ConsumerState<NetworkCanvas>
 
                                         void selectAndFocusCnl() {
                                           selectStructurally();
-                                          if (_isPrimaryModifierPressed) return;
+                                          if (isPrimaryModifierPressed) return;
                                           if (lineMap.nodeToLine.containsKey(
                                             node.id,
                                           )) {
@@ -594,17 +586,14 @@ class _NetworkCanvasState extends ConsumerState<NetworkCanvas>
                                           // On mobile, selecting a node pops
                                           // the inspector bottom sheet (see
                                           // CanvasScreen's ref.listen on
-                                          // canvasSelectedNodeIdProvider),
-                                          // which steals the pointer and
-                                          // aborts the drag the instant a
-                                          // pan gesture is recognized. Skip
-                                          // the drag-start selection there so
-                                          // a touch-drag can actually move
-                                          // the node; onTap still selects
-                                          // (and opens the sheet) normally.
-                                          onDragStart: isVertical
-                                              ? () {}
-                                              : selectStructurally,
+                                          // canvasSelectedNodeIdProvider) --
+                                          // see CanvasSurfaceState.
+                                          // dragStartGuard.
+                                          onDragStart: dragStartGuard(
+                                            isVertical: isVertical,
+                                            selectStructurally:
+                                                selectStructurally,
+                                          ),
                                           onDoubleTapDown:
                                               (PointerDeviceKind kind) {
                                                 _lastDoubleTapDownKind = kind;
@@ -812,12 +801,7 @@ class _NetworkCanvasState extends ConsumerState<NetworkCanvas>
   }
 
   void _scheduleWorkspaceRestoreFocus(int revision) {
-    if (revision == 0 || revision == _handledWorkspaceRestoreFocusRevision) {
-      return;
-    }
-    _handledWorkspaceRestoreFocusRevision = revision;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
+    scheduleWorkspaceRestoreFocus(revision, () {
       final CanvasGraph graph = ref.read(canvasProvider).graph;
       if (graph.nodes.isEmpty) return;
       final RenderBox? box = context.findRenderObject() as RenderBox?;
@@ -850,7 +834,7 @@ class _NetworkCanvasState extends ConsumerState<NetworkCanvas>
       networkEraseAt(event.position);
       return;
     }
-    if (_isPrimaryModifierPressed) return;
+    if (isPrimaryModifierPressed) return;
     final CanvasGraph graph = ref.read(canvasProvider).graph;
     final Offset scenePos = canvasSceneFromViewport(event.localPosition);
     final CanvasNode? node = networkNodeAtPosition(scenePos, graph);
@@ -937,20 +921,20 @@ class _NetworkCanvasState extends ConsumerState<NetworkCanvas>
       return;
     }
 
-    if (_isPrimaryModifierPressed &&
+    if (isPrimaryModifierPressed &&
         event.logicalKey == LogicalKeyboardKey.digit0) {
       ref.read(canvasProvider.notifier).resetViewport();
       return;
     }
 
-    if (_isPrimaryModifierPressed &&
+    if (isPrimaryModifierPressed &&
         (event.logicalKey == LogicalKeyboardKey.equal ||
             event.logicalKey == LogicalKeyboardKey.numpadAdd)) {
       networkAdjustZoom(kCanvasZoomStep);
       return;
     }
 
-    if (_isPrimaryModifierPressed &&
+    if (isPrimaryModifierPressed &&
         (event.logicalKey == LogicalKeyboardKey.minus ||
             event.logicalKey == LogicalKeyboardKey.numpadSubtract)) {
       networkAdjustZoom(1 / kCanvasZoomStep);
@@ -966,33 +950,33 @@ class _NetworkCanvasState extends ConsumerState<NetworkCanvas>
     }
 
     final notifier = ref.read(canvasProvider.notifier);
-    if (_isPrimaryModifierPressed &&
+    if (isPrimaryModifierPressed &&
         event.logicalKey == LogicalKeyboardKey.keyC) {
       unawaited(notifier.copySelection());
       return;
     }
-    if (_isPrimaryModifierPressed &&
+    if (isPrimaryModifierPressed &&
         event.logicalKey == LogicalKeyboardKey.keyV) {
       unawaited(notifier.pasteClipboard());
       return;
     }
-    if (_isPrimaryModifierPressed &&
+    if (isPrimaryModifierPressed &&
         event.logicalKey == LogicalKeyboardKey.keyX) {
       unawaited(notifier.cutSelection());
       return;
     }
-    if (_isPrimaryModifierPressed &&
+    if (isPrimaryModifierPressed &&
         event.logicalKey == LogicalKeyboardKey.keyA) {
       notifier.selectAllNodes();
       return;
     }
-    if (_isPrimaryModifierPressed &&
+    if (isPrimaryModifierPressed &&
         !HardwareKeyboard.instance.isShiftPressed &&
         event.logicalKey == LogicalKeyboardKey.keyZ) {
       notifier.undo();
       return;
     }
-    if (_isPrimaryModifierPressed &&
+    if (isPrimaryModifierPressed &&
         ((HardwareKeyboard.instance.isShiftPressed &&
                 event.logicalKey == LogicalKeyboardKey.keyZ) ||
             event.logicalKey == LogicalKeyboardKey.keyY)) {
