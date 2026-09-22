@@ -6,7 +6,8 @@ import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter/services.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import 'package:neuro_toolkit/features/neurocnl/models/canonical_editor_document.dart' as canonical_doc;
+import 'package:neuro_toolkit/features/neurocnl/models/canonical_editor_document.dart'
+    as canonical_doc;
 import 'package:neuro_toolkit/features/neurocnl/models/canvas/canvas.dart';
 import 'package:neuro_toolkit/features/neurocnl/models/canvas/canvas_clipboard.dart';
 import 'package:neuro_toolkit/features/neurocnl/models/canvas/grid.dart';
@@ -1654,8 +1655,13 @@ class CanvasController extends _$CanvasController {
 
     if (axis == CanvasLayoutAxis.horizontal) {
       final tierCount = grouped.keys.fold<int>(0, math.max) + 1;
-      const hStep = 260.0;
-      const vStep = 180.0;
+      // Step by whole grid cells (not an arbitrary pixel value) so the ideal
+      // position for tier k already lands exactly on grid column/row k --
+      // stepping by a non-multiple of the cell size let independent
+      // per-node rounding in _snapNodesToGrid drift and skip a column at
+      // deeper tiers, leaving unwanted empty space between nodes.
+      const hStep = kGridCellWidth;
+      const vStep = kGridCellHeight;
       final totalW = math.max(hStep * math.max(0, tierCount - 1), 0.0);
       for (final entry in grouped.entries) {
         for (var j = 0; j < entry.value.length; j++) {
@@ -1670,8 +1676,8 @@ class CanvasController extends _$CanvasController {
         }
       }
     } else {
-      const vStep = 220.0;
-      const hStep = 280.0;
+      const vStep = kGridCellHeight;
+      const hStep = kGridCellWidth;
       for (final entry in grouped.entries) {
         for (var j = 0; j < entry.value.length; j++) {
           nextNodes.add(
@@ -1683,11 +1689,13 @@ class CanvasController extends _$CanvasController {
       }
     }
 
-    // Snap the freshly-computed tier positions onto the grid -- BFS tier
-    // spacing (hStep/vStep above) doesn't line up with the grid cell size,
-    // so leaving these unsnapped visibly drifted off-grid. Snapping in tier
-    // order (nextNodes' order) keeps each tier's first-choice cell priority
-    // matching its layout position, same as _snapNodesToGrid's contract.
+    // Snap the freshly-computed tier positions onto the grid. hStep/vStep
+    // above are now whole grid cells, so this is a no-op for a graph with a
+    // single node per cell; it still matters when in-tier nodes have custom
+    // widths/heights that push a node's center out of its ideal cell.
+    // Snapping in tier order (nextNodes' order) keeps each tier's
+    // first-choice cell priority matching its layout position, same as
+    // _snapNodesToGrid's contract.
     final snappedNodes = _snapNodesToGrid(nextNodes);
 
     state = state.copyWith(
@@ -1773,8 +1781,9 @@ class CanvasController extends _$CanvasController {
     final nextNodes = <PipelineDagNode>[];
 
     if (axis == CanvasLayoutAxis.horizontal) {
-      const hStep = 260.0;
-      const vStep = 180.0;
+      // Whole grid cells, not arbitrary pixel steps -- see autoLayoutGraph.
+      const hStep = kGridCellWidth;
+      const vStep = kGridCellHeight;
       for (final entry in grouped.entries) {
         for (var j = 0; j < entry.value.length; j++) {
           final n = entry.value[j];
@@ -1784,8 +1793,8 @@ class CanvasController extends _$CanvasController {
         }
       }
     } else {
-      const vStep = 220.0;
-      const hStep = 280.0;
+      const vStep = kGridCellHeight;
+      const hStep = kGridCellWidth;
       for (final entry in grouped.entries) {
         for (var j = 0; j < entry.value.length; j++) {
           final n = entry.value[j];
@@ -1797,8 +1806,7 @@ class CanvasController extends _$CanvasController {
     }
 
     // Snap the freshly-computed tier positions onto the grid, same as
-    // autoLayoutGraph does for the architecture graph -- BFS tier spacing
-    // doesn't line up with the grid cell size on its own.
+    // autoLayoutGraph does for the architecture graph.
     final snappedNodes = _snapDagNodesToGrid(nextNodes);
     var updated = dag;
     for (final n in snappedNodes) {

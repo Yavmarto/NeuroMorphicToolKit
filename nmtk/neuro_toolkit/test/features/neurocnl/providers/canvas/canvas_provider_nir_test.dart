@@ -2,6 +2,7 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:neuro_toolkit/features/neurocnl/models/canvas/canvas.dart';
+import 'package:neuro_toolkit/features/neurocnl/models/canvas/grid.dart';
 import 'package:neuro_toolkit/features/neurocnl/providers/canvas/canvas_provider.dart';
 
 void main() {
@@ -76,6 +77,61 @@ void main() {
     expect(input.position[0], lessThan(lif.position[0]));
     expect(lif.position[0], lessThan(output.position[0]));
   });
+
+  test(
+    'autoLayoutGraph spaces every tier by exactly one grid cell, no gaps',
+    () {
+      // A long single-file chain: each tier index k needs its own node so a
+      // step size that doesn't divide evenly into the grid cell would drift
+      // and skip a column somewhere in this range (previously reproduced at
+      // k=6 -> k=7 with the old 260px step against a 240px grid cell).
+      const int chainLength = 10;
+      final List<CanvasNode> nodes = <CanvasNode>[
+        for (int i = 0; i < chainLength; i++)
+          CanvasNode(
+            id: 'n$i',
+            componentId: 'lif_population',
+            nirType: i == 0 ? 'nir.Input' : 'nir.LIF',
+            parameters: const <String, dynamic>{},
+            position: <double>[0.0, 0.0],
+          ),
+      ];
+      final List<CanvasEdge> edges = <CanvasEdge>[
+        for (int i = 0; i < chainLength - 1; i++)
+          CanvasEdge(
+            id: 'e$i',
+            sourceNodeId: 'n$i',
+            sourcePort: 'out',
+            targetNodeId: 'n${i + 1}',
+            targetPort: 'in',
+            parameters: const <String, dynamic>{},
+          ),
+      ];
+
+      final ProviderContainer container = ProviderContainer();
+      addTearDown(container.dispose);
+      container
+          .read(canvasProvider.notifier)
+          .setGraph(
+            CanvasGraph(
+              nodes: nodes,
+              edges: edges,
+              metadata: const <String, dynamic>{'graph_kind': 'nir'},
+            ),
+          );
+
+      container.read(canvasProvider.notifier).autoLayoutGraph();
+
+      final CanvasGraph graph = container.read(canvasProvider).graph;
+      final List<double> xsInTierOrder = <double>[
+        for (int i = 0; i < chainLength; i++)
+          graph.nodes.firstWhere((CanvasNode n) => n.id == 'n$i').position[0],
+      ];
+      for (int i = 1; i < xsInTierOrder.length; i++) {
+        expect(xsInTierOrder[i] - xsInTierOrder[i - 1], kGridCellWidth);
+      }
+    },
+  );
 
   test(
     'custom replacement preserves instance data, edges, and base NIR type',
