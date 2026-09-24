@@ -112,7 +112,7 @@ jobs:
           & ./nmtk/installer/windows/build-standalone.ps1 -Version '${{ needs.version.outputs.version }}'
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: nmtk-windows-installer
           path: nmtk/dist/*.exe
@@ -159,7 +159,7 @@ jobs:
           ./nmtk/installer/macos/build-standalone.sh "${BUILD_ARGS[@]}"
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: nmtk-macos-dmg
           path: "*.dmg"
@@ -193,7 +193,7 @@ jobs:
         run: ./nmtk/installer/linux/appimage.sh "${{ needs.version.outputs.version }}"
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: nmtk-linux-appimage
           path: "*.AppImage"
@@ -217,7 +217,7 @@ jobs:
           python -m build --outdir dist neurocli
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: nmtk-python-dists
           path: dist/*
