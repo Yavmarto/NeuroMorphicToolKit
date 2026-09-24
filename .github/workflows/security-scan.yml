@@ -43,7 +43,7 @@ jobs:
           echo "$RUNNER_TEMP/pip-audit-venv/bin" >> "${GITHUB_PATH}"
       - name: Set up Python (Linux and Windows)
         if: runner.os != 'macOS'
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: '3.12'
       - name: Run pip-audit
