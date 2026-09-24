@@ -41,7 +41,7 @@ jobs:
     runs-on: ${{ vars.RELEASE_RUNNER_LINUX || 'ubuntu-latest' }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # The script imports nmtk.launcher_control.module_environment, and
           # Neurochip (whose pyproject carries the matching extra) is a
