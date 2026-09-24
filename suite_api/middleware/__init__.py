@@ -9,7 +9,7 @@ import time
 import uuid
 from pathlib import Path
 
-import httpx
+import httpx as httpx  # re-exported: tests patch middleware.httpx.AsyncClient
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.datastructures import Headers

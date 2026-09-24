@@ -121,8 +121,16 @@ _install_python_deps() {
       fi
       ;;
     pip_dev)
+      # nmtk-contracts is a bare-name dependency (see the module's
+      # pyproject.toml) resolved by installing this local sibling package
+      # first, matching the Dockerfiles for these modules.
+      if [ -f "${ROOT_DIR}/nmtk_contracts/pyproject.toml" ]; then
+        python -m pip install "${ROOT_DIR}/nmtk_contracts" --quiet
+      fi
       python -m pip install -e "./${dir}[dev]" --quiet
-      python -m pip install ruff mypy --quiet
+      # trio: see the "pip" branch above — anyio's pytest plugin parametrizes
+      # every async test over both asyncio and trio backends by default.
+      python -m pip install ruff mypy trio --quiet
       ;;
     poetry)
       (cd "$dir" && poetry install --no-interaction --quiet)

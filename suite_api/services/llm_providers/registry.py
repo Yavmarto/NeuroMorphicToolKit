@@ -102,7 +102,7 @@ async def resolve_active_provider() -> LlmProvider | None:
 
 def studio_agent_tool_schemas() -> list[dict[str, Any]]:
     """OpenAI-style tool schemas for Studio MCP tools."""
-    schemas = [
+    schemas: list[dict[str, Any]] = [
         {
             "type": "function",
             "function": {

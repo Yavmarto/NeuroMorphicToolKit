@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterator
 from typing import Any
 
 import pytest
@@ -22,7 +23,7 @@ from suite_api.services.llm_providers.subprocess_cli import CLI_HARNESSES
 
 
 @pytest.fixture(autouse=True)
-def _reset_registry() -> None:
+def _reset_registry() -> Iterator[None]:
     reset_providers_for_tests()
     yield
     reset_providers_for_tests()

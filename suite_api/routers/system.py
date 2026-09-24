@@ -5,9 +5,9 @@ GET /api/suite/system/resources — CPU, memory, optional GPU, and host info.
 
 import asyncio as asyncio  # re-exported: tests patch system.asyncio.to_thread
 import logging
-import platform
-import socket
-import time
+import platform as platform  # re-exported: tests patch system.platform
+import socket as socket  # re-exported: tests patch system.socket
+import time as time  # re-exported: tests patch system.time
 from typing import Any
 
 import psutil as psutil  # re-exported: tests patch system.psutil
@@ -19,7 +19,7 @@ logger = logging.getLogger("suite_api.system")
 
 def _collect_gpu_stats() -> list[dict[str, Any]] | None:
     try:
-        import pynvml  # type: ignore[import-untyped]
+        import pynvml  # type: ignore[import-not-found]
     except ImportError:
         return None
 
@@ -56,7 +56,7 @@ def _collect_gpu_stats() -> list[dict[str, Any]] | None:
         try:
             pynvml.nvmlShutdown()
         except Exception:
-            pass
+            logger.debug("pynvml_shutdown_failed", exc_info=True)
 
 
 def _collect_resources() -> dict[str, Any]:

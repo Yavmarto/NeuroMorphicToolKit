@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 _INSTRUCTIONS_MARKER = "nmtk-studio-assistant-v1"
 
 
@@ -26,7 +28,7 @@ def instructions_marker() -> str:
     return _INSTRUCTIONS_MARKER
 
 
-def message_has_studio_instructions(messages: list[dict]) -> bool:
+def message_has_studio_instructions(messages: list[dict[str, Any]]) -> bool:
     marker = _INSTRUCTIONS_MARKER
     return any(
         message.get("role") == "system"

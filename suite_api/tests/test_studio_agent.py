@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterator
 from typing import Any
 
 import pytest
@@ -40,7 +41,7 @@ def client() -> TestClient:
 
 
 @pytest.fixture(autouse=True)
-def _clear_sessions() -> None:
+def _clear_sessions() -> Iterator[None]:
     studio_agent.reset_sessions_for_tests()
     yield
     studio_agent.reset_sessions_for_tests()
