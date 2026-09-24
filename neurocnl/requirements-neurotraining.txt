@@ -6,7 +6,7 @@
 # Backend-only:      pip install -r requirements-neurotraining.txt --only-binary :all: -r <(grep "^#= BACKEND" requirements-neurotraining.txt)
 
 #= CORE — always required
-pytest>=7.0.0
+pytest>=9.1.1
 pytest-cov
 ruff
 mypy
