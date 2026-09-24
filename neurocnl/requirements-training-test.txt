@@ -12,4 +12,4 @@
 #   PYTHONPATH=neurocnl python -c "from neurocnl.training_registry import TrainingResult; print('OK')"
 #   python -m pytest neurocnl/tests/test_training_registry.py -v -p no:conftest
 
-pytest>=7.0.0
+pytest>=9.1.1
