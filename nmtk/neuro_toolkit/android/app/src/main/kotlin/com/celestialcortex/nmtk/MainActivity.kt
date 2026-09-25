@@ -1,4 +1,4 @@
-package com.example.neuro_toolkit
+package com.celestialcortex.nmtk
 
 import io.flutter.embedding.android.FlutterActivity
 

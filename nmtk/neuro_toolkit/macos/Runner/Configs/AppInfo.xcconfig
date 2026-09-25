@@ -12,7 +12,7 @@ PRODUCT_NAME = neuro_toolkit
 ARCHS[sdk=macosx*] = $(ARCHS_STANDARD)
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = io.github.completedspoon6.neurotoolkit
+PRODUCT_BUNDLE_IDENTIFIER = com.celestialcortex.nmtk
 
 // The copyright displayed in application information
 PRODUCT_COPYRIGHT = Copyright © 2026 com.example. All rights reserved.
