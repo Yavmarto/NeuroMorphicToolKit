@@ -9,6 +9,7 @@ import 'package:neuro_toolkit/features/neurocnl/services/coactivation_correlatio
 import 'package:neuro_toolkit/features/neurocnl/utils/force_directed_layout.dart';
 import 'package:neuro_toolkit/features/neurocnl/widgets/brainviz_variants.dart';
 import 'package:neuro_toolkit/features/neurocnl/widgets/canvas/spike_playback_transport.dart';
+import 'package:neuro_toolkit/features/neurocnl/widgets/thermion_graph_spike_view.dart';
 
 /// Results-tab brainviz: per-neuron force-directed layout driven by the same
 /// raster export and shared playback clock as the Grid/Raster tabs, or — while
@@ -61,6 +62,11 @@ class _ResultsBrainvizPanelState extends ConsumerState<ResultsBrainvizPanel>
   Map<String, double> _displayActivity = const <String, double>{};
   String _loadedRasterId = '';
   BrainvizVariant? _focusedVariant;
+
+  /// CEL-574 feasibility spike only: shows the Thermion/Filament GPU tab
+  /// instead of [_focusedVariant]. Additive alongside the CustomPainter
+  /// tabs below, not a replacement for any of them.
+  bool _showGpuSpike = false;
 
   /// Above this node count the comparison grid is too expensive to run several
   /// force layouts at once, so the panel falls back to a single variant.
@@ -230,9 +236,11 @@ class _ResultsBrainvizPanelState extends ConsumerState<ResultsBrainvizPanel>
     final viewKey = useLive ? 'live-training' : _loadedRasterId;
     final matrix = snapshot.coactivationMatrix();
     final canCompare = graph.nodes.length <= _compareNodeCap;
-    final showCompare = _focusedVariant == null && canCompare;
+    final showCompare = !_showGpuSpike && _focusedVariant == null && canCompare;
 
-    final Widget body = showCompare
+    final Widget body = _showGpuSpike
+        ? ThermionGraphSpikeView(key: ValueKey('gpu-spike-$viewKey'), graph: graph)
+        : showCompare
         ? BrainvizVariantsView(
             key: ValueKey('compare-$viewKey'),
             graph: graph,
@@ -267,17 +275,29 @@ class _ResultsBrainvizPanelState extends ConsumerState<ResultsBrainvizPanel>
           children: [
             _modeChip(
               label: 'Compare',
-              selected: _focusedVariant == null,
+              selected: !_showGpuSpike && _focusedVariant == null,
               enabled: canCompare,
-              onSelected: () => setState(() => _focusedVariant = null),
+              onSelected: () => setState(() {
+                _showGpuSpike = false;
+                _focusedVariant = null;
+              }),
             ),
             for (final variant in BrainvizVariant.values)
               _modeChip(
                 label: variant.label,
-                selected: _focusedVariant == variant,
+                selected: !_showGpuSpike && _focusedVariant == variant,
                 enabled: true,
-                onSelected: () => setState(() => _focusedVariant = variant),
+                onSelected: () => setState(() {
+                  _showGpuSpike = false;
+                  _focusedVariant = variant;
+                }),
               ),
+            _modeChip(
+              label: 'GPU (spike)',
+              selected: _showGpuSpike,
+              enabled: true,
+              onSelected: () => setState(() => _showGpuSpike = true),
+            ),
           ],
         ),
       ),
